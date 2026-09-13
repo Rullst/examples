@@ -168,13 +168,20 @@ pub mod app {
                                 <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.1rem; margin-bottom: 1rem;">"Publish a New Story (Active Record)"</h3>
                                 <div style="margin-bottom: 1rem;">
                                     <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">"Article Title"</label>
-                                    <input type="text" name="title" placeholder="e.g. Memory Safety with Rust 2024" required="required" style="width: 100%; background: #0d121f; border: 1px solid #334155; border-radius: 0.375rem; padding: 0.65rem 0.85rem; color: #fff;" />
+                                    <input type="text" name="title" placeholder="e.g. Memory Safety with Rust 2024" readonly="true" style="width: 100%; background: #0d121f; cursor: not-allowed; border: 1px solid #334155; border-radius: 0.375rem; padding: 0.65rem 0.85rem; color: #fff;" />
                                 </div>
                                 <div style="margin-bottom: 1rem;">
                                     <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">"Content (Markdown/Text)"</label>
-                                    <textarea name="body" rows="4" placeholder="Write your post content here..." required="required" style="width: 100%; background: #0d121f; border: 1px solid #334155; border-radius: 0.375rem; padding: 0.65rem 0.85rem; color: #fff;"></textarea>
+                                    <textarea name="body" rows="4" placeholder="Write your post content here..." readonly="true" style="width: 100%; background: #0d121f; cursor: not-allowed; border: 1px solid #334155; border-radius: 0.375rem; padding: 0.65rem 0.85rem; color: #fff;"></textarea>
                                 </div>
-                                <button type="submit" class="btn">"Publish Article"</button>
+                                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn" disabled="true" style="opacity: 0.6; cursor: not-allowed; background: #1e293b; border: 1px solid #475569; color: #94a3b8;">
+                                        "🔒 Publish Article (Read-Only Demo)"
+                                    </button>
+                                    <span style="font-size: 0.8rem; color: #94a3b8; background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.2); padding: 0.4rem 0.75rem; border-radius: 0.375rem;">
+                                        "⚠️ Story creation is locked in this public cloud showcase to prevent spam and vandalism."
+                                    </span>
+                                </div>
                             </form>
                         </div>
 
@@ -200,6 +207,8 @@ pub mod app {
                 title: form.title,
                 body: form.body,
             };
+            
+            #[cfg(debug_assertions)]
             let _ = post.save().await;
         }
         Redirect::to("/")
