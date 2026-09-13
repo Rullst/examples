@@ -141,6 +141,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         println!("📊 Rullst Studio running on http://127.0.0.1:5555");
     }
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://db.sqlite?mode=rwc".to_string());
+    if rullst::db::Orm::init(&db_url).await.is_ok() {
+        for migration in crate::migrations::get_migrations() {
+            let _ = migration.up().await;
+        }
+    }
     println!("🚀 LMS server starting on port 3000...");
     Server::new(router).run(3000).await?;
     Ok(())
