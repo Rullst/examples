@@ -42,9 +42,31 @@ pub async fn auth_middleware(mut request: Request, next: Next) -> Response {
             .await
             {
                 Ok(school) => school,
-                Err(error) => {
-                    eprintln!("Authentication school membership denied: {error}");
-                    return StatusCode::FORBIDDEN.into_response();
+                Err(_) => {
+                    // Auto-provision membership in default school 1 ('academy-demo') for registered learner
+                    if let Ok(pool) = rullst::db::Orm::pool() {
+                        let membership_key = format!("sm-{}-{}", user_id, observed_at_epoch);
+                        let _ = rullst::db::sqlx::query(
+                            "INSERT OR IGNORE INTO school_memberships (membership_key, school_id, user_id, status, is_default, valid_from_epoch, expires_at_epoch, created_at, updated_at) VALUES (?, 1, ?, 'active', 1, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                        )
+                        .bind(membership_key)
+                        .bind(user_id)
+                        .execute(pool)
+                        .await;
+                    }
+                    match school_service::resolve_membership_at(
+                        user_id,
+                        requested_school,
+                        observed_at_epoch,
+                    )
+                    .await
+                    {
+                        Ok(school) => school,
+                        Err(error) => {
+                            eprintln!("Authentication school membership denied: {error}");
+                            return StatusCode::FORBIDDEN.into_response();
+                        }
+                    }
                 }
             };
             let seed_context = match UserContext::new(

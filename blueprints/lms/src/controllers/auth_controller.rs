@@ -196,6 +196,17 @@ pub async fn register_submit(
         return auth::register_page(&token, Some("Error creating account"), nonce).into_response();
     }
 
+    if let Ok(pool) = rullst::db::Orm::pool() {
+        let membership_key = format!("sm-{}-{}", user.id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+        let _ = rullst::db::sqlx::query(
+            "INSERT OR IGNORE INTO school_memberships (membership_key, school_id, user_id, status, is_default, valid_from_epoch, expires_at_epoch, created_at, updated_at) VALUES (?, 1, ?, 'active', 1, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+        )
+        .bind(membership_key)
+        .bind(user.id)
+        .execute(pool)
+        .await;
+    }
+
     match rullst_auth::make_login_cookie(user.id) {
         Ok(cookie) => redirect_with_cookie("/dashboard", &cookie),
         Err(error) => {
