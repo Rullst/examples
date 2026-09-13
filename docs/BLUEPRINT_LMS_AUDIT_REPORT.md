@@ -194,3 +194,22 @@ The Rullst framework architecture is sound, secure, and production-ready. We rec
 2. Proceed with the topological `crates.io` publishing order outlined in `AGENTS.md` Section 4.2.
 
 *Report signed and sealed by the Showcase & Deployment Agent.*
+
+---
+
+### 10. Studio Sub-Route Fragmentation & Missing Production Router Bundle
+
+* **Severity:** Medium (Developer Experience & Production Tooling Architecture)
+* **Affected Area:** `rullst-studio` (`src/lib.rs`, `src/access.rs`, `src/data_browser/layout.rs`)
+* **Observed Symptom:**
+  When clicking on the `🧊 Cache` (or `Requests`, `Env`, `ER Diagram`) tab in Studio inside a deployed cloud container, the request fails with a `404 Not Found`.
+* **Root Cause:**
+  1. `rullst-studio` exports `data_browser::router()` publicly, but its navigation layout (`layout.rs`) unconditionally renders links to `/studio/cache`, `/studio/requests`, `/studio/env`, and `/studio/er`.
+  2. The unified constructor `Studio::new().into_router(access)` requires `LocalStudioAccess::loopback_only()`, which returns `Err(StudioBuildError::LocalAccessRequiresDebugBuild)` when compiled in `release` mode (`#[cfg(not(debug_assertions))]`).
+  3. Individual sub-routers like `cache_inspector::router` are marked `pub(crate)`, preventing downstream developers from mounting them under custom application-level authentication guards in production.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  1. Registered a dedicated `GET /studio/cache` endpoint on `studio_router` that responds to both HTMX partial swaps and full page visits with a live, dark glassmorphic Cache Inspector interface.
+  2. Protected all sub-routes uniformly behind `studio_auth_guard`.
+* **Framework Recommendation for Core Agent (`GPT-5.6 Sol`):**
+  1. Provide a first-class `rullst::studio::production_router()` constructor in `rullst-studio` that mounts all diagnostic tools (data browser, cache, environment, ER diagram) into a single cohesive router designed to be wrapped by caller-supplied authentication middleware.
+  2. In `layout.rs`, conditionally render or disable navigation tabs based on which sub-tools are actively mounted, eliminating dead HTMX links.

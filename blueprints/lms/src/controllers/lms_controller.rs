@@ -155,11 +155,29 @@ pub async fn show_course(
         .as_ref()
         .map(|Extension(value)| value.as_str())
         .unwrap_or_default();
+    let is_enrolled = if let Some(cookie) = rullst::auth::extract_session_cookie(&headers) {
+        if let Ok(app_key) = rullst::auth::get_app_key() {
+            if let Ok(user_id) = rullst::auth::decrypt_session(&cookie, &app_key) {
+                crate::models::enrollment::Enrollment::active_for(user_id, id)
+                    .await
+                    .ok()
+                    .flatten()
+                    .is_some()
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    } else {
+        false
+    };
     Html(lms::course_detail_page(
         course,
         lessons,
         csrf_token,
         nonce,
+        is_enrolled,
     ))
     .into_response()
 }

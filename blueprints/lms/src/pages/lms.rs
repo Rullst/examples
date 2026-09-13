@@ -148,6 +148,7 @@ pub fn course_detail_page(
     lessons: Vec<Lesson>,
     csrf_token: &str,
     csp_nonce: &str,
+    is_enrolled: bool,
 ) -> String {
     let lesson_items = if lessons.is_empty() {
         html! {
@@ -203,19 +204,28 @@ pub fn course_detail_page(
                         <a class="back" href="/">"← Back to catalog"</a>
                         <h1>{&course.title}</h1>
                         <p class="description">{&course.description}</p>
-                        <form method="post" action={format!("/courses/{}/enroll", course.id)}>
-                            <input type="hidden" name="_token" value={csrf_token} />
-                            <button type="submit">"Enroll or resume"</button>
-                        </form>
+                        {if is_enrolled {
+                            let first_id = lessons.first().map(|l| l.id).unwrap_or(1);
+                            rullst::html::RawHtml(format!(
+                                r#"<a href="/lessons/{}/play" style="display:inline-block;width:100%;text-align:center;padding:.85rem;border-radius:.5rem;background:#10b981;color:#052e16;font-weight:800;text-decoration:none;margin-bottom:1rem;box-shadow:0 4px 12px rgba(16,185,129,0.3);">▶ Continuar Aprendendo</a>"#,
+                                first_id
+                            ))
+                        } else {
+                            rullst::html::RawHtml(format!(
+                                r#"<form method="post" action="/courses/{}/enroll"><input type="hidden" name="_token" value="{}" /><button type="submit">Enroll in course</button></form>"#,
+                                course.id,
+                                csrf_token
+                            ))
+                        }}
                         <h2>"Lessons"</h2>
                         <ul>{rullst::html::RawHtml(lesson_items)}</ul>
                     </aside>
                     <main>
-                        <section class="notice">
-                            <h2>"Protected lesson area"</h2>
-                            <p>"Register and enroll before opening a lesson. The server derives identity from the session and verifies entitlement before returning media metadata."</p>
-                            <p>"Production media, captions and transcripts must be supplied by the host application; the scaffold fixtures are development-only."</p>
-                        </section>
+                        {if is_enrolled {
+                            rullst::html::RawHtml(r#"<section class="notice" style="border-color:#10b981;background:rgba(16,185,129,0.08);"><h2 style="color:#34d399">✅ Matrícula Ativa!</h2><p>Você já está matriculado neste curso. Selecione qualquer lição no índice à esquerda para começar a assistir.</p><p style="color:#94a3b8;font-size:0.875rem">Dica: todas as aulas estão com acesso livre para este showcase!</p></section>"#.to_string())
+                        } else {
+                            rullst::html::RawHtml(r#"<section class="notice"><h2>Protected lesson area</h2><p>Register and enroll before opening a lesson. The server derives identity from the session and verifies entitlement before returning media metadata.</p><p>Production media, captions and transcripts must be supplied by the host application; the scaffold fixtures are development-only.</p></section>"#.to_string())
+                        }}
                     </main>
                 </div>
             </body>
