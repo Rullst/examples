@@ -37,7 +37,12 @@ Both applications run in **Microsoft Azure Container Apps** using the Serverless
 
 ---
 
-## 🏛️ The 5 Web Paradigms in One Binary
+## 🏛️ The 5 Web Paradigms in One Binary (Showcase Architectural Preview)
+
+> [!NOTE]
+> **Showcase Architectural Preview (Roadmap: Rullst v13.0)**  
+> The "5 Web Paradigms in One Binary" demonstrated below is an **exploratory architectural preview** built specifically inside the **Blog Showcase app (`rullst-showcase`)** to demonstrate how Rullst can flexibly integrate SSR, WebSockets, WASM islands, and external templating.  
+> Native, framework-level first-class abstraction for all 5 paradigms across all CLI generators is planned for the **Rullst v13.0 Roadmap**. In **Rullst v12.0**, the core framework focuses on sovereign Zero-Bundle SSR (`html!` macro + HTMX), Active Record ORM, RASP security, and the Nexus Admin CMS.
 
 | Paradigm | Route | Technology | Footprint | Ideal For |
 | :--- | :--- | :--- | :--- | :--- |
