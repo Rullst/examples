@@ -2,7 +2,8 @@
 
 **Document ID:** `AUDIT-LMS-2026-V12`  
 **Target Release:** Rullst Framework `v12.0.0` Stable  
-**Auditor:** Showcase & Deployment Autonomous Agent  
+**Auditor:** Showcase & Deployment Autonomous Agent (Gemini 3.8 Flash High)
+**Co-Auditor (Core Monorepo):** Monorepo Hardening Autonomous Agent (GPT-5.6 Sol Extra-High)  
 **Audited Blueprint:** `examples/blueprints/lms` (LMS Academy)  
 **Target Environment:** Microsoft Azure Container Apps (East US)  
 **Live URL:** `https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/`  
@@ -119,10 +120,10 @@ During the transition from local `cargo run` to containerized cloud deployment o
 
 | Milestone | Status | Responsible Agent | Notes |
 |---|---|---|---|
-| Core Crates Test Suites | **COMPLETE** | Monorepo Hardening Agent | 100% pass across all core crates. |
-| Mutation & Scorecard Hardening | **IN PROGRESS** | Monorepo Hardening Agent | Final mutation shard isolation commits landed. |
-| Blueprint LMS Cloud Verification | **COMPLETE** | Showcase & Deployment Agent | All 9 invariants verified; live Azure showcase deployed. |
-| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent | Documented above in Findings 1–6. |
+| Core Crates Test Suites | **COMPLETE** | Monorepo Hardening Agent (GPT-5.6 Sol Extra-High) | 100% pass across all core crates. |
+| Mutation & Scorecard Hardening | **IN PROGRESS** | Monorepo Hardening Agent (GPT-5.6 Sol Extra-High) | Final mutation shard isolation commits landed. |
+| Blueprint LMS Cloud Verification | **COMPLETE** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | All 9 invariants verified; live Azure showcase deployed. |
+| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | Documented above in Findings 1–6. |
 
 ### 🏁 Final Release Gate Recommendation: **CONDITIONAL GO**
 

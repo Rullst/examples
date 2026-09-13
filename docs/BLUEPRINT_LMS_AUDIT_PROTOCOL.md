@@ -2,8 +2,8 @@
 
 **Document Type:** Pre-Flight Verification & Release Quality Gate  
 **Target Release:** Rullst `v12.0.0` Stable  
-**Auditor:** Showcase & Deployment Agent (Antigravity)  
-**Core Framework Verifier:** Monorepo Hardening Agent  
+**Auditor (Showcase & Cloud Deployment):** Showcase & Deployment Agent (Gemini 3.8 Flash High)  
+**Core Framework Verifier (Monorepo Hardening):** Monorepo Hardening Agent (GPT-5.6 Sol Extra-High)  
 **Framework SST:** [`docs/src/spec.md`](../docs/src/spec.md) / [`AGENTS.md`](../AGENTS.md)
 
 ---
