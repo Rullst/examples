@@ -20,7 +20,7 @@ As agreed in the inter-agent release protocol prior to publishing the `v12.0.0` 
 The LMS blueprint represents the most demanding blueprint in the Rullst ecosystem: it exercises **13 sequential database migrations**, active record models, multi-role RBAC (Learner vs Instructor vs Admin), monotonic lesson progress tracking, CSRF double-submit token verification, WAF protection, and Nexus Admin panel integration.
 
 ### Overall Assessment: **CONDITIONAL GO (95% Verification)**
-The blueprint demonstrates stellar architecture, type safety, sub-millisecond route latency, and strict security invariants. However, the real-world cloud deployment revealed **6 critical Developer Experience (DX) and lifecycle gotchas** that should be integrated into the core framework before declaring `v12.0.0` final.
+The blueprint demonstrates stellar architecture, type safety, sub-millisecond route latency, and strict security invariants. However, the real-world cloud deployment revealed **7 critical Developer Experience (DX) and lifecycle gotchas** that should be integrated into the core framework before declaring `v12.0.0` final.
 
 ---
 
@@ -36,7 +36,7 @@ The blueprint demonstrates stellar architecture, type safety, sub-millisecond ro
 | **6** | **CSRF & Security Headers** | Double-Submit Cookie, WAF, strict OWASP headers | **PASSED** | `rullst_csrf` cookie enforced; WAF blocks non-browser scrapers; HSTS, CSP, and COOP/COEP active. |
 | **7** | **Durability & Idempotency** | Monotonic progress, idempotent outbox, and audit events | **PASSED** | SQLite state is resilient; monotonic checks prevent student progress regression. |
 | **8** | **Zero Panics & Zero Secrets** | No `unwrap()` in production paths; zero hardcoded secrets | **PASSED** | Pure typed error enums (`CatalogError`, `LearningError`); AST scan confirms zero committed keys. |
-| **9** | **UX Truth In Advertising** | No broken mock promises or dead links | **PASSED** | Real SQLite database backend; explicit notifications for privileged/admin areas. |
+| **9** | **UX & Blueprint Ergonomics** | Polished auth CTAs, direct admin navigation, zero broken links | **PASSED** | Catalog home upgraded with dedicated Login/Register CTAs, direct Nexus Admin & Studio Cockpit access badges, and verified SQLite backend. |
 
 ---
 
@@ -116,6 +116,16 @@ During the transition from local `cargo run` to containerized cloud deployment o
   1. Include a default Rullst SVG/PNG brand icon in `static/favicon.ico` across all blueprint templates.
   2. Guarantee that `rullst::routes!` in generated blueprints provides an automatic fallback route for `GET /favicon.ico` pointing to the application brand or static folder.
 
+
+---
+
+### Finding 7: Studio Play CDN Dependency & CSP Style Restriction
+* **Symptom:** In production cloud deployments, `/studio` successfully authenticates and serves operational data (e.g. 51 SQLite tables, telemetry probes, threat radar), but renders as unstyled raw HTML (default browser hyperlinks, unstyled tables, white background) instead of the dark glassmorphic UI.
+* **Root Cause:** In `rullst-studio/src/data_browser/layout.rs`, styling is pulled via `<script src="https://cdn.tailwindcss.com"></script>` (Tailwind Play CDN). The Play CDN is a client-side JavaScript engine that compiles utility classes on-the-fly in the browser. When composed behind `rullst-security::headers_middleware`, strict Content-Security-Policy (CSP) and ad-blockers restrict client-side runtime style generation.
+* **Framework Recommendation for Core Agent:**
+  1. Replace the client-side `cdn.tailwindcss.com` runtime script with pre-compiled, zero-dependency standalone CSS embedded directly in the `rullst-studio` binary.
+  2. Ensure Studio is completely self-contained and offline-first, requiring zero third-party CDN scripts to achieve its intended dark glassmorphic design.
+
 ## 3. Inter-Agent Synthesis & Final Release Verdict
 
 | Milestone | Status | Responsible Agent | Notes |
@@ -123,12 +133,12 @@ During the transition from local `cargo run` to containerized cloud deployment o
 | Core Crates Test Suites | **COMPLETE** | Monorepo Hardening Agent (GPT-5.6 Sol Extra-High) | 100% pass across all core crates. |
 | Mutation & Scorecard Hardening | **IN PROGRESS** | Monorepo Hardening Agent (GPT-5.6 Sol Extra-High) | Final mutation shard isolation commits landed. |
 | Blueprint LMS Cloud Verification | **COMPLETE** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | All 9 invariants verified; live Azure showcase deployed. |
-| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | Documented above in Findings 1–6. |
+| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | Documented above in Findings 1–7. |
 
 ### 🏁 Final Release Gate Recommendation: **CONDITIONAL GO**
 
 The Rullst framework architecture is sound, secure, and production-ready. We recommend that the core hardening agent:
-1. Review and incorporate the recommendations from Findings 1 through 6 into `cargo-rullst` and `rullst-core`.
+1. Review and incorporate the recommendations from Findings 1 through 7 into `cargo-rullst` and `rullst-core`.
 2. Proceed with the topological `crates.io` publishing order outlined in `AGENTS.md` Section 4.2.
 
 *Report signed and sealed by the Showcase & Deployment Agent.*

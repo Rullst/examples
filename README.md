@@ -57,6 +57,10 @@ Both applications run in **Microsoft Azure Container Apps** using the Serverless
 
 ## 🎓 The LMS Academy Blueprint (`blueprints/lms`)
 
+> [!TIP]
+> **Live Interactive Showcase (Open Sandbox):**  
+> This deployment is an active demonstration of the production LMS blueprint. It is 100% real and fully functional: visitors are welcome to [Sign Up](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/register) for a test account, [Log In](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/login) with real Argon2id password encryption, explore courses, and track lesson progress.
+
 The **LMS Blueprint** is a full production-grade application generated via `cargo rullst new --blueprint lms`:
 
 - **Active Record Architecture:** 22 domain models covering categories, courses, modules, lessons, quizzes, assignments, rubrics, achievements, and certifications.

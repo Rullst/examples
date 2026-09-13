@@ -110,6 +110,9 @@ pub fn index_page(
                         <div>
                             <h1>"Rullst Academy"</h1>
                             <p class="sub">"A server-rendered starter catalog with bounded search."</p>
+                            <p class="summary" style="margin-top: 0.5rem; font-size: 0.875rem; color: #94a3b8;">
+                                "💡 Live Blueprint Showcase: Fully functional sandbox. Feel free to sign up, log in, and test course progression."
+                            </p>
                         </div>
                         <nav class="actions" aria-label="Developer tools">
                             <a class="button secondary" href="/login">"Login"</a>
