@@ -50,6 +50,8 @@ During the transition from local `cargo run` to containerized cloud deployment o
   ```html
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   ```
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  Patched all layout templates in `src/pages/lms.rs` and `src/pages/auth.rs` with explicit `<meta name="viewport" content="width=device-width, initial-scale=1">` tags.
 * **Framework Recommendation for Core Agent:**
   1. Update `cargo-rullst` scaffolding generators (`make:view`, `new`) to guarantee that all base HTML layouts include the viewport meta tag by default.
   2. Embed a native mobile drawer / hamburger navigation pattern in blueprint layouts for screens `< 768px`.
@@ -67,6 +69,8 @@ During the transition from local `cargo run` to containerized cloud deployment o
   }
   ```
   When a container starts without an explicit `RULLST_ENV=production` or `HOST=0.0.0.0`, it defaults to `127.0.0.1`. Inside Docker, this isolates network traffic strictly to the container's internal loopback, rejecting all ingress proxy traffic from the cloud host.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  Configured `ENV HOST="0.0.0.0"`, `ENV RULLST_HOST="0.0.0.0"`, and `ENV PORT=3000` explicitly inside `blueprints/lms/Dockerfile`.
 * **Framework Recommendation for Core Agent:**
   1. Add automatic container detection in `rullst-core`: if `HOST` is unset but a container environment is detected (e.g. `/.dockerenv` exists or container cgroups are present), default to `0.0.0.0`.
   2. Ensure `cargo-rullst new --docker` generates Dockerfiles with `ENV HOST="0.0.0.0"` and `ENV PORT=3000`.
@@ -76,6 +80,8 @@ During the transition from local `cargo run` to containerized cloud deployment o
 ### Finding 3: Container Auto-Migration Lifecycle (`RULLST_AUTO_MIGRATE`)
 * **Symptom:** Fresh container deployments on empty storage volumes return `503 Service Unavailable` with `Catalog temporarily unavailable`.
 * **Root Cause:** In containerized deployments (Docker, ACA, ECS, Kubernetes), the runtime starts the service by directly executing the binary (`CMD ["/app/myapp"]`) without command-line flags. `rullst::artisan!` only triggers migrations when arguments such as `db:migrate` are explicitly passed. If storage is uninitialized, the tables do not exist.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  Embedded an automatic migration runner in `src/main.rs` immediately after `rullst::db::Orm::init(&db_url).await`, executing `migration.up().await` across all 13 schema versions before starting the HTTP listener.
 * **Framework Recommendation for Core Agent:**
   1. Add first-class support in `rullst-core` for automatic startup migrations:
      ```rust
@@ -91,6 +97,8 @@ During the transition from local `cargo run` to containerized cloud deployment o
 ### Finding 4: Non-Root Container Volume Permissions for SQLite
 * **Symptom:** SQLite returns `SQLITE_CANTOPEN` or permission denied when writing to `/app/data/lms.db` inside non-root containers (`USER 1000:1000`).
 * **Root Cause:** When an OCI container defines `VOLUME ["/app/data"]`, container runtimes (such as Kubernetes or Azure Container Apps) mount anonymous volumes owned by `root:root` (UID 0). A non-root application user cannot create SQLite files or write-ahead journals (`-wal` / `-shm`) in that directory.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  Removed the anonymous volume directive and configured `DATABASE_URL="sqlite:///app/db.sqlite?mode=rwc"` directly within `/app`, which is strictly chowned to `1000:1000`.
 * **Framework Recommendation for Core Agent:**
   1. In the default scaffolding Dockerfile, place the SQLite database in the application working directory (e.g. `/app/db.sqlite`) where non-root ownership is preserved, or configure an entrypoint permission check.
   2. Avoid anonymous `VOLUME ["/app/data"]` in default scaffolds unless caller documentation explicitly describes cloud volume permission mapping.
@@ -103,6 +111,8 @@ During the transition from local `cargo run` to containerized cloud deployment o
 ### Finding 5: Cloud Reverse-Proxy Ingress TLS Termination (`NexusVerifiedTls`)
 * **Symptom:** When accessing the auto-generated Nexus Admin panel (`/nexus`) behind cloud reverse proxies (e.g. Azure Container Apps Envoy Ingress, Cloudflare, AWS ALB), the browser is served `HTTP 426 Upgrade Required` with an empty response body instead of the Basic Auth challenge dialog.
 * **Root Cause:** By design, Rullst Nexus refuses HTTP Basic Auth unless verified transport encryption is present to prevent cleartext credential leakage. In cloud environments, TLS is terminated at the edge/ingress, forwarding plaintext HTTP to container port 3000. Nexus detects no local TLS socket and deliberately returns 426.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  Configured `.layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))` on the main application router in `src/main.rs`.
 * **Framework Recommendation for Core Agent:**
   1. Document and streamline `NexusVerifiedTls::from_trusted_tls_termination()` in CLI blueprints when `--docker` is selected.
   2. Support an application-level configuration or environment flag `RULLST_TRUSTED_PROXY=true` to automate reverse-proxy TLS assertion.
@@ -112,6 +122,8 @@ During the transition from local `cargo run` to containerized cloud deployment o
 ### Finding 6: Missing Default Favicon & Brand Asset Scaffolding
 * **Symptom:** Browsers load blueprint pages with a blank default tab icon and flood application logs with repetitive `404 Not Found` requests for `/favicon.ico`.
 * **Root Cause:** Scaffolds generated via `cargo rullst new --blueprint lms` omit standard `<link rel="icon">` declarations in HTML `<head>` sections and do not register a default fallback handler or static asset for `/favicon.ico`.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  Added `<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />` to all page layouts and registered `GET /favicon.ico` in `src/main.rs` and `src/controllers/lms_controller.rs`.
 * **Framework Recommendation for Core Agent:**
   1. Include a default Rullst SVG/PNG brand icon in `static/favicon.ico` across all blueprint templates.
   2. Guarantee that `rullst::routes!` in generated blueprints provides an automatic fallback route for `GET /favicon.ico` pointing to the application brand or static folder.
@@ -132,6 +144,9 @@ During the transition from local `cargo run` to containerized cloud deployment o
 ### Finding 8: Multi-Tenant Scaffolds Omit Default Tenant Onboarding Hook
 * **Symptom:** After registering an account via `/register`, the learner is redirected to `/dashboard` and immediately greeted with `HTTP 403 Forbidden` (*"O acesso foi negado"*).
 * **Root Cause:** In the LMS blueprint, multi-tenancy is strictly enforced by `school_service::resolve_membership_at` on every protected route. While `auth_controller::register_submit` successfully persisted the learner to the `users` table, it omitted inserting the necessary `school_memberships` association for default school ID 1 (`academy-demo`). As a result, the user possessed a valid encrypted cookie session but zero valid school tenant memberships.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  1. Patched `auth_controller::register_submit` to automatically provision the learner into default school ID 1 (`academy-demo`) upon account creation.
+  2. Enhanced `auth_middleware::auth_middleware` with an auto-healing fallback to auto-enroll existing registered users into the default school on subsequent logins.
 * **Framework Recommendation for Core Agent:**
   1. In `cargo-rullst`, scaffolds featuring multi-tenancy or school partitioning must generate an automatic tenant onboarding hook (e.g. creating the default membership record upon registration).
   2. Implement an auto-provisioning fallback in `auth_middleware` for single-tenant / starter deployments to avoid unhandled 403 dead-ends.
