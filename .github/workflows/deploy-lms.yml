@@ -52,3 +52,21 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        if: ${{ env.AZURE_CREDENTIALS != '' }}
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v2
+        if: ${{ env.AZURE_CREDENTIALS != '' }}
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+        with:
+          containerAppName: rullst-lms
+          resourceGroup: rullst-rg
+          imageToDeploy: ghcr.io/rullst/lms:latest
