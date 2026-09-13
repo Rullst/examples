@@ -34,24 +34,28 @@ fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
 }
 
 async fn studio_auth_guard(
-    req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    use axum::http::{header, HeaderValue, StatusCode};
-    use axum::response::IntoResponse;
+    req: rullst::server::Request,
+    next: rullst::server::Next,
+) -> rullst::server::Response {
+    use rullst::server::header;
+    use rullst::server::{HeaderValue, IntoResponse, StatusCode};
 
     let auth_header = req.headers().get(header::AUTHORIZATION).and_then(|v| v.to_str().ok());
-    let expected_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-    let expected_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_else(|_| "1234567891234567".to_string());
+    let expected_user = std::env::var("NEXUS_ADMIN_USERNAME").ok();
+    let expected_pass = std::env::var("NEXUS_ADMIN_PASSWORD").ok();
 
     let mut is_authorized = false;
-    if let Some(auth) = auth_header {
-        if let Some(encoded) = auth.strip_prefix("Basic ") {
-            if let Some(decoded) = decode_base64_cred(encoded.trim()) {
-                if let Ok(credentials) = String::from_utf8(decoded) {
-                    if let Some((user, pass)) = credentials.split_once(':') {
-                        if user == expected_user && pass == expected_pass {
-                            is_authorized = true;
+    if let (Some(exp_user), Some(exp_pass)) = (expected_user, expected_pass) {
+        if !exp_user.trim().is_empty() && !exp_pass.trim().is_empty() {
+            if let Some(auth) = auth_header {
+                if let Some(encoded) = auth.strip_prefix("Basic ") {
+                    if let Some(decoded) = decode_base64_cred(encoded.trim()) {
+                        if let Ok(credentials) = String::from_utf8(decoded) {
+                            if let Some((user, pass)) = credentials.split_once(':') {
+                                if user == exp_user && pass == exp_pass {
+                                    is_authorized = true;
+                                }
+                            }
                         }
                     }
                 }
@@ -76,8 +80,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::artisan!(crate::migrations::get_migrations());
 
     let nexus_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-    let nexus_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_else(|_| "1234567891234567".to_string());
-    let nexus_auth = rullst::nexus::NexusAuthPolicy::basic(nexus_user, nexus_pass)?;
+    let nexus_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_default();
+    let nexus_auth = if nexus_pass.len() >= 16 {
+        rullst::nexus::NexusAuthPolicy::basic(nexus_user, nexus_pass)?
+    } else {
+        eprintln!("⚠️ NEXUS_ADMIN_PASSWORD environment variable not set or under 16 characters. Generating ephemeral secret.");
+        let ephemeral_pass = format!("ephemeral_{:x}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+        rullst::nexus::NexusAuthPolicy::basic(nexus_user, ephemeral_pass)?
+    };
 let nexus = rullst::nexus::Nexus::new()
         .with_auth_policy(nexus_auth)
         .with_brand("LMS Admin")
@@ -126,6 +136,7 @@ let nexus = rullst::nexus::Nexus::new()
 
     let public = routes![
         get("/" => controllers::lms_controller::index),
+        get("/favicon.ico" => controllers::lms_controller::favicon_handler),
         // rullst-access: public — course metadata and lesson titles form the public catalog.
         get("/courses/{id}" => controllers::lms_controller::show_course),
         // rullst-access: public — an opaque certificate key reveals bounded course evidence, never learner PII.
@@ -187,7 +198,7 @@ let nexus = rullst::nexus::Nexus::new()
     ].layer(rullst::server::from_fn(middlewares::auth_middleware::auth_middleware));
 
     let studio_router = rullst::studio::data_browser::router()
-        .layer(axum::middleware::from_fn(studio_auth_guard));
+        .layer(rullst::server::from_fn(studio_auth_guard));
 
     let router = public
         .merge_axum(learning.into_axum())

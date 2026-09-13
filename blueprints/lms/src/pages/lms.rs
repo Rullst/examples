@@ -67,6 +67,7 @@ pub fn index_page(
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>"Rullst Academy — Course catalog"</title>
+                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style nonce={csp_nonce}>
                     "
                     * { box-sizing: border-box; }
@@ -169,6 +170,7 @@ pub fn course_detail_page(
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>{&course.title}</title>
+                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style nonce={csp_nonce}>
                     "
                     * { box-sizing: border-box; }
@@ -303,6 +305,7 @@ pub fn lesson_player_page(
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>{title}</title>
+                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style nonce={csp_nonce}>
                     "
                     * { box-sizing: border-box; }

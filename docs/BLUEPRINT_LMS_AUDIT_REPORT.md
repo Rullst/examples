@@ -19,7 +19,7 @@ As agreed in the inter-agent release protocol prior to publishing the `v12.0.0` 
 The LMS blueprint represents the most demanding blueprint in the Rullst ecosystem: it exercises **13 sequential database migrations**, active record models, multi-role RBAC (Learner vs Instructor vs Admin), monotonic lesson progress tracking, CSRF double-submit token verification, WAF protection, and Nexus Admin panel integration.
 
 ### Overall Assessment: **CONDITIONAL GO (95% Verification)**
-The blueprint demonstrates stellar architecture, type safety, sub-millisecond route latency, and strict security invariants. However, the real-world cloud deployment revealed **4 critical Developer Experience (DX) and lifecycle gotchas** that should be integrated into the core framework before declaring `v12.0.0` final.
+The blueprint demonstrates stellar architecture, type safety, sub-millisecond route latency, and strict security invariants. However, the real-world cloud deployment revealed **6 critical Developer Experience (DX) and lifecycle gotchas** that should be integrated into the core framework before declaring `v12.0.0` final.
 
 ---
 
@@ -96,6 +96,25 @@ During the transition from local `cargo run` to containerized cloud deployment o
 
 ---
 
+
+---
+
+### Finding 5: Cloud Reverse-Proxy Ingress TLS Termination (`NexusVerifiedTls`)
+* **Symptom:** When accessing the auto-generated Nexus Admin panel (`/nexus`) behind cloud reverse proxies (e.g. Azure Container Apps Envoy Ingress, Cloudflare, AWS ALB), the browser is served `HTTP 426 Upgrade Required` with an empty response body instead of the Basic Auth challenge dialog.
+* **Root Cause:** By design, Rullst Nexus refuses HTTP Basic Auth unless verified transport encryption is present to prevent cleartext credential leakage. In cloud environments, TLS is terminated at the edge/ingress, forwarding plaintext HTTP to container port 3000. Nexus detects no local TLS socket and deliberately returns 426.
+* **Framework Recommendation for Core Agent:**
+  1. Document and streamline `NexusVerifiedTls::from_trusted_tls_termination()` in CLI blueprints when `--docker` is selected.
+  2. Support an application-level configuration or environment flag `RULLST_TRUSTED_PROXY=true` to automate reverse-proxy TLS assertion.
+
+---
+
+### Finding 6: Missing Default Favicon & Brand Asset Scaffolding
+* **Symptom:** Browsers load blueprint pages with a blank default tab icon and flood application logs with repetitive `404 Not Found` requests for `/favicon.ico`.
+* **Root Cause:** Scaffolds generated via `cargo rullst new --blueprint lms` omit standard `<link rel="icon">` declarations in HTML `<head>` sections and do not register a default fallback handler or static asset for `/favicon.ico`.
+* **Framework Recommendation for Core Agent:**
+  1. Include a default Rullst SVG/PNG brand icon in `static/favicon.ico` across all blueprint templates.
+  2. Guarantee that `rullst::routes!` in generated blueprints provides an automatic fallback route for `GET /favicon.ico` pointing to the application brand or static folder.
+
 ## 3. Inter-Agent Synthesis & Final Release Verdict
 
 | Milestone | Status | Responsible Agent | Notes |
@@ -103,12 +122,12 @@ During the transition from local `cargo run` to containerized cloud deployment o
 | Core Crates Test Suites | **COMPLETE** | Monorepo Hardening Agent | 100% pass across all core crates. |
 | Mutation & Scorecard Hardening | **IN PROGRESS** | Monorepo Hardening Agent | Final mutation shard isolation commits landed. |
 | Blueprint LMS Cloud Verification | **COMPLETE** | Showcase & Deployment Agent | All 9 invariants verified; live Azure showcase deployed. |
-| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent | Documented above in Findings 1–4. |
+| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent | Documented above in Findings 1–6. |
 
 ### 🏁 Final Release Gate Recommendation: **CONDITIONAL GO**
 
 The Rullst framework architecture is sound, secure, and production-ready. We recommend that the core hardening agent:
-1. Review and incorporate the recommendations from Findings 1, 2, and 3 into `cargo-rullst` and `rullst-core`.
+1. Review and incorporate the recommendations from Findings 1 through 6 into `cargo-rullst` and `rullst-core`.
 2. Proceed with the topological `crates.io` publishing order outlined in `AGENTS.md` Section 4.2.
 
 *Report signed and sealed by the Showcase & Deployment Agent.*

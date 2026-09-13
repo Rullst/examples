@@ -33,16 +33,17 @@ Both applications run in **Microsoft Azure Container Apps** using the Serverless
 | Application | Live Public URL | Key Features | Admin / Cockpit |
 | :--- | :--- | :--- | :--- |
 | **🌐 Rullst Showcase** | [rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/) | 5 Web Paradigms, WAF Defense, LiveView, AI Assistant, Omni Simulator | Architecture Notices & Cockpit Guide |
-| **🎓 LMS Academy** | [rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Login: `admin` | Senha: `1234567891234567`)* |
+| **🎓 LMS Academy** | [rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
 
 ---
 
-## 🏛️ The 5 Web Paradigms in One Binary (Showcase Architectural Preview)
+## 🏛️ The 5 Web Paradigms in One Binary (Blog Showcase Only / Roadmap v13)
 
-> [!NOTE]
-> **Showcase Architectural Preview (Roadmap: Rullst v13.0)**  
-> The "5 Web Paradigms in One Binary" demonstrated below is an **exploratory architectural preview** built specifically inside the **Blog Showcase app (`rullst-showcase`)** to demonstrate how Rullst can flexibly integrate SSR, WebSockets, WASM islands, and external templating.  
-> Native, framework-level first-class abstraction for all 5 paradigms across all CLI generators is planned for the **Rullst v13.0 Roadmap**. In **Rullst v12.0**, the core framework focuses on sovereign Zero-Bundle SSR (`html!` macro + HTMX), Active Record ORM, RASP security, and the Nexus Admin CMS.
+> [!WARNING]
+> **Important Scope & Architecture Disclaimer (Roadmap Rullst v13.0):**  
+> This section and the "5 Web Paradigms in One Binary" demonstration exist **exclusively as an exploratory architectural preview inside the Blog Showcase example (`rullst-showcase` / `examples/blog`)**.  
+> This multi-paradigm unification **does NOT yet exist natively or completely within the core Rullst framework**. It is an experimental proof-of-concept targeted for potential inclusion in the **Rullst v13.0 Roadmap**.  
+> In **Rullst v12.0**, the framework focuses strictly on Sovereign Zero-Bundle SSR (`html!` macro + HTMX), Active Record ORM, RASP/WAF defense layers, and the Nexus Admin CMS.
 
 | Paradigm | Route | Technology | Footprint | Ideal For |
 | :--- | :--- | :--- | :--- | :--- |
@@ -65,7 +66,7 @@ The **LMS Blueprint** is a full production-grade application generated via `carg
 - **Control Centers:**
   - 🛡️ **Nexus Admin Panel (`/nexus`):** Auto-generated admin CRUD for all 22 models.
   - 🚀 **Studio Cockpit (`/studio`):** Live telemetry, query profiler, and security radar.
-  - **Credentials:** Username: `admin` | Password: `1234567891234567`
+  - **Access Security:** Protected by HTTP Basic Auth configured via `NEXUS_ADMIN_USERNAME` and `NEXUS_ADMIN_PASSWORD` environment variables.
 - **Pre-Flight Verification:** See the official [LMS Audit Protocol](docs/BLUEPRINT_LMS_AUDIT_PROTOCOL.md) and [LMS Audit Report](docs/BLUEPRINT_LMS_AUDIT_REPORT.md).
 
 ---

@@ -179,3 +179,7 @@ mod tests {
         ));
     }
 }
+
+pub async fn favicon_handler() -> impl IntoResponse {
+    rullst::response::Redirect::temporary("https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png")
+}
