@@ -263,6 +263,17 @@ let nexus = rullst::nexus::Nexus::new()
             }
             println!("✅ Database migrations applied successfully!");
             if let Ok(pool) = rullst::db::Orm::pool() {
+                // Seed permanent demo learner account
+                if let Ok(demo_hash) = rullst::auth::hash_password_async("Password123!".to_string()).await {
+                    let _ = rullst::db::sqlx::query(
+                        "INSERT OR IGNORE INTO users (id, name, email, password_hash, created_at, updated_at) VALUES (100, 'Demo Learner', 'demo@rullst.dev', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    ).bind(&demo_hash).execute(pool).await;
+
+                    let _ = rullst::db::sqlx::query(
+                        "INSERT OR IGNORE INTO school_memberships (school_id, user_id, role, membership_key, status, created_at, updated_at) VALUES (1, 100, 'student', 'sm-demo-100', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    ).execute(pool).await;
+                }
+
                 // Seed Course 2 scope for default demo school so all learners can enroll
                 let _ = rullst::db::sqlx::query(
                     "INSERT OR REPLACE INTO course_school_scopes (school_id, course_id, enrollment_policy, created_at, updated_at) VALUES (1, 2, 'open', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -270,19 +281,19 @@ let nexus = rullst::nexus::Nexus::new()
 
                 // Seed real YouTube video lessons for Rust & Web Development
                 let _ = rullst::db::sqlx::query(
-                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/5C_HPTJg5ek', title = 'Introduction to Memory Safety in Rust', transcript = 'Rust achieves memory safety without a garbage collector through its ownership model. In this lesson, we explore how ownership, borrowing, and lifetimes guarantee that references always point to valid data.' WHERE id = 1"
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/5C_HPTJg5ek', title = 'Introduction to Memory Safety in Rust', transcript = 'Rust achieves memory safety without a garbage collector through its ownership model. In this lesson, we explore how ownership, borrowing, and lifetimes guarantee that references always point to valid data.' WHERE id = 1"
                 ).execute(pool).await;
 
                 let _ = rullst::db::sqlx::query(
-                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/8O0Nt9qYn6o', title = 'Deep Dive into Smart Pointers & Concurrency', transcript = 'Smart pointers act like pointers but have additional metadata and capabilities. We explore Box for heap allocation, Rc for single-threaded reference counting, and Arc/Mutex for thread-safe concurrent design.' WHERE id = 2"
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/8O0Nt9qYn6o', title = 'Deep Dive into Smart Pointers & Concurrency', transcript = 'Smart pointers act like pointers but have additional metadata and capabilities. We explore Box for heap allocation, Rc for single-threaded reference counting, and Arc/Mutex for thread-safe concurrent design.' WHERE id = 2"
                 ).execute(pool).await;
 
                 let _ = rullst::db::sqlx::query(
-                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/L8tffdfhyvU', title = 'Setting up your first Rust Web Application', transcript = 'Rust is rapidly becoming the premier choice for backend web infrastructure. Learn how Rullst organizes routes, handles asynchronous IO with Tokio, and integrates active record data models.' WHERE id = 3"
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/L8tffdfhyvU', title = 'Setting up your first Rust Web Application', transcript = 'Rust is rapidly becoming the premier choice for backend web infrastructure. Learn how Rullst organizes routes, handles asynchronous IO with Tokio, and integrates active record data models.' WHERE id = 3"
                 ).execute(pool).await;
 
                 let _ = rullst::db::sqlx::query(
-                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/r-GSGH2RxJs', title = 'Building Interactive UIs with HTMX', transcript = 'HTMX gives you access to AJAX, CSS Transitions, and Server-Sent Events directly in HTML. Pair HTMX with Rust server-side rendering for rich, dynamic user interfaces without heavy JavaScript bundle complexity.' WHERE id = 4"
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/r-GSGH2RxJs', title = 'Building Interactive UIs with HTMX', transcript = 'HTMX gives you access to AJAX, CSS Transitions, and Server-Sent Events directly in HTML. Pair HTMX with Rust server-side rendering for rich, dynamic user interfaces without heavy JavaScript bundle complexity.' WHERE id = 4"
                 ).execute(pool).await;
                 println!("🎥 Educational YouTube video lessons and open course scopes initialized!");
             }

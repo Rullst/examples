@@ -47,7 +47,23 @@ pub async fn enroll(
     Extension(context): Extension<UserContext>,
 ) -> Response {
     match learning_service::enroll(user_id, &context, course_id).await {
-        Ok(_) => Redirect::to(&format!("/courses/{course_id}")).into_response(),
+        Ok(_) => {
+            if let Ok(pool) = rullst::db::Orm::pool() {
+                let first_lesson = rullst::db::sqlx::query_scalar::<_, i32>(
+                    "SELECT id FROM lessons WHERE course_id = ? ORDER BY id ASC LIMIT 1"
+                )
+                .bind(course_id)
+                .fetch_optional(pool)
+                .await
+                .ok()
+                .flatten();
+
+                if let Some(lesson_id) = first_lesson {
+                    return Redirect::to(&format!("/lessons/{lesson_id}/play")).into_response();
+                }
+            }
+            Redirect::to(&format!("/courses/{course_id}")).into_response()
+        }
         Err(error) => learning_error_response(error),
     }
 }
@@ -88,7 +104,14 @@ pub async fn play_lesson(
         &progress_key,
         csp_nonce.as_str(),
     ) {
-        Ok(page) => rullst::response::Html(page).into_response(),
+        Ok(page) => {
+            let mut res = rullst::response::Html(page).into_response();
+            res.headers_mut().insert(
+                rullst::server::header::HeaderName::from_static("cross-origin-embedder-policy"),
+                rullst::server::HeaderValue::from_static("unsafe-none"),
+            );
+            res
+        }
         Err(_) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
     }
 }
