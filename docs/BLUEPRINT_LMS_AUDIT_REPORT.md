@@ -131,12 +131,19 @@ During the transition from local `cargo run` to containerized cloud deployment o
 
 ---
 
-### Finding 7: Studio Play CDN Dependency & CSP Style Restriction
-* **Symptom:** In production cloud deployments, `/studio` successfully authenticates and serves operational data (e.g. 51 SQLite tables, telemetry probes, threat radar), but renders as unstyled raw HTML (default browser hyperlinks, unstyled tables, white background) instead of the dark glassmorphic UI.
-* **Root Cause:** In `rullst-studio/src/data_browser/layout.rs`, styling is pulled via `<script src="https://cdn.tailwindcss.com"></script>` (Tailwind Play CDN). The Play CDN is a client-side JavaScript engine that compiles utility classes on-the-fly in the browser. When composed behind `rullst-security::headers_middleware`, strict Content-Security-Policy (CSP) and ad-blockers restrict client-side runtime style generation.
-* **Framework Recommendation for Core Agent:**
-  1. Replace the client-side `cdn.tailwindcss.com` runtime script with pre-compiled, zero-dependency standalone CSS embedded directly in the `rullst-studio` binary.
-  2. Ensure Studio is completely self-contained and offline-first, requiring zero third-party CDN scripts to achieve its intended dark glassmorphic design.
+### Finding 7: Studio Play CDN Blocked by COEP Security Policy (Unstyled Studio UI)
+* **Symptom:** In production cloud deployments, `/studio` successfully authenticates via Basic Auth and serves live operational data (e.g. 51 SQLite tables, telemetry probes, threat radar), but renders as completely unstyled raw HTML (default browser blue hyperlinks, unstyled tables, white background) instead of the intended dark glassmorphic UI. By contrast, `/nexus` renders with full dark styling.
+* **Root Cause:**
+  1. In `rullst-studio/src/data_browser/layout.rs`, styling relies on an external Play CDN runtime: `<script src="https://cdn.tailwindcss.com"></script>`.
+  2. In production, `rullst-core/src/security/headers.rs` (`headers_middleware`) enforces strict OWASP defense-in-depth headers, including `Cross-Origin-Embedder-Policy: require-corp` (COEP) and `Cross-Origin-Resource-Policy: same-origin` (CORP).
+  3. Under COEP (`require-corp`), modern browsers (Chrome, Edge, Firefox, Safari) strictly forbid loading any cross-origin script or subresource unless the external host serves a `Cross-Origin-Resource-Policy: cross-origin` header.
+  4. The Tailwind Play CDN (`cdn.tailwindcss.com`) redirects (302) to `/3.4.17` and does *not* send any CORP header. As a result, the browser blocks the script from executing with:
+     `net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginAfterDefaultedToSameOriginByCoep`
+  5. Because the runtime script is blocked by browser security, none of the Tailwind classes (`bg-slate-950`, `text-slate-100`, `border-slate-800`, etc.) are compiled into CSS rules.
+  6. By contrast, Nexus (`rullst-nexus/src/nexus/ui.rs`) embeds its dark theme (`NEXUS_CSS`) directly as an inline `<style>` tag inside the Rust binary, making it entirely immune to COEP and 100% self-contained.
+* **Framework Recommendation for Core Agent (`GPT-5.6 Sol`):**
+  1. Adopt the Nexus design pattern in `rullst-studio`: replace the external `cdn.tailwindcss.com` Play CDN script with a zero-dependency, pre-compiled Vanilla CSS stylesheet embedded directly inside the `rullst-studio` binary (e.g. `STUDIO_CSS`).
+  2. Guarantee that Studio is 100% self-contained and offline-first, requiring zero external CDN requests to achieve its intended dark glassmorphic UI.
 
 
 ---
