@@ -153,7 +153,7 @@ pub fn render_pricing_page(
                             "Select an adapter to exercise deterministic mock behavior through " <code>"rullst-capital"</code> ". This page does not contact a live payment service:"
                         </p>
 
-                        <form method="POST" action="/checkout" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto; gap: 1rem; align-items: flex-end;">
+                        <form method="POST" action="/checkout#checkout-simulator" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto; gap: 1rem; align-items: flex-end;">
                             <input type="hidden" name="_token" value={csrf_token} />
                             <div>
                                 <label style="display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.35rem;">"Payment Gateway:"</label>
@@ -297,7 +297,7 @@ fn render_gateway_cards(gateways: &[GatewayInfo]) -> String {
                     </div>
 
                     <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                        <a href={format!("/checkout?provider={}&plan=pro_plan", g.id)} class="btn btn-primary" style="flex: 1; text-align: center; font-size: 0.8rem; padding: 0.4rem;">
+                        <a href={format!("/checkout?provider={}&plan=pro_plan#checkout-simulator", g.id)} class="btn btn-primary" style="flex: 1; text-align: center; font-size: 0.8rem; padding: 0.4rem;">
                             "Test Checkout"
                         </a>
                         <a href={format!("#{}", config_id)} class="btn" style="flex: 1; text-align: center; font-size: 0.8rem; padding: 0.4rem;">
@@ -380,10 +380,10 @@ fn render_checkout_result(simulated: Option<(String, String)>) -> String {
         };
 
         html! {
-            <div style="margin-top: 1.5rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 0.5rem;">
+            <div style="margin-top: 1.5rem; padding: 1.25rem; background: rgba(16, 185, 129, 0.18); border: 2px solid #10b981; border-radius: 0.5rem; box-shadow: 0 0 25px rgba(16, 185, 129, 0.3);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                     <span style="font-weight: 700; color: #34d399; font-size: 0.95rem;">
-                        "🧪 Offline Adapter Result for: " <strong>{provider.to_uppercase()}</strong>
+                        "⚡ Checkout Session Generated: " <strong>{provider.to_uppercase()}</strong>
                     </span>
                     <span class="stat-badge live">"OFFLINE FIXTURE"</span>
                 </div>

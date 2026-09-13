@@ -98,12 +98,12 @@ pub fn render_showcase_nav(active_route: &str) -> String {
                     { rullst::html::RawHtml(buttons_html.clone()) }
                 </div>
                 <div class="showcase-portals desktop-nav">
-                    <a href="http://127.0.0.1:5555" target="_blank" class="portal-btn studio-btn" title="Open local Developer Control Room">
+                    <button type="button" class="portal-btn studio-btn" onclick="alert('🚀 Rullst Studio (Developer Control Room)\n\nStudio is a local developer cockpit running on loopback at http://127.0.0.1:5555 during local development.\n\nIn production cloud containers, Studio is intentionally disabled by design for security reasons.')">
                         "🚀 Studio"
-                    </a>
-                    <a href="/nexus" target="_blank" class="portal-btn nexus-btn" title="Open Admin CMS">
+                    </button>
+                    <button type="button" class="portal-btn nexus-btn" onclick="alert('🛡️ Rullst Nexus Admin CMS\n\nNexus is the auto-generated Admin Panel. In production, it enforces strict Fail-Closed security with TLS verification.\n\nIn this public cloud demo, raw admin mutations are locked to protect the showcase against anonymous vandalism.')">
                         "🛡️ Nexus"
-                    </a>
+                    </button>
                 </div>
 
                 <div id="showcase-drawer" class="showcase-mobile-drawer">
@@ -111,13 +111,12 @@ pub fn render_showcase_nav(active_route: &str) -> String {
                         { rullst::html::RawHtml(buttons_html) }
                     </div>
                     <div class="showcase-mobile-portals">
-                        <a href="http://127.0.0.1:5555" target="_blank" class="portal-btn studio-btn" title="Open local Developer Control Room">
+                        <button type="button" class="portal-btn studio-btn" onclick="alert('🚀 Rullst Studio (Developer Control Room)\n\nStudio is a local developer cockpit running on loopback at http://127.0.0.1:5555 during local development.\n\nIn production cloud containers, Studio is intentionally disabled by design for security reasons.')">
                             "🚀 Studio"
-                        </a>
-                        <a href="/nexus" target="_blank" class="portal-btn nexus-btn" title="Open Admin CMS">
+                        </button>
+                        <button type="button" class="portal-btn nexus-btn" onclick="alert('🛡️ Rullst Nexus Admin CMS\n\nNexus is the auto-generated Admin Panel. In production, it enforces strict Fail-Closed security with TLS verification.\n\nIn this public cloud demo, raw admin mutations are locked to protect the showcase against anonymous vandalism.')">
                             "🛡️ Nexus"
-                        </a>
-                    </div>
+                        </button></div>
                 </div>
             </div>
         </div>
