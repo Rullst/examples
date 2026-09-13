@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🦀 Rullst Framework — Official Showcase & Blueprints
 
@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![OCI Container Ready](https://img.shields.io/badge/container-cargo--chef-blueviolet.svg?style=flat-square&logo=podman)](Containerfile)
 [![Caddy SSL](https://img.shields.io/badge/proxy-caddy_auto_https-00ADD8.svg?style=flat-square&logo=caddy)](Caddyfile)
+[![Live Showcase](https://img.shields.io/badge/live_demo-azure_container_apps-0078D4.svg?style=flat-square&logo=microsoftazure)](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/)
 
 **The Sovereign SaaS, Full-Stack & Edge/IoT Showcase built with Rullst.**
 
@@ -75,6 +76,14 @@ Access the local endpoints:
 - 🌐 **Web Showcase:** [http://127.0.0.1:3000](http://127.0.0.1:3000)
 - 🛠️ **Rullst Studio (Developer Control Room):** [http://127.0.0.1:5555](http://127.0.0.1:5555)
 - 🛡️ **Nexus Admin CMS:** [http://127.0.0.1:3000/nexus](http://127.0.0.1:3000/nexus)
+
+---
+
+## ☁️ Cloud Deployment: Azure Container Apps (Serverless Scale-to-Zero)
+
+The official live showcase is deployed to **Microsoft Azure Container Apps** using the Consumption Tier (Serverless Scale-to-Zero):
+- 🌐 **Live URL:** [https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/)
+- 📖 **Complete Architecture & Deployment Guide:** See [docs/AZURE_CONTAINER_APPS.md](docs/AZURE_CONTAINER_APPS.md) for details on why ACA outperforms traditional B1s VMs in cost, student credit longevity, and quota stability.
 
 ---
 
