@@ -49,8 +49,7 @@ COPY Rullst.toml /app/Rullst.toml
 
 # Persistent storage directory for SQLite database
 RUN mkdir -p /app/data && chown -R 1000:1000 /app
-COPY db.sqlite /app/data/lms.db
-RUN chown -R 1000:1000 /app/data
+VOLUME ["/app/data"]
 
 ENV HOST="0.0.0.0"
 ENV RULLST_HOST="0.0.0.0"
