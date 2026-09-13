@@ -7,18 +7,78 @@ pub mod middlewares;
 pub mod pages;
 pub mod services;
 
+
+fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::new();
+    let mut buf = 0u32;
+    let mut bits = 0;
+    for &b in input.as_bytes() {
+        let val = match b {
+            b'A'..=b'Z' => b - b'A',
+            b'a'..=b'z' => b - b'a' + 26,
+            b'0'..=b'9' => b - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            b'=' => break,
+            _ if b.is_ascii_whitespace() => continue,
+            _ => return None,
+        };
+        buf = (buf << 6) | u32::from(val);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((buf >> bits) as u8);
+        }
+    }
+    Some(out)
+}
+
+async fn studio_auth_guard(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::http::{header, HeaderValue, StatusCode};
+    use axum::response::IntoResponse;
+
+    let auth_header = req.headers().get(header::AUTHORIZATION).and_then(|v| v.to_str().ok());
+    let expected_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
+    let expected_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_else(|_| "1234567891234567".to_string());
+
+    let mut is_authorized = false;
+    if let Some(auth) = auth_header {
+        if let Some(encoded) = auth.strip_prefix("Basic ") {
+            if let Some(decoded) = decode_base64_cred(encoded.trim()) {
+                if let Ok(credentials) = String::from_utf8(decoded) {
+                    if let Some((user, pass)) = credentials.split_once(':') {
+                        if user == expected_user && pass == expected_pass {
+                            is_authorized = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if is_authorized {
+        next.run(req).await
+    } else {
+        let mut res = (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
+        res.headers_mut().insert(
+            header::WWW_AUTHENTICATE,
+            HeaderValue::from_static("Basic realm=\"Rullst Studio & Nexus\""),
+        );
+        res
+    }
+}
+
 #[rullst::runtime::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::artisan!(crate::migrations::get_migrations());
 
-    let nexus_auth = match rullst::nexus::NexusAuthPolicy::local_development_or_basic_from_env() {
-        Ok(policy) => policy,
-        Err(err) => {
-            eprintln!("⚠️  Nexus auth policy fallback: {err}. Using default showcase credentials.");
-            rullst::nexus::NexusAuthPolicy::basic("rullst_admin", "SovereignRullst2026!Key")?
-        }
-    };
-    let nexus = rullst::nexus::Nexus::new()
+    let nexus_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
+    let nexus_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_else(|_| "1234567891234567".to_string());
+    let nexus_auth = rullst::nexus::NexusAuthPolicy::basic(nexus_user, nexus_pass)?;
+let nexus = rullst::nexus::Nexus::new()
         .with_auth_policy(nexus_auth)
         .with_brand("LMS Admin")
         .register::<models::category::Category>()
@@ -126,11 +186,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         post("/certificates/{certificate_key}/revoke" => controllers::completion_controller::revoke),
     ].layer(rullst::server::from_fn(middlewares::auth_middleware::auth_middleware));
 
+    let studio_router = rullst::studio::data_browser::router()
+        .layer(axum::middleware::from_fn(studio_auth_guard));
+
     let router = public
         .merge_axum(learning.into_axum())
         .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
         .layer(rullst::server::from_fn(rullst::security::headers_middleware))
-        .nest_axum("/nexus", nexus);
+        .nest_axum("/nexus", nexus)
+        .nest_axum("/studio", studio_router)
+        .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()));
 
     #[cfg(debug_assertions)]
     {

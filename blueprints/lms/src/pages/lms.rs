@@ -111,8 +111,10 @@ pub fn index_page(
                             <p class="sub">"A server-rendered starter catalog with bounded search."</p>
                         </div>
                         <nav class="actions" aria-label="Developer tools">
-                            <a class="button secondary" href="/nexus">"Nexus CMS"</a>
-                            <a class="button secondary" href="http://127.0.0.1:5555" target="_blank" rel="noopener noreferrer">"Local Studio"</a>
+                            <a class="button secondary" href="/login">"Login"</a>
+                            <a class="button" href="/register">"Sign Up"</a>
+                            <a class="button secondary" href="/nexus" target="_blank">"🛡️ Nexus Admin"</a>
+                            <a class="button secondary" href="/studio" target="_blank">"🚀 Studio Cockpit"</a>
                         </nav>
                     </header>
                     <main id="catalog-results">
