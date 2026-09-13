@@ -47,16 +47,14 @@ COPY --from=builder /app/target/release/lms /app/lms
 COPY static /app/static
 COPY Rullst.toml /app/Rullst.toml
 
-# Persistent storage directory for SQLite database
-RUN mkdir -p /app/data && chown -R 1000:1000 /app
-VOLUME ["/app/data"]
+RUN chown -R 1000:1000 /app
 
 ENV HOST="0.0.0.0"
 ENV RULLST_HOST="0.0.0.0"
 ENV RULLST_ENV="production"
 ENV PORT=3000
 ENV RUST_LOG="info,rullst=info"
-ENV DATABASE_URL="sqlite:///app/data/lms.db?mode=rwc"
+ENV DATABASE_URL="sqlite:///app/db.sqlite?mode=rwc"
 ENV NEXUS_ADMIN_USERNAME="rullst_admin"
 ENV NEXUS_ADMIN_PASSWORD="SovereignRullst2026!Key"
 ENV APP_KEY="rMjM3gkBQSYlXYmymd5HJh7EfKLJZ0d1"

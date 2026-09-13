@@ -141,10 +141,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         println!("📊 Rullst Studio running on http://127.0.0.1:5555");
     }
-    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://db.sqlite?mode=rwc".to_string());
-    if rullst::db::Orm::init(&db_url).await.is_ok() {
-        for migration in crate::migrations::get_migrations() {
-            let _ = migration.up().await;
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:///app/db.sqlite?mode=rwc".to_string());
+    println!("📦 Connecting to database: {db_url}");
+    match rullst::db::Orm::init(&db_url).await {
+        Ok(_) => {
+            println!("🚀 Running migrations on boot...");
+            for migration in crate::migrations::get_migrations() {
+                if let Err(err) = migration.up().await {
+                    eprintln!("⚠️ Migration error: {err}");
+                }
+            }
+            println!("✅ Database migrations applied successfully!");
+        }
+        Err(err) => {
+            eprintln!("❌ Database connection error: {err}");
         }
     }
     println!("🚀 LMS server starting on port 3000...");
