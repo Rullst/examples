@@ -98,11 +98,11 @@ pub fn render_showcase_nav(active_route: &str) -> String {
                     { rullst::html::RawHtml(buttons_html.clone()) }
                 </div>
                 <div class="showcase-portals desktop-nav">
-                    <button type="button" class="portal-btn studio-btn" onclick="alert('🚀 Rullst Studio (Developer Control Room)\n\nStudio is a local developer cockpit running on loopback at http://127.0.0.1:5555 during local development.\n\nIn production cloud containers, Studio is intentionally disabled by design for security reasons.')">
-                        "🚀 Studio"
+                    <button type="button" class="portal-btn studio-btn" onclick="alert('🚀 Rullst Studio (Developer Control Room)\n\nStudio is an interactive developer cockpit running on loopback at http://127.0.0.1:5555 during local development.\n\nIn cloud production containers, Studio is intentionally disabled by design for zero-attack-surface security.\n\nTo use Studio locally, clone the repo and run:\n$ cargo run\nThen open http://127.0.0.1:5555 in your browser.')" title="Developer Control Room (runs locally on loopback via cargo run at http://127.0.0.1:5555)">
+                        "🚀 Studio (Local Only)"
                     </button>
-                    <button type="button" class="portal-btn nexus-btn" onclick="alert('🛡️ Rullst Nexus Admin CMS\n\nNexus is the auto-generated Admin Panel. In production, it enforces strict Fail-Closed security with TLS verification.\n\nIn this public cloud demo, raw admin mutations are locked to protect the showcase against anonymous vandalism.')">
-                        "🛡️ Nexus"
+                    <button type="button" class="portal-btn nexus-btn" onclick="alert('🛡️ Rullst Nexus Admin CMS\n\nNexus is the auto-generated Admin Panel (/nexus). In production, it enforces strict Fail-Closed security with TLS verification.\n\nIn this public cloud demo, raw admin mutations are locked to protect the showcase against anonymous vandalism.\n\nTo use Nexus locally with full write permissions:\n$ cargo run\nThen open http://127.0.0.1:3000/nexus (User: rullst_admin)')" title="Admin CMS Panel (Protected by strict Fail-Closed TLS in cloud production)">
+                        "🛡️ Nexus (Admin Protected)"
                     </button>
                 </div>
 
@@ -111,13 +111,18 @@ pub fn render_showcase_nav(active_route: &str) -> String {
                         { rullst::html::RawHtml(buttons_html) }
                     </div>
                     <div class="showcase-mobile-portals">
-                        <button type="button" class="portal-btn studio-btn" onclick="alert('🚀 Rullst Studio (Developer Control Room)\n\nStudio is a local developer cockpit running on loopback at http://127.0.0.1:5555 during local development.\n\nIn production cloud containers, Studio is intentionally disabled by design for security reasons.')">
-                            "🚀 Studio"
+                        <button type="button" class="portal-btn studio-btn" onclick="alert('🚀 Rullst Studio (Developer Control Room)\n\nStudio is an interactive developer cockpit running on loopback at http://127.0.0.1:5555 during local development.\n\nIn cloud production containers, Studio is intentionally disabled by design for zero-attack-surface security.\n\nTo use Studio locally, clone the repo and run:\n$ cargo run\nThen open http://127.0.0.1:5555 in your browser.')">
+                            "🚀 Studio (Local Only)"
                         </button>
-                        <button type="button" class="portal-btn nexus-btn" onclick="alert('🛡️ Rullst Nexus Admin CMS\n\nNexus is the auto-generated Admin Panel. In production, it enforces strict Fail-Closed security with TLS verification.\n\nIn this public cloud demo, raw admin mutations are locked to protect the showcase against anonymous vandalism.')">
-                            "🛡️ Nexus"
-                        </button></div>
+                        <button type="button" class="portal-btn nexus-btn" onclick="alert('🛡️ Rullst Nexus Admin CMS\n\nNexus is the auto-generated Admin Panel (/nexus). In production, it enforces strict Fail-Closed security with TLS verification.\n\nIn this public cloud demo, raw admin mutations are locked to protect the showcase against anonymous vandalism.\n\nTo use Nexus locally with full write permissions:\n$ cargo run\nThen open http://127.0.0.1:3000/nexus (User: rullst_admin)')">
+                            "🛡️ Nexus (Admin Protected)"
+                        </button>
+                    </div>
                 </div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.85); border-top: 1px solid rgba(51, 65, 85, 0.4); padding: 0.45rem 1.5rem; font-size: 0.8rem; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 0.6rem; flex-wrap: wrap; text-align: center;">
+                <span style="color: #38bdf8; font-weight: 600;">"🛡️ Architecture Notice:"</span>
+                <span>"Studio is a local developer cockpit (http://127.0.0.1:5555 via cargo run). Nexus Admin CMS enforces strict Fail-Closed TLS in cloud production."</span>
             </div>
         </div>
     }
@@ -294,6 +299,8 @@ pub fn render_shared_styles() -> String {
         gap: 0.5rem;
     }
     .portal-btn {
+        border: none;
+        cursor: pointer;
         text-decoration: none;
         font-size: 0.8rem;
         font-weight: 700;
