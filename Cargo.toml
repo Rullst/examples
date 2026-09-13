@@ -1,0 +1,50 @@
+﻿[package]
+name = "rullst-blog-example"
+version = "12.0.0-rc.1"
+authors = ["Rullst Core Team"]
+edition = "2024"
+publish = false
+autobins = false
+default-run = "rullst-blog-example"
+license = "MIT"
+description = "Official example blog and showcase application built with the Rullst framework suite."
+
+[dependencies]
+async-trait = "0.1.89"
+rullst = { version = "12.0.0-rc.1", features = ["orm", "auth", "capital", "ai", "studio", "nexus", "mailer"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+
+[package.metadata.cargo-machete]
+ignored = ["async-trait", "serde_json", "rullst-security", "rullst-auth", "rullst-capital", "rullst-ai", "rullst-studio", "rullst-nexus"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rullst-orm = "12.0.0-rc.1"
+rullst-security = "12.0.0-rc.1"
+rullst-auth = "12.0.0-rc.1"
+rullst-capital = "12.0.0-rc.1"
+rullst-studio = "12.0.0-rc.1"
+rullst-nexus = "12.0.0-rc.1"
+rullst-ai = "12.0.0-rc.1"
+tracing = "0.1.44"
+tokio = { version = "1.52.3", features = ["full"] }
+sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio"] }
+axum = { version = "0.8.9", features = ["form", "ws"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dev-dependencies]
+tower = { version = "0.5.3", features = ["util"] }
+
+[[bin]]
+name = "rullst-blog-example"
+path = "src/main.rs"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.123"
+web-sys = { version = "0.3.100", features = ["Document", "Element", "Window", "EventTarget", "HtmlElement", "console"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+getrandom = { version = "0.4.2", features = ["wasm_js"] }

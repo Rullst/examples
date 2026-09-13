@@ -1,0 +1,40 @@
+﻿version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - APP_ENV=production
+      - RUST_LOG=info,rullst=info
+      - DATABASE_URL=sqlite:///app/data/blog.db
+    volumes:
+      - app_data:/app/data
+    expose:
+      - "3000"
+
+  caddy:
+    image: docker.io/library/caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  app_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local

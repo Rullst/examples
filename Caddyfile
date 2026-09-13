@@ -1,0 +1,30 @@
+﻿# ==============================================================================
+# Rullst Framework - Caddy Production Reverse Proxy
+# Automatic HTTPS via Let's Encrypt / ZeroSSL + WebSockets for LiveView
+# ==============================================================================
+
+{$DOMAIN:localhost} {
+    # Encode responses using modern zstd and gzip algorithms
+    encode zstd gzip
+
+    # Reverse proxy to Rullst application
+    reverse_proxy app:3000 {
+        # Transparently pass client headers for RASP and security audit logs
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+}
