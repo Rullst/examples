@@ -34,6 +34,21 @@ fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
 }
 
 
+async fn coep_policy_patch(
+    req: rullst::server::Request,
+    next: rullst::server::Next,
+) -> rullst::server::Response {
+    let uri = req.uri().path().to_string();
+    let mut res = next.run(req).await;
+    if uri.starts_with("/lessons/") && uri.ends_with("/play") {
+        res.headers_mut().insert(
+            rullst::server::header::HeaderName::from_static("cross-origin-embedder-policy"),
+            rullst::server::HeaderValue::from_static("unsafe-none"),
+        );
+    }
+    res
+}
+
 async fn studio_tailwind_patch(
     req: rullst::server::Request,
     next: rullst::server::Next,
@@ -240,7 +255,8 @@ let nexus = rullst::nexus::Nexus::new()
             .nest_axum("/nexus", nexus)
             .nest_axum("/studio", studio_router)
             .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))
-    };
+    }
+    .layer(rullst::server::from_fn(coep_policy_patch));
 
     #[cfg(debug_assertions)]
     {
