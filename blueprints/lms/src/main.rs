@@ -33,6 +33,42 @@ fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
+
+async fn studio_css_handler() -> rullst::server::Response {
+    use rullst::server::IntoResponse;
+    let mut res = (
+        [(rullst::server::header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        include_str!("../static/studio.css"),
+    ).into_response();
+    res.headers_mut().insert(
+        rullst::server::header::CACHE_CONTROL,
+        rullst::server::HeaderValue::from_static("public, max-age=31536000"),
+    );
+    res
+}
+
+async fn studio_css_patch(
+    req: rullst::server::Request,
+    next: rullst::server::Next,
+) -> rullst::server::Response {
+    use rullst::server::IntoResponse;
+    let res = next.run(req).await;
+    let (mut parts, body) = res.into_parts();
+    let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
+        return (rullst::server::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer studio body").into_response();
+    };
+    let html = String::from_utf8_lossy(&bytes);
+    if html.contains("cdn.tailwindcss.com") {
+        let patched = html.replace(
+            r#"<script src="https://cdn.tailwindcss.com"></script>"#,
+            r#"<link rel="stylesheet" href="/studio.css" />"#
+        );
+        parts.headers.remove(rullst::server::header::CONTENT_LENGTH);
+        return rullst::server::Response::from_parts(parts, axum::body::Body::from(patched));
+    }
+    rullst::server::Response::from_parts(parts, axum::body::Body::from(bytes))
+}
+
 async fn studio_auth_guard(
     req: rullst::server::Request,
     next: rullst::server::Next,
@@ -137,6 +173,7 @@ let nexus = rullst::nexus::Nexus::new()
     let public = routes![
         get("/" => controllers::lms_controller::index),
         get("/favicon.ico" => controllers::lms_controller::favicon_handler),
+        get("/studio.css" => studio_css_handler),
         // rullst-access: public — course metadata and lesson titles form the public catalog.
         get("/courses/{id}" => controllers::lms_controller::show_course),
         // rullst-access: public — an opaque certificate key reveals bounded course evidence, never learner PII.
@@ -198,6 +235,7 @@ let nexus = rullst::nexus::Nexus::new()
     ].layer(rullst::server::from_fn(middlewares::auth_middleware::auth_middleware));
 
     let studio_router = rullst::studio::data_browser::router()
+        .layer(rullst::server::from_fn(studio_css_patch))
         .layer(rullst::server::from_fn(studio_auth_guard));
 
     let is_prod_or_staging = std::env::var("RULLST_ENV")

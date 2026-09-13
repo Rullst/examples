@@ -141,6 +141,10 @@ During the transition from local `cargo run` to containerized cloud deployment o
      `net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginAfterDefaultedToSameOriginByCoep`
   5. Because the runtime script is blocked by browser security, none of the Tailwind classes (`bg-slate-950`, `text-slate-100`, `border-slate-800`, etc.) are compiled into CSS rules.
   6. By contrast, Nexus (`rullst-nexus/src/nexus/ui.rs`) embeds its dark theme (`NEXUS_CSS`) directly as an inline `<style>` tag inside the Rust binary, making it entirely immune to COEP and 100% self-contained.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  1. Created a self-contained dark glassmorphic stylesheet at `static/studio.css` matching the Rullst Studio Design System (`slate-950` palette, glassmorphic headers, tables, telemetry badges).
+  2. Registered a dedicated `GET /studio.css` route serving the embedded stylesheet with long-lived public cache headers.
+  3. Added a lightweight response-patch middleware (`studio_css_patch`) to the `/studio` sub-router that replaces the blocked `https://cdn.tailwindcss.com` script with the same-origin `<link rel="stylesheet" href="/studio.css" />`, ensuring immediate dark glassmorphic rendering immune to COEP.
 * **Framework Recommendation for Core Agent (`GPT-5.6 Sol`):**
   1. Adopt the Nexus design pattern in `rullst-studio`: replace the external `cdn.tailwindcss.com` Play CDN script with a zero-dependency, pre-compiled Vanilla CSS stylesheet embedded directly inside the `rullst-studio` binary (e.g. `STUDIO_CSS`).
   2. Guarantee that Studio is 100% self-contained and offline-first, requiring zero external CDN requests to achieve its intended dark glassmorphic UI.
