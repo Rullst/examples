@@ -34,20 +34,7 @@ fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
 }
 
 
-async fn studio_css_handler() -> rullst::server::Response {
-    use rullst::server::IntoResponse;
-    let mut res = (
-        [(rullst::server::header::CONTENT_TYPE, "text/css; charset=utf-8")],
-        include_str!("../static/studio.css"),
-    ).into_response();
-    res.headers_mut().insert(
-        rullst::server::header::CACHE_CONTROL,
-        rullst::server::HeaderValue::from_static("public, max-age=31536000"),
-    );
-    res
-}
-
-async fn studio_css_patch(
+async fn studio_tailwind_patch(
     req: rullst::server::Request,
     next: rullst::server::Next,
 ) -> rullst::server::Response {
@@ -59,10 +46,7 @@ async fn studio_css_patch(
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("cdn.tailwindcss.com") {
-        let patched = html.replace(
-            r#"<script src="https://cdn.tailwindcss.com"></script>"#,
-            r#"<link rel="stylesheet" href="/studio.css" />"#
-        );
+        let patched = html.replace("https://cdn.tailwindcss.com", "/static/tailwind.js");
         parts.headers.remove(rullst::server::header::CONTENT_LENGTH);
         return rullst::server::Response::from_parts(parts, axum::body::Body::from(patched));
     }
@@ -173,7 +157,6 @@ let nexus = rullst::nexus::Nexus::new()
     let public = routes![
         get("/" => controllers::lms_controller::index),
         get("/favicon.ico" => controllers::lms_controller::favicon_handler),
-        get("/studio.css" => studio_css_handler),
         // rullst-access: public — course metadata and lesson titles form the public catalog.
         get("/courses/{id}" => controllers::lms_controller::show_course),
         // rullst-access: public — an opaque certificate key reveals bounded course evidence, never learner PII.
@@ -235,7 +218,7 @@ let nexus = rullst::nexus::Nexus::new()
     ].layer(rullst::server::from_fn(middlewares::auth_middleware::auth_middleware));
 
     let studio_router = rullst::studio::data_browser::router()
-        .layer(rullst::server::from_fn(studio_css_patch))
+        .layer(rullst::server::from_fn(studio_tailwind_patch))
         .layer(rullst::server::from_fn(studio_auth_guard));
 
     let is_prod_or_staging = std::env::var("RULLST_ENV")
@@ -279,6 +262,30 @@ let nexus = rullst::nexus::Nexus::new()
                 }
             }
             println!("✅ Database migrations applied successfully!");
+            if let Ok(pool) = rullst::db::Orm::pool() {
+                // Seed Course 2 scope for default demo school so all learners can enroll
+                let _ = rullst::db::sqlx::query(
+                    "INSERT OR REPLACE INTO course_school_scopes (school_id, course_id, enrollment_policy, created_at, updated_at) VALUES (1, 2, 'open', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ).execute(pool).await;
+
+                // Seed real YouTube video lessons for Rust & Web Development
+                let _ = rullst::db::sqlx::query(
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/5C_HPTJg5ek', title = 'Introduction to Memory Safety in Rust', transcript = 'Rust achieves memory safety without a garbage collector through its ownership model. In this lesson, we explore how ownership, borrowing, and lifetimes guarantee that references always point to valid data.' WHERE id = 1"
+                ).execute(pool).await;
+
+                let _ = rullst::db::sqlx::query(
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/8O0Nt9qYn6o', title = 'Deep Dive into Smart Pointers & Concurrency', transcript = 'Smart pointers act like pointers but have additional metadata and capabilities. We explore Box for heap allocation, Rc for single-threaded reference counting, and Arc/Mutex for thread-safe concurrent design.' WHERE id = 2"
+                ).execute(pool).await;
+
+                let _ = rullst::db::sqlx::query(
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/L8tffdfhyvU', title = 'Setting up your first Rust Web Application', transcript = 'Rust is rapidly becoming the premier choice for backend web infrastructure. Learn how Rullst organizes routes, handles asynchronous IO with Tokio, and integrates active record data models.' WHERE id = 3"
+                ).execute(pool).await;
+
+                let _ = rullst::db::sqlx::query(
+                    "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube-nocookie.com/embed/r-GSGH2RxJs', title = 'Building Interactive UIs with HTMX', transcript = 'HTMX gives you access to AJAX, CSS Transitions, and Server-Sent Events directly in HTML. Pair HTMX with Rust server-side rendering for rich, dynamic user interfaces without heavy JavaScript bundle complexity.' WHERE id = 4"
+                ).execute(pool).await;
+                println!("🎥 Educational YouTube video lessons and open course scopes initialized!");
+            }
         }
         Err(err) => {
             eprintln!("❌ Database connection error: {err}");

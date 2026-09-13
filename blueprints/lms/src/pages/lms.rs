@@ -281,26 +281,42 @@ pub fn lesson_player_page(
     if transcript.is_empty() || transcript.len() > 65_536 {
         return Err(LessonMediaError::InvalidTranscript);
     }
-    let media_player = match media_kind {
-        "video" => {
-            if !valid_media_source(captions_url) {
-                return Err(LessonMediaError::MissingCaptions);
-            }
-            html! {
-                <video controls="controls" preload="metadata">
-                    <source src={media_url} />
-                    <track kind="captions" src={captions_url} srclang={language_tag} label={language_tag} default="true" />
-                    "Your browser does not support HTML video. Use the transcript below."
-                </video>
-            }
+    let is_youtube = media_url.contains("youtube.com") || media_url.contains("youtube-nocookie.com") || media_kind == "youtube";
+    let media_player = if is_youtube {
+        html! {
+            <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:1rem;border:1px solid #334155;background:#000;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5);">
+                <iframe
+                    src={media_url}
+                    title={title}
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen="true">
+                </iframe>
+            </div>
         }
-        "audio" => html! {
-            <audio controls="controls" preload="metadata">
-                <source src={media_url} />
-                "Your browser does not support HTML audio. Use the transcript below."
-            </audio>
-        },
-        _ => return Err(LessonMediaError::InvalidKind),
+    } else {
+        match media_kind {
+            "video" => {
+                if !valid_media_source(captions_url) {
+                    return Err(LessonMediaError::MissingCaptions);
+                }
+                html! {
+                    <video controls="controls" preload="metadata">
+                        <source src={media_url} />
+                        <track kind="captions" src={captions_url} srclang={language_tag} label={language_tag} default="true" />
+                        "Your browser does not support HTML video. Use the transcript below."
+                    </video>
+                }
+            }
+            "audio" => html! {
+                <audio controls="controls" preload="metadata">
+                    <source src={media_url} />
+                    "Your browser does not support HTML audio. Use the transcript below."
+                </audio>
+            },
+            _ => return Err(LessonMediaError::InvalidKind),
+        }
     };
     Ok(html! {
         <html lang="en" class="dark">

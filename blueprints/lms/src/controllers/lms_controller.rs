@@ -111,6 +111,7 @@ pub async fn index(
 
 pub async fn show_course(
     Path(id): Path<i32>,
+    headers: rullst::server::HeaderMap,
     csrf: Option<Extension<rullst::security::CsrfToken>>,
     csp_nonce: Option<Extension<rullst::security::CspNonce>>,
 ) -> Response {
@@ -132,10 +133,24 @@ pub async fn show_course(
         Ok(lessons) => lessons,
         Err(error) => return error_response(error.into()),
     };
-    let csrf_token = csrf
+    let token_owned = csrf
         .as_ref()
-        .map(|Extension(token)| token.as_str())
-        .unwrap_or_default();
+        .map(|Extension(token)| token.as_str().to_owned())
+        .unwrap_or_else(|| {
+            headers
+                .get(rullst::server::header::COOKIE)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|cookie_header| {
+                    cookie_header.split(';').find_map(|cookie| {
+                        cookie
+                            .trim()
+                            .strip_prefix("rullst_csrf=")
+                            .map(ToOwned::to_owned)
+                    })
+                })
+                .unwrap_or_default()
+        });
+    let csrf_token = token_owned.as_str();
     let nonce = csp_nonce
         .as_ref()
         .map(|Extension(value)| value.as_str())
