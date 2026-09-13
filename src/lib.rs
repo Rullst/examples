@@ -144,7 +144,7 @@ pub mod app {
                 <head>
                     <meta charset="utf-8" />
                     <title>"Rullst Sovereign SaaS Blog & Publisher"</title>
-                    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
+                    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                     <style>{ rullst::html::RawHtml(styles) }</style>
                 </head>
                 <body>
@@ -225,7 +225,7 @@ pub mod app {
             <head>
                 <meta charset="utf-8" />
                 <title>"Rullst LiveView - Real-time WebSockets Feed"</title>
-                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
+                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style>{ rullst::html::RawHtml(styles) }</style>
                 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
                 <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
@@ -263,7 +263,7 @@ pub mod app {
             <head>
                 <meta charset="utf-8" />
                 <title>"Rullst Wasm Island - Client-side Reactive WebAssembly"</title>
-                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
+                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style>{ rullst::html::RawHtml(styles) }</style>
             </head>
             <body>
@@ -308,7 +308,7 @@ pub mod app {
     }
 
     pub async fn favicon_handler() -> impl IntoResponse {
-        Redirect::temporary("https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png")
+        Redirect::temporary("https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png")
     }
 
     pub async fn robots_txt() -> impl IntoResponse {
@@ -322,7 +322,7 @@ pub mod app {
         (
             axum::http::StatusCode::OK,
             [(axum::http::header::CONTENT_TYPE, "application/xml")],
-            r#"<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>http://localhost:3000/</loc></url></urlset>"#,
+            r#"<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/</loc></url></urlset>"#,
         )
     }
 

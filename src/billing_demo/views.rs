@@ -64,7 +64,7 @@ pub fn render_pricing_page(
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>"Rullst Capital — Connected Payment Gateways & Configuration Guide"</title>
-                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
+                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style>{ rullst::html::RawHtml(styles) }</style>
                 <style>{ rullst::html::RawHtml(extra_styles.to_string()) }</style>
             </head>
@@ -206,7 +206,7 @@ pub fn render_pricing_page(
                                 </p>
                             </div>
                             <div>
-                                <a href="https://github.com/venelouis/Rullst/blob/main/docs/src/payment-gateways-guide.md" target="_blank" class="btn" style="font-size: 0.85rem; padding: 0.4rem 0.85rem;">
+                                <a href="https://github.com/Rullst/Rullst/blob/main/docs/src/payment-gateways-guide.md" target="_blank" class="btn" style="font-size: 0.85rem; padding: 0.4rem 0.85rem;">
                                     "📖 Open Full Architecture Guide"
                                 </a>
                             </div>

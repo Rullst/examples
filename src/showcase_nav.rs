@@ -82,7 +82,7 @@ pub fn render_showcase_nav(active_route: &str) -> String {
         <div class="showcase-banner">
             <div class="showcase-banner-inner">
                 <a href="/" class="showcase-brand" style="text-decoration: none; color: inherit;">
-                    <img src="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" alt="Rullst Logo" class="showcase-brand-img" />
+                    <img src="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" alt="Rullst Logo" class="showcase-brand-img" />
                     <span class="showcase-logo">"RULLST"</span>
                     <span class="showcase-badge">"v12.0 Enterprise"</span>
                     <span class="tenant-badge" title="Active Multi-Tenant Context">
