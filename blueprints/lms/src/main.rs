@@ -9,6 +9,10 @@ pub mod services;
 
 #[rullst::runtime::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var("HOST").is_err() && std::env::var("RULLST_HOST").is_err() {
+        std::env::set_var("HOST", "0.0.0.0");
+        std::env::set_var("RULLST_HOST", "0.0.0.0");
+    }
     rullst::artisan!(crate::migrations::get_migrations());
 
     let nexus_auth = match rullst::nexus::NexusAuthPolicy::local_development_or_basic_from_env() {
