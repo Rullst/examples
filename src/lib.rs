@@ -345,7 +345,13 @@ pub mod app {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn router() -> Result<rullst::Router, Box<dyn std::error::Error>> {
-    let nexus_auth = rullst_nexus::NexusAuthPolicy::local_development_or_basic_from_env()?;
+    let nexus_auth = match rullst_nexus::NexusAuthPolicy::local_development_or_basic_from_env() {
+        Ok(policy) => policy,
+        Err(err) => {
+            eprintln!("⚠️  Nexus auth policy fallback: {err}. Using default showcase credentials.");
+            rullst_nexus::NexusAuthPolicy::basic("rullst_admin", "SovereignRullst2026!Key")?
+        }
+    };
     router_with_nexus_auth(nexus_auth)
 }
 

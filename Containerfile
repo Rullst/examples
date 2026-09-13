@@ -54,9 +54,13 @@ COPY Rullst.toml /app/Rullst.toml
 RUN mkdir -p /app/data && chown -R 1000:1000 /app
 VOLUME ["/app/data"]
 
+ENV HOST="0.0.0.0"
 ENV PORT=3000
+ENV APP_ENV="production"
 ENV RUST_LOG="info,rullst=info"
 ENV DATABASE_URL="sqlite:///app/data/blog.db"
+ENV NEXUS_ADMIN_USERNAME="rullst_admin"
+ENV NEXUS_ADMIN_PASSWORD="SovereignRullst2026!Key"
 
 EXPOSE 3000
 
@@ -64,3 +68,4 @@ EXPOSE 3000
 USER 1000:1000
 
 CMD ["/app/rullst-blog-example"]
+

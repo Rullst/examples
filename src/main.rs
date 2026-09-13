@@ -17,7 +17,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Initialize SQLite database
-    Orm::init("sqlite://blog.db").await?;
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://blog.db".to_string());
+    Orm::init(&db_url).await?;
 
     // Create table schema
     let pool = Orm::pool()?;
