@@ -200,13 +200,26 @@ let nexus = rullst::nexus::Nexus::new()
     let studio_router = rullst::studio::data_browser::router()
         .layer(rullst::server::from_fn(studio_auth_guard));
 
-    let router = public
-        .merge_axum(learning.into_axum())
-        .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
-        .layer(rullst::server::from_fn(rullst::security::headers_middleware))
-        .nest_axum("/nexus", nexus)
-        .nest_axum("/studio", studio_router)
-        .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()));
+    let is_prod_or_staging = std::env::var("RULLST_ENV")
+        .or_else(|_| std::env::var("APP_ENV"))
+        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "production" | "prod" | "staging" | "stage"))
+        .unwrap_or(false);
+
+    let router = if !is_prod_or_staging {
+        public
+            .merge_axum(learning.into_axum())
+            .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
+            .layer(rullst::server::from_fn(rullst::security::headers_middleware))
+            .nest_axum("/nexus", nexus)
+            .nest_axum("/studio", studio_router)
+            .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+    } else {
+        public
+            .merge_axum(learning.into_axum())
+            .nest_axum("/nexus", nexus)
+            .nest_axum("/studio", studio_router)
+            .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+    };
 
     #[cfg(debug_assertions)]
     {

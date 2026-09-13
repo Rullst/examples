@@ -20,7 +20,7 @@ As agreed in the inter-agent release protocol prior to publishing the `v12.0.0` 
 The LMS blueprint represents the most demanding blueprint in the Rullst ecosystem: it exercises **13 sequential database migrations**, active record models, multi-role RBAC (Learner vs Instructor vs Admin), monotonic lesson progress tracking, CSRF double-submit token verification, WAF protection, and Nexus Admin panel integration.
 
 ### Overall Assessment: **CONDITIONAL GO (95% Verification)**
-The blueprint demonstrates stellar architecture, type safety, sub-millisecond route latency, and strict security invariants. However, the real-world cloud deployment revealed **8 critical Developer Experience (DX) and lifecycle gotchas** that should be integrated into the core framework before declaring `v12.0.0` final.
+The blueprint demonstrates stellar architecture, type safety, sub-millisecond route latency, and strict security invariants. However, the real-world cloud deployment revealed **9 critical Developer Experience (DX) and lifecycle gotchas** that should be integrated into the core framework before declaring `v12.0.0` final.
 
 ---
 
@@ -151,6 +151,23 @@ During the transition from local `cargo run` to containerized cloud deployment o
   1. In `cargo-rullst`, scaffolds featuring multi-tenancy or school partitioning must generate an automatic tenant onboarding hook (e.g. creating the default membership record upon registration).
   2. Implement an auto-provisioning fallback in `auth_middleware` for single-tenant / starter deployments to avoid unhandled 403 dead-ends.
 
+
+---
+
+### Finding 9: Double CSRF Middleware Execution in Production Environments (HTTP 403 "CSRF token cookie missing")
+* **Symptom:** When submitting `POST /register` or `POST /login` from any web browser on a live cloud deployment (Azure Container Apps, staging, or production), the server immediately rejects the request with `HTTP 403 Forbidden` and body message `CSRF token cookie missing`. Account registration and authentication are completely unusable for visitors.
+* **Root Cause:**
+  1. In `rullst-core/src/server/builder.rs`, `Server::run` automatically calls `crate::security::apply_security_baseline(app, app_config.security, environment)` when the environment requires secure defaults (`Environment::Production` or `Environment::Staging`).
+  2. `apply_security_baseline` canonically wraps the application router with `axum::middleware::from_fn(crate::security::csrf_middleware)` and `axum::middleware::from_fn(crate::security::headers_middleware)`.
+  3. The blueprint scaffold (`blueprints/lms/src/main.rs`) also manually registered `.layer(rullst::server::from_fn(rullst::security::csrf_middleware))` directly on the merged application router.
+  4. As a result, in production, `csrf_middleware` executed **twice** in series on every request. On the initial `GET /register` or `GET /login`, the outer and inner middleware each generated an independent token, emitting two distinct `set-cookie: rullst_csrf=...` headers in the same HTTP response.
+  5. When the user submitted the form, the browser transmitted both cookie values in the `Cookie` header. In `rullst-core/src/security/csrf.rs` (`csrf_token_from_cookies`), encountering multiple `rullst_csrf` cookies strictly triggers `if found.is_some() { return None; }` to guard against cookie-tossing attacks. Because it returned `None`, `handle_csrf_state_modifying` treated the cookie as missing and returned `403 Forbidden ("CSRF token cookie missing")`.
+* **Applied Resolution in Live Blueprint (`examples/blueprints/lms`):**
+  - In `blueprints/lms/src/main.rs`, guarded manual CSRF and security headers middleware registration behind an environment check (`!is_prod_or_staging`), allowing `Server::run`'s canonical `apply_security_baseline` to manage them exclusively in staging and production without double-layering.
+* **Framework Recommendation for Core Agent (`Rullst`):**
+  1. In `cargo-rullst`, update all blueprint templates (`blank`, `erp`, `saas`, `lms`) to eliminate redundant manual `csrf_middleware` layering when using `Server::new(router).run(...)`.
+  2. In `rullst-core/src/security/baseline.rs`, make `apply_security_baseline` idempotent by detecting whether `CsrfToken` or CSRF middleware has already been installed on the incoming Axum router.
+
 ## 3. Inter-Agent Synthesis & Final Release Verdict
 
 | Milestone | Status | Responsible Agent | Notes |
@@ -158,12 +175,12 @@ During the transition from local `cargo run` to containerized cloud deployment o
 | Core Crates Test Suites | **COMPLETE** | Monorepo Hardening Agent (GPT-5.6 Sol Extra-High) | 100% pass across all core crates. |
 | Mutation & Scorecard Hardening | **IN PROGRESS** | Monorepo Hardening Agent (GPT-5.6 Sol Extra-High) | Final mutation shard isolation commits landed. |
 | Blueprint LMS Cloud Verification | **COMPLETE** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | All 9 invariants verified; live Azure showcase deployed. |
-| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | Documented above in Findings 1–8. |
+| DX Hardening Recommendations | **SUBMITTED** | Showcase & Deployment Agent (Gemini 3.8 Flash High) | Documented above in Findings 1–9. |
 
 ### 🏁 Final Release Gate Recommendation: **CONDITIONAL GO**
 
 The Rullst framework architecture is sound, secure, and production-ready. We recommend that the core hardening agent:
-1. Review and incorporate the recommendations from Findings 1 through 8 into `cargo-rullst` and `rullst-core`.
+1. Review and incorporate the recommendations from Findings 1 through 9 into `cargo-rullst` and `rullst-core`.
 2. Proceed with the topological `crates.io` publishing order outlined in `AGENTS.md` Section 4.2.
 
 *Report signed and sealed by the Showcase & Deployment Agent.*
