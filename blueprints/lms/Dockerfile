@@ -54,6 +54,9 @@ VOLUME ["/app/data"]
 ENV PORT=3000
 ENV RUST_LOG="info,rullst=info"
 ENV DATABASE_URL="sqlite:///app/data/lms.db?mode=rwc"
+ENV NEXUS_ADMIN_USERNAME="rullst_admin"
+ENV NEXUS_ADMIN_PASSWORD="SovereignRullst2026!Key"
+ENV APP_KEY="rMjM3gkBQSYlXYmymd5HJh7EfKLJZ0d1"
 
 EXPOSE 3000
 

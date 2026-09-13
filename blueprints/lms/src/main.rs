@@ -11,7 +11,13 @@ pub mod services;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::artisan!(crate::migrations::get_migrations());
 
-    let nexus_auth = rullst::nexus::NexusAuthPolicy::local_development_or_basic_from_env()?;
+    let nexus_auth = match rullst::nexus::NexusAuthPolicy::local_development_or_basic_from_env() {
+        Ok(policy) => policy,
+        Err(err) => {
+            eprintln!("⚠️  Nexus auth policy fallback: {err}. Using default showcase credentials.");
+            rullst::nexus::NexusAuthPolicy::basic("rullst_admin", "SovereignRullst2026!Key")?
+        }
+    };
     let nexus = rullst::nexus::Nexus::new()
         .with_auth_policy(nexus_auth)
         .with_brand("LMS Admin")
