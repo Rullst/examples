@@ -67,10 +67,11 @@ jobs:
 
       - name: Generate and Package iOS Xcode Project
         if: matrix.os == 'macos'
-        working-directory: ./blueprints/lms/omni-app
         run: |
+          cd ./blueprints/lms/omni-app
           npx tauri ios init --ci
-          cd gen && zip -r ../../../Rullst.LMS_1.0.0_iOS_Xcode.zip apple
+          cd gen/apple && zip -r "${GITHUB_WORKSPACE}/Rullst.LMS_1.0.0_iOS_Xcode.zip" .
+          ls -la "${GITHUB_WORKSPACE}/Rullst.LMS_1.0.0_iOS_Xcode.zip"
 
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v4
