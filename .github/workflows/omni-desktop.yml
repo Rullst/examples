@@ -9,8 +9,30 @@ on:
       - '.github/workflows/omni-desktop.yml'
 
 jobs:
-  build-desktop-windows:
-    runs-on: windows-latest
+  build-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            os: windows
+            artifact_name: Rullst-LMS-Windows
+            bundle_path: |
+              ./blueprints/lms/omni-app/target/release/bundle/nsis/*.exe
+              ./blueprints/lms/omni-app/target/release/bundle/msi/*.msi
+          - platform: macos-latest
+            os: macos
+            artifact_name: Rullst-LMS-macOS
+            bundle_path: |
+              ./blueprints/lms/omni-app/target/release/bundle/dmg/*.dmg
+          - platform: ubuntu-22.04
+            os: linux
+            artifact_name: Rullst-LMS-Linux
+            bundle_path: |
+              ./blueprints/lms/omni-app/target/release/bundle/appimage/*.AppImage
+              ./blueprints/lms/omni-app/target/release/bundle/deb/*.deb
+
+    runs-on: ${{ matrix.platform }}
     permissions:
       contents: write
 
@@ -18,10 +40,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -38,16 +64,14 @@ jobs:
         env:
           CI: true
 
-      - name: Upload Windows Desktop Artifact
+      - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Rullst-LMS-Windows-Desktop
-          path: |
-            ./blueprints/lms/omni-app/target/release/bundle/nsis/*.exe
-            ./blueprints/lms/omni-app/target/release/bundle/msi/*.msi
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.bundle_path }}
           if-no-files-found: warn
 
-      - name: Create or Update GitHub Release
+      - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         with:
@@ -55,14 +79,13 @@ jobs:
           name: "Rullst LMS & Omni Desktop v1.0.0"
           body: |
             ## Rullst Omni Desktop Apps (v1.0.0)
-            Official native desktop installers generated using Rullst Omni (`cargo rullst make:omni`).
+            Official native desktop packages generated using Rullst Omni (`cargo rullst make:omni`).
             
-            - **Target:** Windows x64 (.exe installer & .msi package)
-            - **Framework:** Rullst Framework + Tauri 2.0
-            - **Backend:** Azure Cloud Container
-          files: |
-            ./blueprints/lms/omni-app/target/release/bundle/nsis/*.exe
-            ./blueprints/lms/omni-app/target/release/bundle/msi/*.msi
+            - **Windows:** `.exe` installer & `.msi` package
+            - **macOS:** `.dmg` disk image (Apple Silicon & Intel)
+            - **Linux:** `.AppImage` standalone binary & `.deb` package
+            - **Engine:** Tauri 2.0 + Rust
+          files: ${{ matrix.bundle_path }}
           draft: false
           prerelease: false
         env:
