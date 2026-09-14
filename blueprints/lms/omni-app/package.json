@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.4"
+  },
+  "name": "rullst-omni",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri"
+  },
+  "version": "1.0.0"
+}

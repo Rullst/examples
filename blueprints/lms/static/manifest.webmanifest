@@ -1,0 +1,28 @@
+{
+  "name": "Rullst LMS - Systems Academy",
+  "short_name": "Rullst LMS",
+  "description": "High-performance learning management platform powered by the Rullst Framework.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080b11",
+  "theme_color": "#080b11",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "education",
+    "developer-tools"
+  ]
+}

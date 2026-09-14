@@ -170,6 +170,15 @@ async fn studio_auth_guard(
     }
 }
 
+
+async fn manifest_handler() -> impl rullst::server::IntoResponse {
+    ([(rullst::server::header::CONTENT_TYPE, "application/manifest+json")], include_str!("../static/manifest.webmanifest"))
+}
+
+async fn sw_handler() -> impl rullst::server::IntoResponse {
+    ([(rullst::server::header::CONTENT_TYPE, "application/javascript")], include_str!("../static/sw.js"))
+}
+
 #[rullst::runtime::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::artisan!(crate::migrations::get_migrations());
@@ -232,6 +241,9 @@ let nexus = rullst::nexus::Nexus::new()
     let public = routes![
         get("/" => controllers::lms_controller::index),
         get("/favicon.ico" => controllers::lms_controller::favicon_handler),
+        get("/apps" => pages::apps::apps_page),
+        get("/manifest.webmanifest" => manifest_handler),
+        get("/sw.js" => sw_handler),
         // rullst-access: public — course metadata and lesson titles form the public catalog.
         get("/courses/{id}" => controllers::lms_controller::show_course),
         // rullst-access: public — an opaque certificate key reveals bounded course evidence, never learner PII.
@@ -341,7 +353,7 @@ let nexus = rullst::nexus::Nexus::new()
             println!("✅ Database migrations applied successfully!");
             if let Ok(pool) = rullst::db::Orm::pool() {
                 // Seed permanent demo learner account
-                if let Ok(demo_hash) = rullst::auth::hash_password_async("Password123!".to_string()).await {
+                if let Ok(demo_hash) = rullst::auth::hash_password_async("RullstAcademy2026!".to_string()).await {
                     let _ = rullst::db::sqlx::query(
                         "INSERT OR IGNORE INTO users (id, name, email, password_hash, created_at, updated_at) VALUES (100, 'Demo Learner', 'demo@rullst.dev', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                     ).bind(&demo_hash).execute(pool).await;

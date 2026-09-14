@@ -1,0 +1,10 @@
+:root { font-family: system-ui, sans-serif; color: #e2e8f0; background: #020617; }
+* { box-sizing: border-box; }
+body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 2rem; }
+main { width: min(32rem, 100%); padding: 2rem; text-align: center; border: 1px solid #334155; border-radius: 1.5rem; background: #0f172acc; box-shadow: 0 1.5rem 5rem #0008; }
+.mark { display: inline-grid; place-items: center; width: 4rem; height: 4rem; border-radius: 1rem; color: white; font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #2563eb, #7c3aed); }
+h1 { margin: 1.25rem 0 .5rem; font-size: clamp(1.5rem, 6vw, 2rem); }
+p, noscript { color: #94a3b8; }
+button { margin-top: 1rem; padding: .75rem 1.25rem; color: white; border: 0; border-radius: .75rem; background: #2563eb; font: inherit; font-weight: 700; cursor: pointer; }
+button:disabled { opacity: .45; cursor: wait; }
+button:focus-visible { outline: .2rem solid #93c5fd; outline-offset: .2rem; }

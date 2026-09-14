@@ -67,6 +67,8 @@ pub fn index_page(
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>"Rullst Academy — Course catalog"</title>
+                <link rel="manifest" href="/manifest.webmanifest" />
+                <meta name="theme-color" content="#080b11" />
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style nonce={csp_nonce}>
                     "
@@ -115,6 +117,7 @@ pub fn index_page(
                             </p>
                         </div>
                         <nav class="actions" aria-label="Developer tools">
+                            <a class="button secondary" href="/apps" style="border-color:#10b981;color:#34d399">"📱 Apps & PWA"</a>
                             <a class="button secondary" href="/login">"Login"</a>
                             <a class="button" href="/register">"Sign Up"</a>
                             <a class="button secondary" href="/nexus" target="_blank">"🛡️ Nexus Admin"</a>
@@ -138,6 +141,9 @@ pub fn index_page(
                         </div>
                     </main>
                 </div>
+                <script nonce={csp_nonce}>
+                    "if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(console.error)); }"
+                </script>
             </body>
         </html>
     }

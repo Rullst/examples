@@ -1,0 +1,18 @@
+[package]
+name = "rullst-omni"
+version = "1.0.0"
+description = "Rullst Omni application shell"
+authors = ["Rullst Developer"]
+edition = "2021"
+
+[lib]
+name = "rullst_omni"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+tauri = { version = "=2.11.5", features = [] }
+
+[workspace]

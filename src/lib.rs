@@ -356,6 +356,15 @@ pub mod app {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+
+async fn manifest_handler() -> impl rullst::server::IntoResponse {
+    ([(rullst::server::header::CONTENT_TYPE, "application/manifest+json")], include_str!("../static/manifest.webmanifest"))
+}
+
+async fn sw_handler() -> impl rullst::server::IntoResponse {
+    ([(rullst::server::header::CONTENT_TYPE, "application/javascript")], include_str!("../static/sw.js"))
+}
+
 pub fn router() -> Result<rullst::Router, Box<dyn std::error::Error>> {
     let nexus_auth = match rullst_nexus::NexusAuthPolicy::local_development_or_basic_from_env() {
         Ok(policy) => policy,
@@ -410,6 +419,8 @@ fn router_with_nexus_auth(
         get("/security-demo" => crate::security_demo::security_page),
         get("/ai-assistant" => crate::ai_demo::ai_page),
         get("/omni" => crate::omni_demo::omni_page),
+        get("/manifest.webmanifest" => manifest_handler),
+        get("/sw.js" => sw_handler),
         get("/wp-admin" => honeypot_trap),
         get("/favicon.ico" => favicon_handler),
         get("/robots.txt" => robots_txt),

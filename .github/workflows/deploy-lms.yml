@@ -40,6 +40,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
+            type=raw,value=${{ github.sha }}
             type=sha
 
       - name: Build and push LMS OCI image with cargo-chef cache
@@ -69,4 +70,4 @@ jobs:
         with:
           containerAppName: rullst-lms
           resourceGroup: rullst-rg
-          imageToDeploy: ghcr.io/rullst/lms:latest
+          imageToDeploy: ghcr.io/rullst/lms:${{ github.sha }}
