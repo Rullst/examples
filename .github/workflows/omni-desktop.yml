@@ -1,4 +1,4 @@
-name: Build Omni Desktop Application
+name: Build Omni Desktop and Mobile Applications
 
 on:
   workflow_dispatch:
@@ -25,6 +25,7 @@ jobs:
             artifact_name: Rullst-LMS-macOS
             bundle_path: |
               ./blueprints/lms/omni-app/target/release/bundle/dmg/*.dmg
+              ./Rullst.LMS_1.0.0_iOS_Xcode.zip
           - platform: ubuntu-22.04
             os: linux
             artifact_name: Rullst-LMS-Linux
@@ -64,6 +65,13 @@ jobs:
         env:
           CI: true
 
+      - name: Generate and Package iOS Xcode Project
+        if: matrix.os == 'macos'
+        working-directory: ./blueprints/lms/omni-app
+        run: |
+          npx tauri ios init --ci
+          cd gen && zip -r ../../../Rullst.LMS_1.0.0_iOS_Xcode.zip apple
+
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -76,17 +84,83 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         with:
           tag_name: v1.0.0
-          name: "Rullst LMS & Omni Desktop v1.0.0"
+          name: "Rullst LMS & Omni Multiplatform v1.0.0"
           body: |
-            ## Rullst Omni Desktop Apps (v1.0.0)
-            Official native desktop packages generated using Rullst Omni (`cargo rullst make:omni`).
+            ## Rullst Omni Multiplatform Release (v1.0.0)
+            Official native packages generated using Rullst Omni (`cargo rullst make:omni`).
             
             - **Windows:** `.exe` installer & `.msi` package
             - **macOS:** `.dmg` disk image (Apple Silicon & Intel)
             - **Linux:** `.AppImage` standalone binary & `.deb` package
+            - **Android:** `.apk` installable mobile package
+            - **iOS:** `.zip` full native Xcode project ready to build/run
             - **Engine:** Tauri 2.0 + Rust
           files: ${{ matrix.bundle_path }}
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-android:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager --install "ndk;26.1.10909125"
+
+      - name: Install Rust Toolchain and Android Targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Tauri CLI and Dependencies
+        working-directory: ./blueprints/lms/omni-app
+        run: npm install
+
+      - name: Build Android Universal APK
+        working-directory: ./blueprints/lms/omni-app
+        env:
+          NDK_HOME: /usr/local/lib/android/sdk/ndk/26.1.10909125
+        run: |
+          npx tauri android init --ci
+          npx tauri android build --apk
+
+      - name: Locate and Package Android APK
+        run: |
+          find ./blueprints/lms/omni-app -name "*.apk" -exec cp {} ./Rullst.LMS_1.0.0.apk \;
+          ls -la ./Rullst.LMS_1.0.0.apk
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rullst-LMS-Android-APK
+          path: ./Rullst.LMS_1.0.0.apk
+          if-no-files-found: warn
+
+      - name: Attach Android APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          files: ./Rullst.LMS_1.0.0.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

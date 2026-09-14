@@ -458,92 +458,6 @@ pub async fn apps_page() -> impl IntoResponse {
                     <div class="grid">
                         <main>
                             
-                            <div class="browser-guide-card">
-                                <h2 style="font-size:1.25rem;color:#f8fafc;margin-bottom:0.5rem">
-                                    "🔍 How to Install in Your Browser"
-                                </h2>
-                                <p style="color:#94a3b8;font-size:0.875rem;margin-bottom:1rem">
-                                    "Different browsers place the PWA install button in different locations. Choose your browser to see exactly where to find it:"
-                                </p>
-
-                                <div class="browser-tabs-nav">
-                                    <button type="button" class="tab-btn active" onclick="switchGuide('brave')">"🦁 Brave"</button>
-                                    <button type="button" class="tab-btn" onclick="switchGuide('chrome')">"🌐 Chrome"</button>
-                                    <button type="button" class="tab-btn" onclick="switchGuide('edge')">"🌊 Edge"</button>
-                                    <button type="button" class="tab-btn" onclick="switchGuide('safari')">"🍏 Safari (iOS / Mac)"</button>
-                                    <button type="button" class="tab-btn" onclick="switchGuide('firefox')">"🦊 Firefox"</button>
-                                </div>
-
-                                
-                                <div id="guide-brave" class="guide-pane active">
-                                    <div class="guide-step">
-                                        <strong>"Option 1 (Main Menu — Recommended):"</strong>
-                                        <p>"Click the three horizontal lines (≡) at the top-right corner > click 'Save and share' ('Salvar e compartilhar') > click 'Install page as app...' ('Instalar página como app...'). Confirm to create the desktop app!"</p>
-                                    </div>
-                                    <div class="guide-step">
-                                        <strong>"Option 2 (Address Bar):"</strong>
-                                        <p>"Look at the far right of the address bar next to the Lion shield. If visible, click the small monitor icon with a down arrow (🖥️⬇️) and select 'Install'."</p>
-                                    </div>
-                                    <div class="guide-step">
-                                        <strong>"📱 On Android (Brave Mobile):"</strong>
-                                        <p>"Open this URL on your Android phone > tap the three dots (⋮) menu at the bottom-right > tap 'Install app' or 'Add to Home screen'. It installs immediately without Play Store!"</p>
-                                    </div>
-                                </div>
-
-                                
-                                <div id="guide-chrome" class="guide-pane">
-                                    <div class="guide-step">
-                                        <strong>"Option 1 (Address Bar):"</strong>
-                                        <p>"On the right side of the address bar, look for the 'Install Rullst LMS' icon (computer screen with a down arrow). Click it to install."</p>
-                                    </div>
-                                    <div class="guide-step">
-                                        <strong>"Option 2 (Chrome Menu):"</strong>
-                                        <p>"Click the three dots (⋮) in the top-right corner > 'Save and share' (or 'Cast, save, and share') > click 'Install Rullst LMS...'."</p>
-                                    </div>
-                                    <div class="guide-step">
-                                        <strong>"On Android (Chrome Mobile):"</strong>
-                                        <p>"Tap the three dots (⋮) menu at the top right, then tap 'Install app' or 'Add to Home screen'."</p>
-                                    </div>
-                                </div>
-
-                                
-                                <div id="guide-edge" class="guide-pane">
-                                    <div class="guide-step">
-                                        <strong>"Option 1 (Address Bar):"</strong>
-                                        <p>"Click the 'App available' icon (three squares with a plus symbol) on the right side of the URL bar, then click 'Install'."</p>
-                                    </div>
-                                    <div class="guide-step">
-                                        <strong>"Option 2 (Edge Menu):"</strong>
-                                        <p>"Click the three dots (...) menu at the top right > 'Apps' > 'Install this site as an app'."</p>
-                                    </div>
-                                </div>
-
-                                
-                                <div id="guide-safari" class="guide-pane">
-                                    <div class="guide-step">
-                                        <strong>"On iPhone & iPad (iOS Safari):"</strong>
-                                        <p>"Tap the Share button (the square with an upward arrow [↑]) at the bottom of the screen, scroll down, and tap 'Add to Home Screen' ([+])."</p>
-                                    </div>
-                                    <div class="guide-step">
-                                        <strong>"On Mac (macOS Sonoma or newer):"</strong>
-                                        <p>"In Safari, click 'File' in the top macOS menu bar > select 'Add to Dock...'. The app will appear in your Mac Dock and Applications folder!"</p>
-                                    </div>
-                                </div>
-
-                                
-                                <div id="guide-firefox" class="guide-pane">
-                                    <div class="guide-step">
-                                        <strong>"On Android (Firefox Mobile):"</strong>
-                                        <p>"Tap the three dots (⋮) menu > tap 'Install' or 'Add to Home screen'."</p>
-                                    </div>
-                                    <div class="guide-step">
-                                        <strong>"On Desktop (Windows / Mac / Linux):"</strong>
-                                        <p>"Firefox Desktop does not natively support standalone PWA windows. To use the app on desktop, please open this site in Brave, Chrome, or Edge, or download the native Rullst Omni (.exe) installer below!"</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            
                             <div class="card">
                                 <div class="card-header">
                                     <span class="badge badge-desktop">"🖥️ Desktop Target"</span>
@@ -564,13 +478,13 @@ pub async fn apps_page() -> impl IntoResponse {
                                     "cargo rullst omni desktop"
                                 </div>
                                 <div class="downloads-row">
-                                    <a href="https://github.com/Rullst/examples/releases" target="_blank" class="download-btn">
+                                    <a href="https://github.com/Rullst/examples/releases/download/v1.0.0/Rullst.LMS_1.0.0_x64-setup.exe" target="_blank" class="download-btn">
                                         "🪟 Windows (.exe)"
                                     </a>
-                                    <a href="https://github.com/Rullst/examples/releases" target="_blank" class="download-btn">
+                                    <a href="https://github.com/Rullst/examples/releases/download/v1.0.0/Rullst.LMS_1.0.0_aarch64.dmg" target="_blank" class="download-btn">
                                         "🍏 macOS (.dmg)"
                                     </a>
-                                    <a href="https://github.com/Rullst/examples/releases" target="_blank" class="download-btn">
+                                    <a href="https://github.com/Rullst/examples/releases/download/v1.0.0/Rullst.LMS_1.0.0_amd64.AppImage" target="_blank" class="download-btn">
                                         "🐧 Linux (.AppImage)"
                                     </a>
                                 </div>
@@ -597,12 +511,12 @@ pub async fn apps_page() -> impl IntoResponse {
                                     "cargo rullst omni android"
                                 </div>
                                 <div class="downloads-row">
-                                    <a href="https://github.com/Rullst/examples/releases" target="_blank" class="download-btn">
+                                    <a href="https://github.com/Rullst/examples/releases/download/v1.0.0/Rullst.LMS_1.0.0.apk" target="_blank" class="download-btn">
                                         "🤖 Download Android APK"
                                     </a>
-                                    <span class="download-btn" style="opacity:0.7;cursor:default">
-                                        "📱 iOS (Xcode Build)"
-                                    </span>
+                                    <a href="https://github.com/Rullst/examples/releases/download/v1.0.0/Rullst.LMS_1.0.0_iOS_Xcode.zip" target="_blank" class="download-btn">
+                                        "📱 iOS (Xcode Project .zip)"
+                                    </a>
                                 </div>
                             </div>
 
