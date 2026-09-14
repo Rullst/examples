@@ -42,5 +42,28 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Rullst-LMS-Windows-Desktop
-          path: ./blueprints/lms/omni-app/src-tauri/target/release/bundle/msi/*.msi
+          path: |
+            ./blueprints/lms/omni-app/target/release/bundle/nsis/*.exe
+            ./blueprints/lms/omni-app/target/release/bundle/msi/*.msi
           if-no-files-found: warn
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: "Rullst LMS & Omni Desktop v1.0.0"
+          body: |
+            ## Rullst Omni Desktop Apps (v1.0.0)
+            Official native desktop installers generated using Rullst Omni (`cargo rullst make:omni`).
+            
+            - **Target:** Windows x64 (.exe installer & .msi package)
+            - **Framework:** Rullst Framework + Tauri 2.0
+            - **Backend:** Azure Cloud Container
+          files: |
+            ./blueprints/lms/omni-app/target/release/bundle/nsis/*.exe
+            ./blueprints/lms/omni-app/target/release/bundle/msi/*.msi
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -6,7 +6,7 @@ authors = ["Rullst Developer"]
 edition = "2021"
 
 [lib]
-name = "rullst_omni"
+name = "rullst_omni_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

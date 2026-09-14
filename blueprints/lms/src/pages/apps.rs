@@ -1,4 +1,4 @@
-// blueprints/lms/src/pages/apps.rs - Rullst Omni Multi-Platform Showcase
+// blueprints/lms/src/pages/apps.rs - Rullst Omni Multi-Platform Showcase & Browser Guide
 use axum::response::{Html, IntoResponse};
 use rullst::html;
 
@@ -73,6 +73,16 @@ pub async fn apps_page() -> impl IntoResponse {
                         position: relative;
                         overflow: hidden;
                     }
+                    .hero::before {
+                        content: '';
+                        position: absolute;
+                        top: -50%;
+                        right: -20%;
+                        width: 400px;
+                        height: 400px;
+                        background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%);
+                        pointer-events: none;
+                    }
                     .hero h1 {
                         font-size: 2.25rem;
                         font-weight: 900;
@@ -109,6 +119,12 @@ pub async fn apps_page() -> impl IntoResponse {
                         font-size: 0.9rem;
                         margin-bottom: 0;
                     }
+                    .banner-actions {
+                        display: flex;
+                        gap: 0.75rem;
+                        align-items: center;
+                        flex-wrap: wrap;
+                    }
                     .btn-install {
                         background: #10b981;
                         color: #052e16;
@@ -127,6 +143,20 @@ pub async fn apps_page() -> impl IntoResponse {
                     .btn-install:hover {
                         background: #059669;
                         transform: translateY(-1px);
+                    }
+                    .btn-instructions {
+                        background: #1e293b;
+                        color: #38bdf8;
+                        border: 1px solid rgba(56, 189, 248, 0.3);
+                        font-weight: 700;
+                        padding: 0.75rem 1.25rem;
+                        border-radius: 0.5rem;
+                        cursor: pointer;
+                        transition: background 0.15s, border-color 0.15s;
+                    }
+                    .btn-instructions:hover {
+                        background: rgba(56, 189, 248, 0.15);
+                        border-color: #38bdf8;
                     }
                     .grid {
                         display: grid;
@@ -213,6 +243,64 @@ pub async fn apps_page() -> impl IntoResponse {
                         background: #334155;
                         border-color: #38bdf8;
                     }
+                    /* Browser guide card */
+                    .browser-guide-card {
+                        background: #0d1322;
+                        border: 1px solid #1e293b;
+                        border-radius: 0.875rem;
+                        padding: 1.5rem;
+                        margin-bottom: 2rem;
+                    }
+                    .browser-tabs-nav {
+                        display: flex;
+                        gap: 0.5rem;
+                        flex-wrap: wrap;
+                        border-bottom: 1px solid #1e293b;
+                        padding-bottom: 0.75rem;
+                        margin-bottom: 1.25rem;
+                    }
+                    .tab-btn {
+                        background: #111827;
+                        border: 1px solid #334155;
+                        color: #94a3b8;
+                        padding: 0.5rem 0.9rem;
+                        border-radius: 0.5rem;
+                        font-size: 0.85rem;
+                        font-weight: 700;
+                        cursor: pointer;
+                        transition: all 0.15s;
+                    }
+                    .tab-btn:hover {
+                        color: #f8fafc;
+                        border-color: #475569;
+                    }
+                    .tab-btn.active {
+                        background: rgba(56, 189, 248, 0.15);
+                        border-color: #38bdf8;
+                        color: #38bdf8;
+                    }
+                    .guide-pane {
+                        display: none;
+                    }
+                    .guide-pane.active {
+                        display: block;
+                    }
+                    .guide-step {
+                        background: rgba(15, 23, 42, 0.7);
+                        border: 1px solid #1e293b;
+                        border-radius: 0.5rem;
+                        padding: 1rem 1.25rem;
+                        margin-bottom: 0.75rem;
+                    }
+                    .guide-step strong {
+                        color: #38bdf8;
+                    }
+                    .guide-step p {
+                        margin-bottom: 0;
+                        color: #cbd5e1;
+                        font-size: 0.9rem;
+                    }
+                    /* Simulator styling */
                     .sim-wrapper {
                         text-align: center;
                         position: sticky;
@@ -293,6 +381,45 @@ pub async fn apps_page() -> impl IntoResponse {
                         background: #334155;
                         color: #ffffff;
                     }
+                    /* Modal styles */
+                    .modal-backdrop {
+                        position: fixed;
+                        inset: 0;
+                        background: rgba(0, 0, 0, 0.8);
+                        backdrop-filter: blur(8px);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 1rem;
+                        z-index: 9999;
+                    }
+                    .modal-card {
+                        background: #0f172a;
+                        border: 1px solid #334155;
+                        border-radius: 1rem;
+                        padding: 2rem;
+                        max-width: 650px;
+                        width: 100%;
+                        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+                    }
+                    .modal-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 1rem;
+                    }
+                    .modal-close {
+                        background: transparent;
+                        border: none;
+                        color: #94a3b8;
+                        font-size: 1.5rem;
+                        cursor: pointer;
+                        padding: 0.25rem 0.5rem;
+                        border-radius: 0.25rem;
+                    }
+                    .modal-close:hover {
+                        color: #ffffff;
+                    }
                     "#
                 </style>
             </head>
@@ -317,14 +444,105 @@ pub async fn apps_page() -> impl IntoResponse {
                                 <h3>"⚡ Instant Progressive Web App"</h3>
                                 <p>"No store download needed. Install directly to your Home Screen or Desktop with 1 click."</p>
                             </div>
-                            <button id="pwa-install-btn" class="btn-install" type="button">
-                                "⬇️ Install Web App"
-                            </button>
+                            <div class="banner-actions">
+                                <button id="pwa-install-btn" class="btn-install" type="button">
+                                    "⬇️ Install Web App"
+                                </button>
+                                <button type="button" class="btn-instructions" onclick="openModal()">
+                                    "📖 Browser Guide"
+                                </button>
+                            </div>
                         </div>
                     </section>
 
                     <div class="grid">
                         <main>
+                            
+                            <div class="browser-guide-card">
+                                <h2 style="font-size:1.25rem;color:#f8fafc;margin-bottom:0.5rem">
+                                    "🔍 How to Install in Your Browser"
+                                </h2>
+                                <p style="color:#94a3b8;font-size:0.875rem;margin-bottom:1rem">
+                                    "Different browsers place the PWA install button in different locations. Choose your browser to see exactly where to find it:"
+                                </p>
+
+                                <div class="browser-tabs-nav">
+                                    <button type="button" class="tab-btn active" onclick="switchGuide('brave')">"🦁 Brave"</button>
+                                    <button type="button" class="tab-btn" onclick="switchGuide('chrome')">"🌐 Chrome"</button>
+                                    <button type="button" class="tab-btn" onclick="switchGuide('edge')">"🌊 Edge"</button>
+                                    <button type="button" class="tab-btn" onclick="switchGuide('safari')">"🍏 Safari (iOS / Mac)"</button>
+                                    <button type="button" class="tab-btn" onclick="switchGuide('firefox')">"🦊 Firefox"</button>
+                                </div>
+
+                                
+                                <div id="guide-brave" class="guide-pane active">
+                                    <div class="guide-step">
+                                        <strong>"Option 1 (Address Bar):"</strong>
+                                        <p>"Look at the far right of the address bar where you type the URL (next to the lion Shields icon). You will see a small computer icon with a down arrow (🖥️⬇️). Click it and select 'Install'."</p>
+                                    </div>
+                                    <div class="guide-step">
+                                        <strong>"Option 2 (Main Menu):"</strong>
+                                        <p>"Click the three horizontal lines (≡) menu at the top right corner of Brave, then click 'Install Rullst LMS...'."</p>
+                                    </div>
+                                    <div class="guide-step">
+                                        <strong>"On Android (Brave Mobile):"</strong>
+                                        <p>"Tap the three dots (⋮) menu at the bottom right, then tap 'Install app' or 'Add to Home screen'."</p>
+                                    </div>
+                                </div>
+
+                                
+                                <div id="guide-chrome" class="guide-pane">
+                                    <div class="guide-step">
+                                        <strong>"Option 1 (Address Bar):"</strong>
+                                        <p>"On the right side of the address bar, look for the 'Install Rullst LMS' icon (computer screen with a down arrow). Click it to install."</p>
+                                    </div>
+                                    <div class="guide-step">
+                                        <strong>"Option 2 (Chrome Menu):"</strong>
+                                        <p>"Click the three dots (⋮) in the top-right corner > 'Save and share' (or 'Cast, save, and share') > click 'Install Rullst LMS...'."</p>
+                                    </div>
+                                    <div class="guide-step">
+                                        <strong>"On Android (Chrome Mobile):"</strong>
+                                        <p>"Tap the three dots (⋮) menu at the top right, then tap 'Install app' or 'Add to Home screen'."</p>
+                                    </div>
+                                </div>
+
+                                
+                                <div id="guide-edge" class="guide-pane">
+                                    <div class="guide-step">
+                                        <strong>"Option 1 (Address Bar):"</strong>
+                                        <p>"Click the 'App available' icon (three squares with a plus symbol) on the right side of the URL bar, then click 'Install'."</p>
+                                    </div>
+                                    <div class="guide-step">
+                                        <strong>"Option 2 (Edge Menu):"</strong>
+                                        <p>"Click the three dots (...) menu at the top right > 'Apps' > 'Install this site as an app'."</p>
+                                    </div>
+                                </div>
+
+                                
+                                <div id="guide-safari" class="guide-pane">
+                                    <div class="guide-step">
+                                        <strong>"On iPhone & iPad (iOS Safari):"</strong>
+                                        <p>"Tap the Share button (the square with an upward arrow [↑]) at the bottom of the screen, scroll down, and tap 'Add to Home Screen' ([+])."</p>
+                                    </div>
+                                    <div class="guide-step">
+                                        <strong>"On Mac (macOS Sonoma or newer):"</strong>
+                                        <p>"In Safari, click 'File' in the top macOS menu bar > select 'Add to Dock...'. The app will appear in your Mac Dock and Applications folder!"</p>
+                                    </div>
+                                </div>
+
+                                
+                                <div id="guide-firefox" class="guide-pane">
+                                    <div class="guide-step">
+                                        <strong>"On Android (Firefox Mobile):"</strong>
+                                        <p>"Tap the three dots (⋮) menu > tap 'Install' or 'Add to Home screen'."</p>
+                                    </div>
+                                    <div class="guide-step">
+                                        <strong>"On Desktop (Windows / Mac / Linux):"</strong>
+                                        <p>"Firefox Desktop does not natively support standalone PWA windows. To use the app on desktop, please open this site in Brave, Chrome, or Edge, or download the native Rullst Omni (.exe) installer below!"</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             
                             <div class="card">
                                 <div class="card-header">
@@ -432,6 +650,81 @@ pub async fn apps_page() -> impl IntoResponse {
                     </div>
                 </div>
 
+                
+                <div id="pwa-modal" class="modal-backdrop" style="display:none" onclick="closeModal(event)">
+                    <div class="modal-card" onclick="event.stopPropagation()">
+                        <div class="modal-header">
+                            <h2 style="font-size:1.35rem;color:#f8fafc">"🚀 How to Install on Your Browser"</h2>
+                            <button class="modal-close" onclick="closeModalDirect()">"✕"</button>
+                        </div>
+                        <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:1.25rem">
+                            "Click your current browser to see exact location of the install button:"
+                        </p>
+                        <div class="browser-tabs-nav" style="margin-bottom:1rem">
+                            <button type="button" class="tab-btn modal-tab active" onclick="switchModalGuide('brave')">"🦁 Brave"</button>
+                            <button type="button" class="tab-btn modal-tab" onclick="switchModalGuide('chrome')">"🌐 Chrome"</button>
+                            <button type="button" class="tab-btn modal-tab" onclick="switchModalGuide('edge')">"🌊 Edge"</button>
+                            <button type="button" class="tab-btn modal-tab" onclick="switchModalGuide('safari')">"🍏 Safari"</button>
+                            <button type="button" class="tab-btn modal-tab" onclick="switchModalGuide('firefox')">"🦊 Firefox"</button>
+                        </div>
+
+                        <div id="modal-pane-brave" class="modal-pane active">
+                            <div class="guide-step">
+                                <strong>"Option 1 (Address Bar):"</strong>
+                                <p>"Look at the far right of the address bar (next to the lion Shields icon). Click the small computer with a down arrow (🖥️⬇️) and select 'Install'."</p>
+                            </div>
+                            <div class="guide-step">
+                                <strong>"Option 2 (Menu):"</strong>
+                                <p>"Click the (≡) menu at the top-right corner of Brave > select 'Install Rullst LMS...'."</p>
+                            </div>
+                        </div>
+
+                        <div id="modal-pane-chrome" class="modal-pane" style="display:none">
+                            <div class="guide-step">
+                                <strong>"Option 1 (Address Bar):"</strong>
+                                <p>"Click the install icon (monitor with down arrow) on the right side of the address bar."</p>
+                            </div>
+                            <div class="guide-step">
+                                <strong>"Option 2 (Menu):"</strong>
+                                <p>"Click the (⋮) menu > 'Save and share' > 'Install Rullst LMS...'."</p>
+                            </div>
+                        </div>
+
+                        <div id="modal-pane-edge" class="modal-pane" style="display:none">
+                            <div class="guide-step">
+                                <strong>"Option 1 (Address Bar):"</strong>
+                                <p>"Click the 'App available' icon (three squares with plus) on the right of the address bar."</p>
+                            </div>
+                            <div class="guide-step">
+                                <strong>"Option 2 (Menu):"</strong>
+                                <p>"Click the (...) menu > 'Apps' > 'Install this site as an app'."</p>
+                            </div>
+                        </div>
+
+                        <div id="modal-pane-safari" class="modal-pane" style="display:none">
+                            <div class="guide-step">
+                                <strong>"iPhone & iPad (iOS):"</strong>
+                                <p>"Tap the Share button [↑] at the bottom of the screen > scroll down and select 'Add to Home Screen' [+]."</p>
+                            </div>
+                            <div class="guide-step">
+                                <strong>"Mac (macOS Sonoma+):"</strong>
+                                <p>"In Safari, click 'File' in the top macOS menu bar > select 'Add to Dock...'."</p>
+                            </div>
+                        </div>
+
+                        <div id="modal-pane-firefox" class="modal-pane" style="display:none">
+                            <div class="guide-step">
+                                <strong>"Android:"</strong>
+                                <p>"Tap the three dots (⋮) > tap 'Install' or 'Add to Home screen'."</p>
+                            </div>
+                            <div class="guide-step">
+                                <strong>"Desktop (Windows/Mac):"</strong>
+                                <p>"Firefox Desktop lacks native PWA window support. Please use Brave, Chrome, Edge, or download the native .exe installer!"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <script>
                     r#"
                     if ('serviceWorker' in navigator) {
@@ -457,9 +750,39 @@ pub async fn apps_page() -> impl IntoResponse {
                             }
                             deferredPrompt = null;
                         } else {
-                            alert('To install this app on your device:\n\n• On Android/Chrome: Tap ⋮ menu and select "Install app" or "Add to Home Screen".\n• On iPhone/Safari: Tap Share button and select "Add to Home Screen".\n• On Windows/Mac: Click the Install icon in the browser address bar.');
+                            openModal();
                         }
                     });
+
+                    function openModal() {
+                        document.getElementById('pwa-modal').style.display = 'flex';
+                    }
+
+                    function closeModal(e) {
+                        if (e.target.id === 'pwa-modal') {
+                            document.getElementById('pwa-modal').style.display = 'none';
+                        }
+                    }
+
+                    function closeModalDirect() {
+                        document.getElementById('pwa-modal').style.display = 'none';
+                    }
+
+                    function switchGuide(browser) {
+                        document.querySelectorAll('.browser-tabs-nav .tab-btn').forEach(btn => btn.classList.remove('active'));
+                        document.querySelectorAll('.guide-pane').forEach(pane => pane.classList.remove('active'));
+                        event.target.classList.add('active');
+                        const targetPane = document.getElementById('guide-' + browser);
+                        if (targetPane) targetPane.classList.add('active');
+                    }
+
+                    function switchModalGuide(browser) {
+                        document.querySelectorAll('.modal-tab').forEach(btn => btn.classList.remove('active'));
+                        document.querySelectorAll('.modal-pane').forEach(pane => pane.style.display = 'none');
+                        event.target.classList.add('active');
+                        const targetPane = document.getElementById('modal-pane-' + browser);
+                        if (targetPane) targetPane.style.display = 'block';
+                    }
                     "#
                 </script>
             </body>
