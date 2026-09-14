@@ -71,4 +71,15 @@ This document records architectural nuances, edge cases, bugs, and compiler quir
 
 ---
 
+
+### 7. `cargo rullst make:omni`: Android/iOS Initialization Leaves Default Tauri Icon Instead of Application Brand Icon
+- **Component:** `cargo-rullst` / Omni Mobile Pipeline
+- **Symptom:** After installing the generated APK on a real Android device (e.g. Motorola) or launching the Xcode project on iOS, the application launcher icon shows the default blue circular Tauri logo instead of the Rullst / application brand logo.
+- **Root Cause:** When `tauri android init` and `tauri ios init` run, they unpack the mobile boilerplate from Tauri's default base templates, which populate `res/mipmap-*` with Tauri's stock `ic_launcher` assets. The custom icons previously scaffolded into `icons/android/` and `icons/ios/` by `cargo rullst make:omni` are not copied into the target native project folders by default.
+- **Framework & CI Resolution:** 
+  1. In CI and CLI scaffolds, copy `icons/android/*` into `gen/android/app/src/main/res/` immediately after running `android init`.
+  2. Execute `tauri icon icons/icon.svg` after mobile initialization to patch all adaptive and legacy launcher mipmaps.
+
+---
+
 *Last Updated: September 2026 — Recorded during Rullst Omni & Blueprint LMS live verification.*

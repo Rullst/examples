@@ -70,6 +70,7 @@ jobs:
         run: |
           cd ./blueprints/lms/omni-app
           npx tauri ios init --ci
+          npx tauri icon icons/icon.svg
           cd gen/apple && zip -r "${GITHUB_WORKSPACE}/Rullst.LMS_1.0.0_iOS_Xcode.zip" .
           ls -la "${GITHUB_WORKSPACE}/Rullst.LMS_1.0.0_iOS_Xcode.zip"
 
@@ -143,6 +144,9 @@ jobs:
           NDK_HOME: /usr/local/lib/android/sdk/ndk/26.1.10909125
         run: |
           npx tauri android init --ci
+          echo "Applying official Rullst brand icons to Android res..."
+          cp -r icons/android/* gen/android/app/src/main/res/
+          npx tauri icon icons/icon.svg
           npx tauri android build --apk
 
       - name: Sign, Align and Verify Android Release APK
