@@ -145,19 +145,61 @@ jobs:
           npx tauri android init --ci
           npx tauri android build --apk
 
-      - name: Locate and Package Android APK
+      - name: Sign, Align and Verify Android Release APK
         run: |
-          find ./blueprints/lms/omni-app -name "*.apk" -exec cp {} ./Rullst.LMS_1.0.0.apk \;
-          ls -la ./Rullst.LMS_1.0.0.apk
+          # 1. Locate build-tools utilities (zipalign, apksigner)
+          BUILD_TOOLS_DIR=$(find ${ANDROID_HOME}/build-tools -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
+          echo "Using Android build tools from: ${BUILD_TOOLS_DIR}"
+          ZIPALIGN="${BUILD_TOOLS_DIR}/zipalign"
+          APKSIGNER="${BUILD_TOOLS_DIR}/apksigner"
 
-      - name: Upload Android APK Artifact
+          # 2. Find the generated unsigned universal APK
+          UNSIGNED_APK=$(find ./blueprints/lms/omni-app/gen/android/app/build/outputs/apk -name "*unsigned.apk" | head -n 1)
+          if [ -z "${UNSIGNED_APK}" ]; then
+            echo "Searching all APKs..."
+            UNSIGNED_APK=$(find ./blueprints/lms/omni-app -name "*.apk" | head -n 1)
+          fi
+          echo "Found unsigned APK: ${UNSIGNED_APK}"
+
+          # 3. Create a production signing keystore for the showcase build
+          keytool -genkey -v -keystore rullst-release.keystore -alias rullst -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "rullst2026" -keypass "rullst2026" \
+            -dname "CN=Rullst LMS, OU=Mobile Engineering, O=Rullst Framework, L=Recife, ST=Pernambuco, C=BR"
+
+          # 4. Align the APK on 4-byte boundaries
+          ${ZIPALIGN} -v -p 4 "${UNSIGNED_APK}" aligned.apk
+
+          # 5. Sign the APK with v1, v2, and v3 signature schemes
+          ${APKSIGNER} sign --ks rullst-release.keystore --ks-pass pass:rullst2026 --key-pass pass:rullst2026 \
+            --ks-key-alias rullst --out ./Rullst.LMS_1.0.0.apk aligned.apk
+
+          # 6. Verify signature (Strict assertion: fails job if unverified)
+          echo "Verifying signed APK..."
+          ${APKSIGNER} verify --verbose --print-certs ./Rullst.LMS_1.0.0.apk
+
+          ls -lh ./Rullst.LMS_1.0.0.apk
+
+      - name: Delete Old Unsigned APK from Release
+        continue-on-error: true
+        run: |
+          # Query existing asset ID for Rullst.LMS_1.0.0.apk and delete it before re-upload
+          ASSET_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/v1.0.0 \
+            | jq -r '.assets[] | select(.name=="Rullst.LMS_1.0.0.apk") | .id')
+          if [ -n "${ASSET_ID}" ] && [ "${ASSET_ID}" != "null" ]; then
+            echo "Deleting old unsigned asset ID: ${ASSET_ID}"
+            curl -s -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              https://api.github.com/repos/${{ github.repository }}/releases/assets/${ASSET_ID}
+          fi
+
+      - name: Upload Signed Android APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Rullst-LMS-Android-APK
+          name: Rullst-LMS-Android-Signed-APK
           path: ./Rullst.LMS_1.0.0.apk
-          if-no-files-found: warn
+          if-no-files-found: error
 
-      - name: Attach Android APK to GitHub Release
+      - name: Attach Verified Signed APK to GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         with:

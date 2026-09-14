@@ -57,4 +57,18 @@ This document records architectural nuances, edge cases, bugs, and compiler quir
 
 ---
 
+
+### 6. `cargo rullst make:omni`: Android Release Packaging Without Keystore Signing
+- **Component:** `cargo-rullst` / Omni Mobile Pipeline
+- **Symptom:** Running `npx tauri android build --apk` in release mode outputs `app-universal-release-unsigned.apk`. When distributed directly to physical Android devices (e.g. Motorola, Samsung), the OS refuses to install the package with error `INSTALL_PARSE_FAILED_NO_CERTIFICATES` (`jar is unsigned`).
+- **Root Cause:** Gradle does not sign release APKs unless configured with a signing keystore. Merely renaming the unsigned APK results in an unverified JAR.
+- **Framework & CI Resolution:** Automate the signing pipeline:
+  1. Generate or inject a keystore (`keytool`).
+  2. Align the package with `zipalign -v -p 4`.
+  3. Sign with `apksigner sign --ks ... --out ...`.
+  4. Strictly assert validity in CI using `apksigner verify --verbose --print-certs`.
+  5. For debug testing, use `npx tauri android build --debug --apk` which leverages Android's built-in debug keystore.
+
+---
+
 *Last Updated: September 2026 — Recorded during Rullst Omni & Blueprint LMS live verification.*
