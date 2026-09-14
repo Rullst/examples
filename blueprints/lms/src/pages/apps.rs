@@ -477,16 +477,16 @@ pub async fn apps_page() -> impl IntoResponse {
                                 
                                 <div id="guide-brave" class="guide-pane active">
                                     <div class="guide-step">
-                                        <strong>"Option 1 (Address Bar):"</strong>
-                                        <p>"Look at the far right of the address bar where you type the URL (next to the lion Shields icon). You will see a small computer icon with a down arrow (🖥️⬇️). Click it and select 'Install'."</p>
+                                        <strong>"Option 1 (Main Menu — Recommended):"</strong>
+                                        <p>"Click the three horizontal lines (≡) at the top-right corner > click 'Save and share' ('Salvar e compartilhar') > click 'Install page as app...' ('Instalar página como app...'). Confirm to create the desktop app!"</p>
                                     </div>
                                     <div class="guide-step">
-                                        <strong>"Option 2 (Main Menu):"</strong>
-                                        <p>"Click the three horizontal lines (≡) menu at the top right corner of Brave, then click 'Install Rullst LMS...'."</p>
+                                        <strong>"Option 2 (Address Bar):"</strong>
+                                        <p>"Look at the far right of the address bar next to the Lion shield. If visible, click the small monitor icon with a down arrow (🖥️⬇️) and select 'Install'."</p>
                                     </div>
                                     <div class="guide-step">
-                                        <strong>"On Android (Brave Mobile):"</strong>
-                                        <p>"Tap the three dots (⋮) menu at the bottom right, then tap 'Install app' or 'Add to Home screen'."</p>
+                                        <strong>"📱 On Android (Brave Mobile):"</strong>
+                                        <p>"Open this URL on your Android phone > tap the three dots (⋮) menu at the bottom-right > tap 'Install app' or 'Add to Home screen'. It installs immediately without Play Store!"</p>
                                     </div>
                                 </div>
 
