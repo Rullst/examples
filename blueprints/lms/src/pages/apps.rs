@@ -518,6 +518,13 @@ pub async fn apps_page() -> impl IntoResponse {
                                         "📱 iOS (Xcode Project .zip)"
                                     </a>
                                 </div>
+                                <div style="margin-top:1.25rem;padding:0.875rem 1rem;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:0.5rem;display:flex;gap:0.75rem;align-items:flex-start">
+                                    <span style="font-size:1.2rem;line-height:1">"💡"</span>
+                                    <p style="font-size:0.825rem;color:#cbd5e1;margin-bottom:0;line-height:1.5">
+                                        <strong style="color:#38bdf8">"iOS Developer Notice: "</strong>
+                                        "The '📱 iOS (Xcode Project .zip)' button downloads the full native Apple Xcode project. Any developer or Mac user can unzip it, open Rullst LMS.xcodeproj directly in Xcode, and run it on their iPhone/iPad in developer mode or archive it for the App Store!"
+                                    </p>
+                                </div>
                             </div>
 
                             
@@ -584,12 +591,16 @@ pub async fn apps_page() -> impl IntoResponse {
 
                         <div id="modal-pane-brave" class="modal-pane active">
                             <div class="guide-step">
-                                <strong>"Option 1 (Address Bar):"</strong>
-                                <p>"Look at the far right of the address bar (next to the lion Shields icon). Click the small computer with a down arrow (🖥️⬇️) and select 'Install'."</p>
+                                <strong>"Option 1 (Menu ➔ Save and share — Recommended):"</strong>
+                                <p>"Click the (≡) menu at the top-right corner of Brave > select 'Save and share' (or 'Salvar e compartilhar') > click 'Install page as app...' (or 'Instalar página como app...'). Confirm to install the standalone desktop app!"</p>
                             </div>
                             <div class="guide-step">
-                                <strong>"Option 2 (Menu):"</strong>
-                                <p>"Click the (≡) menu at the top-right corner of Brave > select 'Install Rullst LMS...'."</p>
+                                <strong>"Option 2 (Address Bar):"</strong>
+                                <p>"Look at the far right of the address bar next to the Lion Shields icon. If visible, click the small monitor icon with a down arrow (🖥️⬇️) and select 'Install'."</p>
+                            </div>
+                            <div class="guide-step">
+                                <strong>"📱 On Android (Brave Mobile):"</strong>
+                                <p>"Tap the three dots (⋮) menu at the bottom-right > tap 'Install app' or 'Add to Home screen'."</p>
                             </div>
                         </div>
 
