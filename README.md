@@ -9,6 +9,7 @@
 [![Caddy SSL](https://img.shields.io/badge/proxy-caddy_auto_https-00ADD8.svg?style=flat-square&logo=caddy)](Caddyfile)
 [![Live Showcase](https://img.shields.io/badge/live_showcase-azure_container_apps-0078D4.svg?style=flat-square&logo=microsoftazure)](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/)
 [![Live LMS Academy](https://img.shields.io/badge/live_lms-azure_container_apps-047857.svg?style=flat-square&logo=microsoftazure)](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/)
+[![Live Portfolio](https://img.shields.io/badge/live_portfolio-azure_container_apps-7C3AED.svg?style=flat-square&logo=microsoftazure)](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/)
 
 **The Sovereign SaaS, Full-Stack & Edge/IoT Showcase built with Rullst.**
 
@@ -20,20 +21,22 @@
 
 Welcome to the official showcase and blueprints repository for the **Rullst Framework (`12.0.0-rc.1`)**. This repository demonstrates how to architect, build, and deploy production-grade, sovereign web applications in pure Rust without JavaScript framework lock-in.
 
-This monorepository contains two live cloud applications:
+This monorepository contains three live cloud applications:
 1. **🌐 Rullst Showcase App:** Demonstrates the **5 Frontend Paradigms**, Active Record ORM, WAF security layers, Prompt Injection Shield, and Omni cross-platform capabilities.
 2. **🎓 Rullst Academy (LMS Blueprint):** A full-featured, real-world educational platform with 13 SQLite migrations, course catalog, Argon2 authentication, monotonic lesson progress tracking, quizzes, certifications, and integrated **Nexus Admin CMS** + **Studio Dev Cockpit**.
+3. **💼 Rullst Portfolio Blueprint:** An ultra-fast, modern developer portfolio featuring dark glassmorphic UI, HTMX SSR, project showcase, experience timeline, skills matrix, and **Nexus Admin CMS**.
 
 ---
 
 ## ☁️ Live Cloud Deployments (Azure Container Apps)
 
-Both applications run in **Microsoft Azure Container Apps** using the Serverless Consumption Tier (Scale-to-Zero):
+All applications run in **Microsoft Azure Container Apps** on the **Azure for Students** plan using the Serverless Consumption Tier (Scale-to-Zero):
 
 | Application | Live Public URL | Key Features | Admin / Cockpit |
 | :--- | :--- | :--- | :--- |
 | **🌐 Rullst Showcase** | [rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/) | 5 Web Paradigms, WAF Defense, LiveView, AI Assistant, Omni Simulator | Architecture Notices & Cockpit Guide |
 | **🎓 LMS Academy** | [rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
+| **💼 Portfolio** | [rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
 
 ---
 
@@ -198,6 +201,13 @@ Access the local showcase endpoints:
 cd blueprints/lms
 cargo run
 # Open http://127.0.0.1:3000 (LMS Catalog, Login, Registration, Nexus, and Studio)
+```
+
+### Running the Portfolio Blueprint Locally
+```bash
+cd blueprints/portfolio
+cargo run
+# Open http://127.0.0.1:3000 (Dark Glassmorphism Portfolio & Nexus CMS at /nexus)
 ```
 
 ---

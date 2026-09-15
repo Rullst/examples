@@ -85,17 +85,51 @@ In the **Azure Portal**:
    - Ingress traffic: `Accepting traffic from anywhere`
    - Target port: `3000`
 9. **Environment Variables:**
-   - `HOST`: `0.0.0.0`
-   - `PORT`: `3000`
-   - `APP_ENV`: `production`
-   - `NEXUS_ADMIN_USERNAME`: `rullst_admin`
-   - `NEXUS_ADMIN_PASSWORD`: `SovereignRullst2026!Key` (16+ characters)
+    - `HOST`: `0.0.0.0`
+    - `PORT`: `3000`
+    - `APP_ENV`: `production`
+    - `NEXUS_ADMIN_USERNAME`: `rullst_admin`
+    - `NEXUS_ADMIN_PASSWORD`: `SovereignRullst2026!Key` (16+ characters)
 10. **Scale Rules (Scale-to-Zero):**
     - Set **Min replicas:** `0`
     - Set **Max replicas:** `1` (or scale dynamically with traffic)
 
 ---
 
+### 3. Deploying the Portfolio Blueprint (`rullst-portfolio`)
+
+The **Portfolio Blueprint** shares the exact same subscription (**Azure for Students**), Resource Group (**`rullst-rg`**), and Azure Container Apps Managed Environment as the other services.
+
+#### Via Azure CLI (Single Command):
+```bash
+az containerapp create \
+  --name rullst-portfolio \
+  --resource-group rullst-rg \
+  --environment managedEnvironment-rullst \
+  --image ghcr.io/rullst/portfolio:latest \
+  --target-port 3000 \
+  --ingress external \
+  --min-replicas 0 \
+  --max-replicas 1 \
+  --cpu 0.25 \
+  --memory 0.5Gi \
+  --env-vars \
+    HOST=0.0.0.0 \
+    PORT=3000 \
+    RULLST_ENV=production \
+    DATABASE_URL="sqlite:///app/db.sqlite?mode=rwc" \
+    NEXUS_ADMIN_USERNAME=portfolio_admin \
+    NEXUS_ADMIN_PASSWORD="SovereignRullst2026!Key"
+```
+
+#### Via GitHub Actions (Automated CI/CD):
+Upon committing and pushing to the `main` branch:
+1. The workflow [deploy-portfolio.yml](.github/workflows/deploy-portfolio.yml) builds the OCI container with `cargo-chef` layer caching and pushes it to `ghcr.io/rullst/portfolio`.
+2. Authenticates to Azure using existing repository secrets (`AZURE_CREDENTIALS`), which are already scoped to the **Azure for Students** subscription and the **`rullst-rg`** Resource Group.
+3. Automatically triggers and provisions the active revision of `rullst-portfolio`.
+
+---
+
 ## 📊 Monitoring & Telemetry
 - **Live Logs:** In Azure Portal, navigate to **Application > Containers > Console log stream** to view real-time Rust logs.
-- **Zero Downtime Revisions:** Azure maintains traffic zero-downtime routing across revisions (`rullst-showcase--0000001`, `0000002`).
+- **Zero Downtime Revisions:** Azure maintains traffic zero-downtime routing across revisions (`rullst-showcase--0000001`, `rullst-portfolio--0000001`).
