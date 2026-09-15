@@ -97,9 +97,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     println!("🚀 Rullst Sovereign SaaS Showcase running at http://127.0.0.1:3000");
-    #[cfg(debug_assertions)]
-    println!("   - Studio Developer Control Room: http://127.0.0.1:5555");
-    println!("   - Nexus Admin CMS: http://127.0.0.1:3000/nexus");
+    println!("   - Studio Developer Control Room: http://127.0.0.1:3000/studio (User: admin | Pass: SovereignShowcase2026!)");
+    println!("   - Nexus Admin CMS: http://127.0.0.1:3000/nexus (User: admin | Pass: SovereignShowcase2026!)");
+    println!("   - Groq AI Copilot: Active with Llama 3.3 70B & Prompt Injection Shield");
 
     server.run(3000).await?;
 
