@@ -204,6 +204,283 @@ fn cv_styles() -> String {
             padding: 1.25rem 1rem;
         }
     }
+
+    /* == AI Career Copilot Floating Drawer & Launcher == */
+    .ai-launcher {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(6, 182, 212, 0.95));
+        color: #050505;
+        font-weight: 700;
+        font-size: 0.92rem;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        box-shadow: 0 10px 25px -3px rgba(0, 255, 204, 0.4), 0 4px 10px rgba(0,0,0,0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .ai-launcher:hover {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 15px 30px -3px rgba(0, 255, 204, 0.6);
+    }
+    .ai-sparkle { font-size: 1.1rem; }
+    .ai-groq-pill {
+        font-size: 0.68rem;
+        padding: 2px 7px;
+        background: rgba(0, 0, 0, 0.25);
+        color: #050505;
+        font-weight: 800;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .ai-drawer {
+        position: fixed;
+        bottom: 84px;
+        right: 24px;
+        width: 420px;
+        max-width: calc(100vw - 32px);
+        height: 590px;
+        max-height: calc(100vh - 110px);
+        background: rgba(15, 15, 22, 0.94);
+        border: 1px solid rgba(0, 255, 204, 0.25);
+        border-radius: 24px;
+        box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 40px rgba(0, 255, 204, 0.12);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        display: none;
+        flex-direction: column;
+        z-index: 1000;
+        overflow: hidden;
+        animation: aiDrawerSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .ai-drawer.open {
+        display: flex;
+    }
+
+    @keyframes aiDrawerSlideUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.96); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .ai-drawer-header {
+        padding: 16px 20px;
+        background: rgba(20, 20, 30, 0.85);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .ai-drawer-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .ai-drawer-subtitle {
+        font-size: 0.72rem;
+        color: var(--accent);
+        display: block;
+        margin-top: 2px;
+    }
+    .ai-close-btn {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid var(--border-color);
+        color: #ddd;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        transition: background 0.15s;
+    }
+    .ai-close-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+    .ai-chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        scroll-behavior: smooth;
+    }
+
+    .chat-bubble {
+        display: flex;
+        flex-direction: column;
+        max-width: 90%;
+        animation: bubbleFadeIn 0.2s ease;
+    }
+    @keyframes bubbleFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-bubble-user {
+        align-self: flex-end;
+    }
+    .chat-bubble-assistant {
+        align-self: flex-start;
+    }
+    .chat-bubble-sender {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+        padding: 0 4px;
+    }
+    .chat-bubble-user .chat-bubble-sender {
+        text-align: right;
+    }
+    .chat-bubble-body {
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 0.88rem;
+        line-height: 1.55;
+    }
+    .chat-bubble-user .chat-bubble-body {
+        background: linear-gradient(135deg, rgba(0, 255, 204, 0.25), rgba(0, 255, 204, 0.15));
+        border: 1px solid rgba(0, 255, 204, 0.4);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+    .chat-bubble-assistant .chat-bubble-body {
+        background: rgba(30, 30, 42, 0.9);
+        border: 1px solid var(--border-color);
+        color: #e4e4e7;
+        border-bottom-left-radius: 4px;
+    }
+    .chat-bubble-assistant.error .chat-bubble-body {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #fca5a5;
+    }
+    .ai-badge-footer {
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        font-size: 0.68rem;
+        color: #a1a1aa;
+    }
+
+    .ai-prompt-suggestions {
+        padding: 10px 16px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        background: rgba(10, 10, 15, 0.7);
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+    .ai-prompt-suggestions::-webkit-scrollbar { display: none; }
+    .ai-pill-btn {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid var(--border-color);
+        color: #d4d4d8;
+        font-size: 0.74rem;
+        padding: 5px 11px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex-shrink: 0;
+    }
+    .ai-pill-btn:hover {
+        background: rgba(0, 255, 204, 0.12);
+        border-color: rgba(0, 255, 204, 0.4);
+        color: #00ffcc;
+    }
+
+    .ai-form {
+        padding: 14px 16px;
+        background: rgba(20, 20, 30, 0.98);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .ai-input {
+        flex: 1;
+        background: rgba(10, 10, 15, 0.8);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 10px 14px;
+        color: #fff;
+        font-size: 0.86rem;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+    .ai-input:focus {
+        border-color: var(--accent);
+    }
+    .ai-submit-btn {
+        background: var(--accent);
+        color: #050505;
+        font-weight: 700;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 16px;
+        cursor: pointer;
+        font-size: 0.86rem;
+        transition: opacity 0.15s;
+    }
+    .ai-submit-btn:hover { opacity: 0.9; }
+
+    .ai-typing-indicator {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 18px;
+        background: rgba(15, 15, 22, 0.8);
+    }
+    .ai-typing-indicator.htmx-request {
+        display: flex;
+    }
+    .ai-typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: aiPulsingDot 1.2s infinite ease-in-out;
+    }
+    .ai-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .ai-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes aiPulsingDot {
+        0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+        40% { transform: scale(1.1); opacity: 1; }
+    }
+
+    @media (max-width: 640px) {
+        .ai-launcher {
+            bottom: 16px;
+            right: 16px;
+            padding: 10px 16px;
+            font-size: 0.84rem;
+        }
+        .ai-drawer {
+            bottom: 72px;
+            right: 10px;
+            left: 10px;
+            width: auto;
+            max-width: none;
+            height: 520px;
+        }
+    }
     "#.to_string()
 }
 
@@ -293,6 +570,141 @@ fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
     }
 }
 
+fn render_ai_widget() -> String {
+    r##"
+    <button id="ai-launcher-btn" class="ai-launcher" onclick="toggleAiDrawer()" aria-label="Open AI Career Copilot">
+        <span class="ai-sparkle">✨</span>
+        <span>Ask Career Copilot</span>
+        <span class="ai-groq-pill">Groq AI</span>
+    </button>
+
+    <div id="ai-drawer" class="ai-drawer" style="display: none;" role="dialog" aria-label="AI Career Copilot">
+        <div class="ai-drawer-header">
+            <div class="ai-header-left">
+                <div class="ai-avatar-badge">⚡</div>
+                <div>
+                    <div class="ai-header-title">Career Copilot</div>
+                    <div class="ai-header-sub">
+                        <span class="ai-status-indicator"></span>
+                        <span>Powered by Groq • Llama 3.3 70B</span>
+                    </div>
+                </div>
+            </div>
+            <button class="ai-close-btn" onclick="toggleAiDrawer()" aria-label="Close">×</button>
+        </div>
+
+        <div id="ai-chat-messages" class="ai-chat-messages">
+            <div class="chat-bubble chat-bubble-assistant">
+                <div class="chat-bubble-sender">Career Copilot</div>
+                <div class="chat-bubble-body">
+                    Hello! I am the AI Career Copilot for this portfolio, powered by Groq and guarded by Rullst. Ask me anything about skills, architectures, projects, or hireability!
+                    <div class="ai-badge-footer">⚡ Groq Llama 3.3 70B • Context-Aware RAG</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-prompt-suggestions">
+            <button class="ai-pill-btn" onclick="setAiQuestion('What are your main backend and Rust skills?')">🦀 Rust Skills</button>
+            <button class="ai-pill-btn" onclick="setAiQuestion('Explain the architecture of Rullst Blueprint LMS.')">🏛️ LMS Architecture</button>
+            <button class="ai-pill-btn" onclick="setAiQuestion('How does Rullst protect against Prompt Injections?')">🛡️ AI Security</button>
+            <button class="ai-pill-btn" onclick="setAiQuestion('Why hire this engineer for high-concurrency systems?')">💼 Why Hire?</button>
+        </div>
+
+        <div id="ai-typing" class="ai-typing-indicator">
+            <span class="ai-typing-dot"></span>
+            <span class="ai-typing-dot"></span>
+            <span class="ai-typing-dot"></span>
+            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot thinking via Groq...</span>
+        </div>
+
+        <form id="ai-chat-form" class="ai-form"
+              hx-post="/api/chat"
+              hx-target="#ai-chat-messages"
+              hx-swap="beforeend"
+              hx-indicator="#ai-typing"
+              hx-on::before-request="appendUserMessage()"
+              hx-on::after-request="finalizeAiRequest()">
+            <input id="ai-message-input" type="text" name="message" class="ai-input" placeholder="Ask about projects, skills, experience..." autocomplete="off" required maxlength="600" />
+            <button type="submit" class="ai-submit-btn">Send</button>
+        </form>
+    </div>
+
+    <script>
+        function toggleAiDrawer() {
+            var drawer = document.getElementById('ai-drawer');
+            var launcher = document.getElementById('ai-launcher-btn');
+            if (!drawer) return;
+            var isOpen = drawer.style.display !== 'none';
+            if (isOpen) {
+                drawer.style.display = 'none';
+                if (launcher) launcher.style.display = 'flex';
+            } else {
+                drawer.style.display = 'flex';
+                if (launcher) launcher.style.display = 'none';
+                var input = document.getElementById('ai-message-input');
+                if (input) setTimeout(function() { input.focus(); }, 150);
+                scrollAiToBottom();
+            }
+        }
+
+        function scrollAiToBottom() {
+            var msgs = document.getElementById('ai-chat-messages');
+            if (msgs) {
+                setTimeout(function() { msgs.scrollTop = msgs.scrollHeight; }, 50);
+            }
+        }
+
+        function setAiQuestion(text) {
+            var input = document.getElementById('ai-message-input');
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function appendUserMessage() {
+            var input = document.getElementById('ai-message-input');
+            if (!input || !input.value.trim()) return;
+            var msg = input.value.trim();
+            var msgs = document.getElementById('ai-chat-messages');
+            if (msgs) {
+                var bubble = document.createElement('div');
+                bubble.className = 'chat-bubble chat-bubble-user';
+                bubble.innerHTML = '<div class="chat-bubble-sender">You</div><div class="chat-bubble-body">' + escapeHtml(msg) + '</div>';
+                msgs.appendChild(bubble);
+                scrollAiToBottom();
+            }
+            input.value = '';
+        }
+
+        function finalizeAiRequest() {
+            scrollAiToBottom();
+            var input = document.getElementById('ai-message-input');
+            if (input) input.focus();
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                var drawer = document.getElementById('ai-drawer');
+                if (drawer && drawer.style.display !== 'none') {
+                    toggleAiDrawer();
+                }
+            }
+        });
+
+        document.addEventListener('htmx:afterSwap', function(e) {
+            if (e.detail.target && e.detail.target.id === 'ai-chat-messages') {
+                scrollAiToBottom();
+            }
+        });
+    </script>
+    "##.to_string()
+}
+
 pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience], skills: &[Skill]) -> String {
     html! {
         <html lang="en">
@@ -302,6 +714,7 @@ pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience
                 <title>"Rullst Developer — AI & Rust Portfolio"</title>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
                 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+                <script src="/static/htmx.js"></script>
                 <style>{ rullst::html::RawHtml(cv_styles()) }</style>
             </head>
             <body>
@@ -314,7 +727,10 @@ pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience
                     { rullst::html::RawHtml(render_sidebar(profile, skills)) }
                     { rullst::html::RawHtml(render_content(projects, experiences)) }
                 </div>
+
+                { rullst::html::RawHtml(render_ai_widget()) }
             </body>
         </html>
     }
 }
+

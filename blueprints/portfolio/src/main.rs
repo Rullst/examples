@@ -75,6 +75,22 @@ async fn studio_logger_handler() -> rullst::server::Response {
     ).into_response()
 }
 
+const HTMX_JS: &str = include_str!("../static/htmx-1.9.12.min.js");
+
+async fn htmx_handler() -> rullst::server::Response {
+    use rullst::server::header;
+    use rullst::server::IntoResponse;
+    (
+        rullst::server::StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=604800"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        HTMX_JS,
+    ).into_response()
+}
+
 async fn studio_auth_guard(
     req: rullst::server::Request,
     next: rullst::server::Next,
@@ -328,6 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Router with Trusted TLS termination for cloud ingress (Azure Container Apps / Envoy)
     let router = routes![
         get("/" => controllers::portfolio_controller::index),
+        get("/static/htmx.js" => htmx_handler),
+        post("/api/chat" => controllers::ai_controller::chat),
     ]
     .nest_axum("/nexus", nexus)
     .nest_axum("/studio", studio_router)
