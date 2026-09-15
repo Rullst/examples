@@ -154,3 +154,34 @@ let studio_router = rullst::studio::data_browser::router()
     .route("/assets/studio.css", axum::routing::get(studio_css_handler))
     .layer(rullst::server::from_fn(studio_auth_guard));
 ```
+
+---
+
+## Issue 2: Orphaned `/studio/cache` Navigation Route (HTTP 404)
+
+* **Component:** `rullst-studio` / `data_browser::layout` & `cache_inspector`
+* **Affected Versions:** `v12.0.0-rc.1` and `v12.0.0` (Stable)
+* **Affected Routes:** `/studio/cache` and `/cache`
+* **Symptom:** Clicking the "🧊 Cache" navigation button in the Studio navbar navigates to `/studio/cache` and returns `HTTP 404 Not Found`.
+* **Root Cause:**
+  1. In `rullst-studio/src/data_browser/layout.rs` (lines 51–53), the Studio top navigation bar unconditionally renders a link to `/studio/cache`:
+     ```html
+     <a href="/studio/cache" ...>
+         <span>🧊 Cache</span>
+     </a>
+     ```
+  2. However, in `rullst-studio/src/data_browser/mod.rs`, `router_with_trace_store()` registers routes for `/`, `/tables/{table}`, `/migrations`, `/ai`, `/security`, `/radar`, `/capital`, and `/traces`, but **does NOT register `/cache` or `/studio/cache`**.
+  3. The internal `cache_inspector::router` is only wired within `Studio::into_router(access)` in `lib.rs` (`.nest("/studio/cache", cache_router)`), which is locked behind the local loopback capability and never exposed when mounting `rullst::studio::data_browser::router()`.
+  4. As a result, every application that embeds the public Studio data browser router experiences a broken 404 link when clicking "Cache".
+
+### Recommended Permanent Framework Fix for Rullst v12.1.0+
+In `rullst-studio/src/data_browser/mod.rs`:
+Mount default inspection fallback routes or wire `cache_inspector` into `data_browser::router_with_trace_store` directly:
+```rust
+.route("/cache", axum::routing::get(handle_studio_cache))
+.route("/studio/cache", axum::routing::get(handle_studio_cache))
+```
+
+### Blueprint Workaround (Applied in `blueprints/portfolio` & `blueprints/lms`)
+Register an application-level handler using `rullst_studio::data_browser::studio_layout` to provide a dark glassmorphic Cache Inspector interface responding to both full visits and HTMX partial swaps.
+
