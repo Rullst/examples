@@ -36,7 +36,7 @@ All applications run in **Microsoft Azure Container Apps** on the **Azure for St
 | :--- | :--- | :--- | :--- |
 | **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, AI Assistant, Omni Simulator | Architecture Notices & Cockpit Guide |
 | **🎓 LMS Academy** | [lms.rullst.win](https://lms.rullst.win) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
-| **💼 Portfolio** | [portfolio.rullst.win](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
+| **💼 Portfolio** | [portfolio.rullst.win](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Sandbox User: `admin` / Pass: `SovereignPortfolio2026!`)*<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
 
 ---
 

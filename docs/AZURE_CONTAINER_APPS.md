@@ -118,8 +118,8 @@ az containerapp create \
     PORT=3000 \
     RULLST_ENV=production \
     DATABASE_URL="sqlite:///app/db.sqlite?mode=rwc" \
-    NEXUS_ADMIN_USERNAME=portfolio_admin \
-    NEXUS_ADMIN_PASSWORD="SovereignRullst2026!Key"
+    NEXUS_ADMIN_USERNAME=admin \
+    NEXUS_ADMIN_PASSWORD="SovereignPortfolio2026!"
 ```
 
 #### Via GitHub Actions (Automated CI/CD):
