@@ -176,6 +176,108 @@ async fn studio_cache_handler(
     rullst::response::Html(full_html).into_response()
 }
 
+async fn nexus_mobile_patch(
+    req: rullst::server::Request,
+    next: rullst::server::Next,
+) -> rullst::server::Response {
+    use rullst::server::IntoResponse;
+    let res = next.run(req).await;
+    let (mut parts, body) = res.into_parts();
+    let is_html = parts
+        .headers
+        .get(rullst::server::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|ct| ct.contains("text/html"))
+        .unwrap_or(false);
+    if !is_html {
+        return rullst::server::Response::from_parts(parts, body);
+    }
+    let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
+        return (rullst::server::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer nexus body").into_response();
+    };
+    let html = String::from_utf8_lossy(&bytes);
+    if html.contains("nexus-sidebar") {
+        let patch = r#"
+<style>
+@media (max-width: 900px) {
+    #nexus-sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 95;
+    }
+    .nexus-sidebar.nexus-sidebar-open ~ #nexus-sidebar-backdrop,
+    body:has(.nexus-sidebar-open) #nexus-sidebar-backdrop {
+        display: block;
+    }
+    .nexus-sidebar {
+        z-index: 100 !important;
+        max-width: 85vw !important;
+        box-shadow: 12px 0 35px rgba(0, 0, 0, 0.6);
+    }
+    .nexus-sidebar-close-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border);
+        color: #fff;
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        margin-left: auto;
+        transition: background 0.15s ease;
+    }
+    .nexus-sidebar-close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('nexus-sidebar');
+    if (!sidebar) return;
+    const brand = sidebar.querySelector('.nexus-brand');
+    if (brand && !document.getElementById('nexus-sidebar-close')) {
+        const btn = document.createElement('button');
+        btn.id = 'nexus-sidebar-close';
+        btn.className = 'nexus-sidebar-close-btn';
+        btn.innerHTML = '&times;';
+        btn.setAttribute('aria-label', 'Close menu');
+        btn.onclick = (e) => {
+            e.preventDefault();
+            sidebar.classList.remove('nexus-sidebar-open');
+        };
+        brand.appendChild(btn);
+    }
+    if (!document.getElementById('nexus-sidebar-backdrop')) {
+        const backdrop = document.createElement('div');
+        backdrop.id = 'nexus-sidebar-backdrop';
+        backdrop.onclick = () => sidebar.classList.remove('nexus-sidebar-open');
+        document.body.appendChild(backdrop);
+    }
+    sidebar.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', () => sidebar.classList.remove('nexus-sidebar-open'));
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') sidebar.classList.remove('nexus-sidebar-open');
+    });
+});
+</script>
+"#;
+        let patched = html.replace("</body>", &format!("{patch}</body>"));
+        parts.headers.remove(rullst::server::header::CONTENT_LENGTH);
+        return rullst::server::Response::from_parts(parts, axum::body::Body::from(patched));
+    }
+    rullst::server::Response::from_parts(parts, axum::body::Body::from(bytes))
+}
+
     // 1. Resilient Nexus Auth Policy (defaults to public sandbox credentials for demonstration)
     let nexus_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
     let raw_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_else(|_| "SovereignPortfolio2026!".to_string());
@@ -193,7 +295,8 @@ async fn studio_cache_handler(
         .register::<models::project::Project>()
         .register::<models::experience::Experience>()
         .register::<models::skill::Skill>()
-        .try_build()?;
+        .try_build()?
+        .layer(rullst::server::from_fn(nexus_mobile_patch));
 
     let studio_router = rullst::studio::data_browser::router()
         .route("/cache", rullst::server::get(studio_cache_handler))

@@ -185,3 +185,100 @@ Mount default inspection fallback routes or wire `cache_inspector` into `data_br
 ### Blueprint Workaround (Applied in `blueprints/portfolio` & `blueprints/lms`)
 Register an application-level handler using `rullst_studio::data_browser::studio_layout` to provide a dark glassmorphic Cache Inspector interface responding to both full visits and HTMX partial swaps.
 
+---
+
+## Issue 3: Nexus Mobile Drawer Trapping (Unclosable Sidebar on Viewports <= 900px)
+
+* **Component:** `rullst-nexus` (v12.0.0) / `src/nexus/ui.rs`
+* **Affected Versions:** `v12.0.0-rc.1` and `v12.0.0` (Stable)
+* **Symptom:** When accessing Nexus CMS on mobile devices or responsive viewports <= 900px, clicking the topbar hamburger toggle button (`&#9776;`) opens the sidebar drawer by applying `.nexus-sidebar-open`. Once opened, the sidebar cannot be closed:
+  - There is no close button (`×`) inside the sidebar or top brand header.
+  - There is no backdrop / overlay element behind the sidebar.
+  - Clicking outside the drawer does nothing because no click-away event listener exists.
+  - Because the fixed sidebar (`width: 240px`, `z-index: 100`) covers the left side of the viewport, the hamburger button underneath is obscured or cannot toggle it closed.
+  - The user is permanently trapped in the sidebar unless they manually reload the page.
+
+* **Root Cause Analysis:**
+  In `rullst-nexus/src/nexus/ui.rs`:
+  1. The topbar toggle button is declared as:
+     ```html
+     <button class="nexus-topbar-toggle" onclick="document.getElementById(&quot;nexus-sidebar&quot;).classList.toggle(&quot;nexus-sidebar-open&quot;)">&#9776;</button>
+     ```
+  2. The mobile CSS specifies:
+     ```css
+     @media (max-width: 900px) {
+         .nexus-sidebar { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); }
+         .nexus-sidebar-open { transform: translateX(0); }
+         .nexus-topbar-toggle { display: flex; }
+         ...
+     }
+     ```
+  3. No `<div class="nexus-sidebar-backdrop">` element is rendered in `render_shell()`.
+  4. No dismiss event listener is registered for navigation links, escape key, or backdrop clicks.
+
+### Recommended Permanent Framework Fix for Rullst v12.1.0+
+In `rullst-nexus/src/nexus/ui.rs`:
+1. In `render_sidebar()` or `render_shell()`:
+   - Add a dismiss button inside `.nexus-brand`:
+     ```html
+     <button class="nexus-sidebar-close" onclick="document.getElementById('nexus-sidebar').classList.remove('nexus-sidebar-open')">&times;</button>
+     ```
+   - Render a backdrop right after the sidebar:
+     ```html
+     <div class="nexus-sidebar-backdrop" id="nexus-sidebar-backdrop" onclick="document.getElementById('nexus-sidebar').classList.remove('nexus-sidebar-open')"></div>
+     ```
+2. In `NEXUS_CSS`:
+   ```css
+   @media (max-width: 900px) {
+       .nexus-sidebar-backdrop {
+           display: none;
+           position: fixed;
+           inset: 0;
+           background: rgba(0, 0, 0, 0.65);
+           backdrop-filter: blur(4px);
+           z-index: 95;
+       }
+       .nexus-sidebar.nexus-sidebar-open ~ .nexus-sidebar-backdrop {
+           display: block;
+       }
+       .nexus-sidebar { z-index: 100; }
+   }
+   ```
+3. Auto-close the sidebar when any navigation link inside the sidebar is clicked, or when `Escape` is pressed.
+
+### Blueprint Workaround (Applied in `blueprints/portfolio` & `blueprints/lms`)
+An Axum middleware layer `nexus_mobile_patch` is attached to `nexus.layer(...)` that buffers HTML responses from Nexus, dynamically injecting:
+- `#nexus-sidebar-backdrop` with backdrop blur and touch dismiss.
+- `#nexus-sidebar-close` ("×") inside `.nexus-brand`.
+- Event listeners for link clicks, click-outside, and Escape key dismissal.
+
+---
+
+## Issue 4: Portfolio Blueprint Layout Missing Responsive Mobile Breakpoints
+
+* **Component:** `blueprints/portfolio` / `src/pages/home.rs`
+* **Symptom:** On mobile browsers (screen widths <= 900px / 360–420px phones), `portfolio.rullst.win` exhibited severe layout degradation:
+  - The sidebar remained pinned with a rigid `width: 350px` and `position: sticky`.
+  - The main container `.layout` maintained `display: flex; gap: 3rem;`, forcing the sidebar and project cards side-by-side.
+  - The content overflowed off-screen horizontally, requiring horizontal scrolling and breaking readability.
+  - Large display headings (`h1`) wrapped awkwardly or overflowed smaller viewports.
+
+* **Root Cause:**
+  `cv_styles()` was written with desktop-first fixed measurements and zero `@media` query breakpoints:
+  ```css
+  .layout { display: flex; min-height: 100vh; max-width: 1400px; margin: 0 auto; padding: 2rem; gap: 3rem; }
+  .sidebar { width: 350px; flex-shrink: 0; position: sticky; top: 2rem; height: calc(100vh - 4rem); ... }
+  ```
+
+* **Blueprint Resolution:**
+  Implemented fluid, mobile-first responsive media queries:
+  1. Added `overflow-x: hidden; width: 100%;` to `html, body`.
+  2. Fluid heading scale: `font-size: clamp(1.8rem, 4vw, 2.3rem);`.
+  3. `@media (max-width: 900px)`:
+     - `.layout` switches to `flex-direction: column; padding: 1.25rem 1rem; gap: 2.25rem;`.
+     - `.sidebar` becomes fluid `width: 100%; position: static; height: auto;`.
+     - `.projects-grid` drops to a single responsive column (`grid-template-columns: 1fr;`).
+  4. `@media (max-width: 640px)`:
+     - Tighter gutter padding (`1rem 0.75rem`), scaled profile avatar (`100px`), and compact timeline connectors.
+
+
