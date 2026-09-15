@@ -1,6 +1,6 @@
-﻿[package]
+[package]
 name = "rullst-blog-example"
-version = "12.0.0-rc.1"
+version = "12.0.0"
 authors = ["Rullst Core Team"]
 edition = "2024"
 publish = false
@@ -11,7 +11,7 @@ description = "Official example blog and showcase application built with the Rul
 
 [dependencies]
 async-trait = "0.1.89"
-rullst = { version = "12.0.0-rc.1", features = ["orm", "auth", "capital", "ai", "studio", "nexus", "mailer"] }
+rullst = { version = "12.0.0", features = ["orm", "auth", "capital", "ai", "studio", "nexus", "mailer"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 
@@ -19,13 +19,13 @@ serde_json = "1.0.150"
 ignored = ["async-trait", "serde_json", "rullst-security", "rullst-auth", "rullst-capital", "rullst-ai", "rullst-studio", "rullst-nexus"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rullst-orm = "12.0.0-rc.1"
-rullst-security = "12.0.0-rc.1"
-rullst-auth = "12.0.0-rc.1"
-rullst-capital = "12.0.0-rc.1"
-rullst-studio = "12.0.0-rc.1"
-rullst-nexus = "12.0.0-rc.1"
-rullst-ai = "12.0.0-rc.1"
+rullst-orm = "12.0.0"
+rullst-security = "12.0.0"
+rullst-auth = "12.0.0"
+rullst-capital = "12.0.0"
+rullst-studio = "12.0.0"
+rullst-nexus = "12.0.0"
+rullst-ai = "12.0.0"
 tracing = "0.1.44"
 tokio = { version = "1.52.3", features = ["full"] }
 sqlx = { version = "0.9.0", features = ["sqlite", "runtime-tokio"] }
