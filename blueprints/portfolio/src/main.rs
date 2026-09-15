@@ -44,10 +44,46 @@ fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
+const STUDIO_CSS: &str = include_str!("../static/studio.css");
+const LOGGER_JS: &str = r#"document.addEventListener("DOMContentLoaded",()=>{const target=document.getElementById("studio-request-stream");if(!target||typeof EventSource==="undefined")return;const source=new EventSource("/studio/requests/stream");source.onmessage=(event)=>{const row=document.createElement("div");row.innerHTML=event.data;while(row.lastChild)target.prepend(row.lastChild);};window.addEventListener("beforeunload",()=>source.close(),{once:true});});"#;
+
+async fn studio_css_handler() -> rullst::server::Response {
+    use rullst::server::header;
+    use rullst::server::IntoResponse;
+    (
+        rullst::server::StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "text/css; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        STUDIO_CSS,
+    ).into_response()
+}
+
+async fn studio_logger_handler() -> rullst::server::Response {
+    use rullst::server::header;
+    use rullst::server::IntoResponse;
+    (
+        rullst::server::StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        LOGGER_JS,
+    ).into_response()
+}
+
 async fn studio_auth_guard(
     req: rullst::server::Request,
     next: rullst::server::Next,
 ) -> rullst::server::Response {
+    let path = req.uri().path();
+    if path.ends_with(".css") || path.ends_with(".js") {
+        return next.run(req).await;
+    }
+
     use rullst::server::header;
     use rullst::server::{HeaderValue, IntoResponse, StatusCode};
 
@@ -103,6 +139,10 @@ async fn studio_auth_guard(
         .try_build()?;
 
     let studio_router = rullst::studio::data_browser::router()
+        .route("/assets/studio.css", rullst::server::get(studio_css_handler))
+        .route("/studio/assets/studio.css", rullst::server::get(studio_css_handler))
+        .route("/assets/logger.js", rullst::server::get(studio_logger_handler))
+        .route("/studio/assets/logger.js", rullst::server::get(studio_logger_handler))
         .layer(rullst::server::from_fn(studio_auth_guard));
 
     // 2. Initialize Database & Run Migrations on container boot
