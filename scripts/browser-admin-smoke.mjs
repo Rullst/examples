@@ -44,19 +44,15 @@ if (!chromePath) {
   process.exit(1);
 }
 
-const profile = mkdtempSync(join(tmpdir(), 'rullst-browser-'));
-const chrome = spawn(chromePath, [
-  '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--no-first-run',
-  // DevTools is bound to loopback and the disposable profile below. Current
-  // Chrome versions otherwise reject Node's WebSocket client by Origin.
-  '--remote-allow-origins=*',
-  '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
-  `--user-data-dir=${profile}`, 'about:blank'
-], { stdio: 'ignore' });
-
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let stage = 'starting Chromium';
 let proxyServer;
+let browserOrigin;
+let profile;
+let chrome;
+let proxyRequestCount = 0;
+let lastProxyStatus;
+let lastProxyFailure;
 
 async function startLoopbackProxy() {
   const authorization = `Basic ${Buffer.from(`${input.username}:${input.password}`, 'utf8').toString('base64')}`;
@@ -69,6 +65,7 @@ async function startLoopbackProxy() {
     'transfer-encoding', 'upgrade'
   ]);
   const server = createServer(async (request, response) => {
+    proxyRequestCount += 1;
     try {
       const target = new URL(request.url || '/', liveOrigin);
       if (target.origin !== liveOrigin.origin) throw new Error('cross-origin proxy target');
@@ -88,6 +85,7 @@ async function startLoopbackProxy() {
         body: request.method === 'GET' || request.method === 'HEAD' ? undefined : body,
         redirect: 'manual'
       });
+      lastProxyStatus = upstream.status;
       response.statusCode = upstream.status;
       upstream.headers.forEach((value, name) => {
         if (!excludedResponseHeaders.has(name)) response.setHeader(name, value);
@@ -103,6 +101,7 @@ async function startLoopbackProxy() {
       }
       response.end(Buffer.from(await upstream.arrayBuffer()));
     } catch {
+      lastProxyFailure = 'upstream request failed';
       response.statusCode = 502;
       response.setHeader('content-type', 'text/plain; charset=utf-8');
       response.end('Live application proxy request failed.');
@@ -124,7 +123,9 @@ async function devtoolsPage() {
       const [port] = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').trim().split(/\r?\n/);
       if (!/^\d+$/.test(port)) throw new Error('invalid DevTools port');
       const pages = await fetch(`http://127.0.0.1:${port}/json/list`).then(r => r.json());
-      if (pages[0]?.webSocketDebuggerUrl) return pages[0].webSocketDebuggerUrl;
+      const appPage = pages.find(page => page.type === 'page' &&
+        typeof page.url === 'string' && page.url.startsWith(browserOrigin));
+      if (appPage?.webSocketDebuggerUrl) return appPage.webSocketDebuggerUrl;
     } catch {}
     if (chrome.exitCode !== null) break;
     await pause(100);
@@ -133,6 +134,21 @@ async function devtoolsPage() {
 }
 
 async function run() {
+  stage = 'starting the loopback proxy';
+  browserOrigin = await startLoopbackProxy();
+  stage = 'starting Chromium';
+  profile = mkdtempSync(join(tmpdir(), 'rullst-browser-'));
+  chrome = spawn(chromePath, [
+    '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--no-first-run',
+    // The browser talks to the public app only through its own allowlisted
+    // loopback proxy. Do not let a runner system proxy intercept that hop.
+    '--no-proxy-server',
+    // DevTools is bound to loopback and the disposable profile below. Current
+    // Chrome versions otherwise reject Node's WebSocket client by Origin.
+    '--remote-allow-origins=*',
+    '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
+    `--user-data-dir=${profile}`, `${browserOrigin}/nexus/chat`
+  ], { stdio: 'ignore' });
   stage = 'discovering the DevTools target';
   const debuggerUrl = await devtoolsPage();
   stage = 'opening the DevTools WebSocket';
@@ -144,14 +160,23 @@ async function run() {
   let id = 0;
   let lastDocumentStatus;
   let lastDocumentError;
+  let expectedDocumentUrl;
+  let currentDocumentRequestId;
   const pending = new Map();
   socket.addEventListener('message', event => {
     const message = JSON.parse(event.data);
-    if (message.method === 'Network.responseReceived' && message.params.type === 'Document') {
+    if (message.method === 'Network.requestWillBeSent' && message.params.type === 'Document' &&
+        message.params.request.url === expectedDocumentUrl) {
+      currentDocumentRequestId = message.params.requestId;
+      return;
+    }
+    if (message.method === 'Network.responseReceived' && message.params.type === 'Document' &&
+        message.params.requestId === currentDocumentRequestId) {
       lastDocumentStatus = message.params.response.status;
       return;
     }
-    if (message.method === 'Network.loadingFailed' && message.params.type === 'Document') {
+    if (message.method === 'Network.loadingFailed' && message.params.type === 'Document' &&
+        message.params.requestId === currentDocumentRequestId) {
       lastDocumentError = message.params.errorText;
       return;
     }
@@ -181,21 +206,18 @@ async function run() {
 
   await send('Network.enable');
   await send('Page.enable');
-  stage = 'starting the loopback proxy';
-  const browserOrigin = await startLoopbackProxy();
 
   for (const [panel, page] of [['nexus', 'chat'], ['studio', 'ai']]) {
     stage = `${panel} page load`;
     lastDocumentStatus = undefined;
     lastDocumentError = undefined;
-    const navigation = await send('Page.navigate', { url: `${browserOrigin}/${panel}/${page}` });
-    const navigationError = navigation.errorText || lastDocumentError;
-    // Chrome can report ERR_ABORTED while replacing about:blank or following a
-    // navigation response. Wait for the final document before treating it as a failure.
-    if (navigationError && navigationError !== 'net::ERR_ABORTED') {
-      const safeError = /^net::ERR_[A-Z0-9_]+$/.test(navigationError) ? navigationError : 'unknown error';
-      stage = `${panel} page navigation (${safeError})`;
-      throw new Error('admin page navigation failed');
+    currentDocumentRequestId = undefined;
+    expectedDocumentUrl = `${browserOrigin}/${panel}/${page}`;
+    const currentDocumentUrl = await evaluate('location.href');
+    if (currentDocumentUrl !== expectedDocumentUrl) {
+      // Keep subsequent panel changes in the real document. Recent headless
+      // Chrome builds can abort the first loopback Page.navigate before I/O.
+      await evaluate(`location.assign(${JSON.stringify(expectedDocumentUrl)})`);
     }
     try {
       await waitFor("document.readyState === 'complete' && !!document.querySelector('#rullst-admin-ai form')", 20);
@@ -233,10 +255,20 @@ async function run() {
 try {
   await run();
 } catch {
+  const proxyStatus = Number.isInteger(lastProxyStatus) ? lastProxyStatus : 'none';
+  const proxyFailure = lastProxyFailure ? ', upstream failure' : '';
+  console.error(`Browser proxy diagnostic: requests=${proxyRequestCount}, last status=${proxyStatus}${proxyFailure}.`);
   console.error(`Real-browser admin verification failed during ${stage}; no credentials or response bodies logged.`);
   process.exitCode = 1;
 } finally {
+  if (chrome) {
+    chrome.kill('SIGKILL');
+    await new Promise(resolve => {
+      if (chrome.exitCode !== null) return resolve();
+      chrome.once('exit', resolve);
+      setTimeout(resolve, 2000);
+    });
+  }
   if (proxyServer) await new Promise(resolve => proxyServer.close(resolve));
-  chrome.kill('SIGKILL');
-  rmSync(profile, { recursive: true, force: true });
+  if (profile) rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
