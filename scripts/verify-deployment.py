@@ -88,7 +88,8 @@ def smoke(app, username, password):
         data = None
         if message is not None:
             headers.update({"Origin": "https://invalid.example" if cross_origin else origin,
-                            "X-Rullst-AI": "1", "Sec-Fetch-Site": "same-origin",
+                            "X-Rullst-AI": "1",
+                            "Sec-Fetch-Site": "cross-site" if cross_origin else "same-origin",
                             "Content-Type": "application/x-www-form-urlencoded"})
             token = next((c.value for c in cookies if c.name == "rullst_csrf"), "")
             headers["X-CSRF-Token"] = token

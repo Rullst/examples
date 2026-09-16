@@ -36,6 +36,14 @@ This monorepository contains three live cloud applications:
 
 All applications run in **Microsoft Azure Container Apps** on the **Azure for Students** plan using the Serverless Consumption Tier (Scale-to-Zero):
 
+> [!NOTE]
+> **Cold-start behavior:** these demos can scale to zero after being idle. The
+> first visit then has to wake a new Azure replica, so the page may load slowly
+> or briefly appear unavailable. Wait a few seconds and reload once. Persistent
+> failures should be checked in Azure revision and container logs. Keeping
+> `minReplicas = 1` avoids scale-to-zero wakeups at the cost of idle usage. See
+> the [Azure Container Apps deployment guide](docs/AZURE_CONTAINER_APPS.md#scale-to-zero-cold-start-notice).
+
 | Application | Live Public URL | Key Features | Admin / Cockpit |
 | :--- | :--- | :--- | :--- |
 | **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Administrator credentials required)*<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |

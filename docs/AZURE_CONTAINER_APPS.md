@@ -11,8 +11,8 @@ Why is Rullst the ultimate framework for serverless and cost-conscious cloud dep
 | Metric | 🦀 **Rullst (Rust)** | ☕ **Spring Boot (Java)** | 🐍 **Django / FastAPI (Python)** | 🐘 **Laravel (PHP)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Idle Memory (RAM)** | **~15–25 MB** | **~350–600 MB** (JVM overhead) | **~120–200 MB** (Gunicorn/Uvicorn) | **~150–250 MB** (PHP-FPM/Octane) |
-| **Cold-Start Wakeup** | **< 50 ms** (Instant) | **8–25 seconds** (JVM class loading) | **4–10 seconds** (Module imports) | **3–8 seconds** (Bootstrap & autoloader) |
-| **Scale-to-Zero Viability** | 🟢 **Perfect**: Users never notice a delay | 🔴 **Poor**: Frequent timeouts during wake-up | 🟡 **Moderate**: Noticeable cold lag | 🟡 **Moderate**: Noticeable cold lag |
+| **Application Process Startup** | **< 50 ms** in the measured binary | **8–25 seconds** (JVM class loading) | **4–10 seconds** (Module imports) | **3–8 seconds** (Bootstrap & autoloader) |
+| **Scale-to-Zero Viability** | 🟢 **Good for cost-sensitive demos**, with a user-visible platform cold start | 🔴 **Poor**: Frequent timeouts during wake-up | 🟡 **Moderate**: Noticeable cold lag | 🟡 **Moderate**: Noticeable cold lag |
 | **Minimum ACA Size Required** | **0.25 vCPU / 0.5 GiB** | **1.0 vCPU / 2.0 GiB** (Minimum viable) | **0.5 vCPU / 1.0 GiB** | **0.5 vCPU / 1.0 GiB** |
 | **Apps Fitting in Free Tier** | 🟢 **10–15 apps** fit comfortably | 🔴 **0–1 app** (exceeds free memory immediately) | 🟡 **1–2 apps** max | 🟡 **1–2 apps** max |
 | **Throughput (req/s per core)** | **~80,000+** (Zero-cost Tokio async) | **~15,000–25,000** | **~2,500–5,000** | **~3,000–6,000** |
@@ -20,7 +20,7 @@ Why is Rullst the ultimate framework for serverless and cost-conscious cloud dep
 
 ### 💡 Why Rullst Saves Over 90% in Cloud Infrastructure:
 1. **No Garbage Collection (GC) or JIT Runtime:** Rullst compiles directly to native machine code. There is no JVM or Python interpreter consuming hundreds of megabytes just to stay idle.
-2. **True Scale-to-Zero:** Because a Rullst container boots from zero in less than 50 milliseconds, you can aggressively configure replicas to drop to `0` when idle. When a visitor arrives, Azure wakes up the container in ~1 second, completely imperceptible to human browsing.
+2. **Scale-to-Zero with a Tradeoff:** The Rullst process starts quickly, but an Azure cold start also includes image availability, resource provisioning, container creation, initialization and health probes. The first request after an idle period can therefore be visibly slower and may briefly look unavailable. This is not guaranteed to be a one-second or imperceptible transition.
 3. **Massive Density:** On a single server or cloud plan, you can run 10x more Rullst microservices or tenant sites than equivalent Spring Boot or Django instances.
 
 ---
@@ -32,9 +32,34 @@ Why is Rullst the ultimate framework for serverless and cost-conscious cloud dep
 | **Idle Cost** | 💰 Charges **24/7**, even with 0 visitors (~$10–$15/mo). Depletes student credits in a few months. | 🟢 **$0.00** when idle (**Scale-to-Zero**). Replicas automatically shut down when traffic stops. | Rullst uses zero idle CPU/RAM when scaled to zero. |
 | **Monthly Free Grant** | ❌ Limited or expired free VM hours. | 🎁 **180,000 vCPU-seconds**, **360,000 GiB-seconds**, and **2,000,000 requests/month FREE**. | Your $100 credit lasts the **full 12 months** without depletion. |
 | **Regional Availability** | ⚠️ Frequent allocation failures in student accounts (*"QuotaExceeded"* / *"Regional capacity exhausted"* in `East US`, etc.). | ✅ Runs on Microsoft's elastic serverless fleet. No dedicated hardware reservation required. | Deploys reliably across regions without quota friction. |
-| **Cold-Start Latency** | N/A (always on). | ~1–2 seconds to wake up from zero. | Pure native Rust binary boots in **< 50ms**. Cold starts are imperceptible compared to Node.js/Python (10–30s). |
+| **Cold-Start Latency** | N/A (always on). | Variable and user-visible when waking from zero; it includes platform work beyond process startup. | The native Rust process starts quickly, but cannot eliminate Azure provisioning, image and probe latency. |
 | **OS Maintenance** | 🛠️ Manual: `apt upgrade`, SSH keys, Linux kernel patches, UFW firewall, systemd services. | 🛡️ Fully managed by Azure. Zero OS patching or infrastructure burden. | Focus purely on your Rust application and business logic. |
 | **TLS / HTTPS** | 🔐 Manual Let's Encrypt certbot setup and renewal cron jobs. | 🔒 **Automatic managed TLS/SSL certificate** with global Anycast routing. | Instant, zero-config HTTPS with custom domain support. |
+
+---
+
+## Scale-to-Zero Cold-Start Notice
+
+These examples use **minimum replicas = 0** to preserve the Azure for Students
+budget. After an idle period, the next request starts a cold container. During
+that interval the browser may wait longer than usual or briefly show a gateway,
+connection or apparently broken-link error. Wait a few seconds and reload once.
+If the site remains unavailable, inspect the active revision, replica status,
+startup/readiness probes and container logs instead of assuming it is only cold.
+
+The Rullst binary's process startup time is only one component of the end-to-end
+cold start. Microsoft documents that scale-to-zero makes the next request trigger
+image/resource provisioning and application startup, and recommends client-side
+accommodations. See [Reducing cold-start time on Azure Container Apps](https://learn.microsoft.com/azure/container-apps/cold-start).
+
+For a user-facing service where first-request latency matters more than idle
+cost, configure **minimum replicas = 1**. This keeps an instance available but
+can incur idle charges. See [Scaling in Azure Container Apps](https://learn.microsoft.com/azure/container-apps/scale-app).
+
+This cold-start behavior is separate from revision rollout. In single-revision
+mode, Azure keeps the previous revision serving traffic until the new revision
+passes its startup and readiness checks; an app configured with zero minimum
+replicas can still cold-start later after becoming idle.
 
 ---
 
@@ -89,7 +114,7 @@ In the **Azure Portal**:
     - `PORT`: `3000`
     - `APP_ENV`: `production`
     - `NEXUS_ADMIN_USERNAME`: `rullst_admin`
-    - `NEXUS_ADMIN_PASSWORD`: `SovereignRullst2026!Key` (16+ characters)
+    - `NEXUS_ADMIN_PASSWORD`: reference a deployment secret containing 16+ characters; never commit or publish the value
 10. **Scale Rules (Scale-to-Zero):**
     - Set **Min replicas:** `0`
     - Set **Max replicas:** `1` (or scale dynamically with traffic)
@@ -113,13 +138,14 @@ az containerapp create \
   --max-replicas 1 \
   --cpu 0.25 \
   --memory 0.5Gi \
+  --secrets nexus-admin-password="$NEXUS_ADMIN_PASSWORD" \
   --env-vars \
     HOST=0.0.0.0 \
     PORT=3000 \
     RULLST_ENV=production \
     DATABASE_URL="sqlite:///app/db.sqlite?mode=rwc" \
     NEXUS_ADMIN_USERNAME=admin \
-    NEXUS_ADMIN_PASSWORD="SovereignPortfolio2026!"
+    NEXUS_ADMIN_PASSWORD=secretref:nexus-admin-password
 ```
 
 #### Via GitHub Actions (Automated CI/CD):
@@ -132,4 +158,4 @@ Upon committing and pushing to the `main` branch:
 
 ## 📊 Monitoring & Telemetry
 - **Live Logs:** In Azure Portal, navigate to **Application > Containers > Console log stream** to view real-time Rust logs.
-- **Zero Downtime Revisions:** Azure maintains traffic zero-downtime routing across revisions (`rullst-showcase--0000001`, `rullst-portfolio--0000001`).
+- **Revision Rollout:** In single-revision mode, Azure keeps the previous healthy revision serving until the new revision passes startup and readiness checks. This does not remove later scale-to-zero cold starts.
