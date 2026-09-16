@@ -30,6 +30,8 @@ class DeploymentChecks(unittest.TestCase):
     def test_browser_check_never_puts_credentials_in_urls_or_output(self):
         source = (ROOT / "scripts/browser-admin-smoke.mjs").read_text(encoding="utf-8")
         self.assertIn("process.stdin", source)
+        self.assertIn("Fetch.continueWithAuth", source)
+        self.assertNotIn("Network.setExtraHTTPHeaders", source)
         self.assertNotIn("console.log(input", source)
         self.assertNotIn("${input.username}@", source)
 

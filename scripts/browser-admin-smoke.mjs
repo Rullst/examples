@@ -66,6 +66,21 @@ async function run() {
   const pending = new Map();
   socket.addEventListener('message', event => {
     const message = JSON.parse(event.data);
+    if (message.method === 'Fetch.authRequired') {
+      send('Fetch.continueWithAuth', {
+        requestId: message.params.requestId,
+        authChallengeResponse: {
+          response: 'ProvideCredentials',
+          username: input.username,
+          password: input.password
+        }
+      }).catch(() => {});
+      return;
+    }
+    if (message.method === 'Fetch.requestPaused') {
+      send('Fetch.continueRequest', { requestId: message.params.requestId }).catch(() => {});
+      return;
+    }
     if (!message.id || !pending.has(message.id)) return;
     const { resolve, reject } = pending.get(message.id);
     pending.delete(message.id);
@@ -91,9 +106,8 @@ async function run() {
   };
 
   await send('Network.enable');
+  await send('Fetch.enable', { handleAuthRequests: true });
   await send('Page.enable');
-  const basic = Buffer.from(`${input.username}:${input.password}`, 'utf8').toString('base64');
-  await send('Network.setExtraHTTPHeaders', { headers: { Authorization: `Basic ${basic}` } });
 
   for (const [panel, page] of [['nexus', 'chat'], ['studio', 'ai']]) {
     stage = `${panel} page load`;
