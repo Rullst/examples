@@ -131,11 +131,16 @@ pub fn render_showcase_nav(active_route: &str) -> String {
 
 fn render_floating_ai_copilot() -> String {
     r##"
-    <button id="showcase-ai-launcher" class="showcase-ai-launcher" onclick="toggleShowcaseAiDrawer()" aria-label="Open AI Copilot">
-        <span class="ai-sparkle">✨</span>
-        <span>Ask Copilot</span>
-        <span class="ai-groq-pill">Groq AI</span>
-    </button>
+    <div id="showcase-crab-launcher" class="showcase-crab-launcher" onclick="toggleShowcaseAiDrawer()" role="button" tabindex="0" aria-label="Ask me anything!">
+        <div class="showcase-crab-bubble">
+            <span class="ai-bubble-sparkle">✨</span>
+            <span class="ai-bubble-text">Ask me anything!</span>
+        </div>
+        <div class="showcase-crab-avatar">
+            <img src="/static/crab.png" alt="Rullst Crab Mascot" class="showcase-crab-img" />
+            <span class="showcase-crab-online"></span>
+        </div>
+    </div>
 
     <div id="showcase-ai-drawer" class="showcase-ai-drawer" style="display: none;" role="dialog" aria-label="Showcase AI Copilot">
         <div class="ai-drawer-header">
@@ -143,7 +148,7 @@ fn render_floating_ai_copilot() -> String {
                 <span style="font-size: 1.1rem;">⚡</span>
                 <div>
                     <div style="font-weight: 700; font-size: 0.9rem; color: #fff;">Showcase Copilot</div>
-                    <div style="font-size: 0.68rem; color: #38bdf8;">Powered by Groq • Llama 3.3 70B</div>
+                    <div style="font-size: 0.68rem; color: #38bdf8;">Sovereign AI Architectural Copilot</div>
                 </div>
             </div>
             <button class="ai-close-btn" onclick="toggleShowcaseAiDrawer()" aria-label="Close">×</button>
@@ -153,7 +158,7 @@ fn render_floating_ai_copilot() -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Showcase Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am your AI Copilot for the Sovereign SaaS Showcase, powered by Groq and guarded by Rullst. Ask me about the 5 Web Paradigms, WAF security, or published stories!
+                    Hello! I am your AI Copilot for the Sovereign SaaS Showcase. Guarded by Rullst Sovereign AI Guardrails. Ask me about the 5 Web Paradigms, WAF security, or published stories!
                 </div>
             </div>
         </div>
@@ -166,7 +171,7 @@ fn render_floating_ai_copilot() -> String {
         </div>
 
         <div id="showcase-drawer-typing" style="display: none; padding: 6px 12px; font-size: 0.75rem; color: #38bdf8; background: #0b0f19;">
-            <span>⚡</span> <em>Copilot thinking via Groq...</em>
+            <span>⚡</span> <em>Copilot is thinking...</em>
         </div>
 
         <form id="showcase-drawer-form" class="ai-form"
@@ -182,9 +187,28 @@ fn render_floating_ai_copilot() -> String {
     </div>
 
     <script>
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            var match = document.cookie.match(/rullst_csrf=([^;]+)/);
+            if (match) {
+                evt.detail.parameters['_token'] = decodeURIComponent(match[1].trim());
+                evt.detail.headers['X-CSRF-Token'] = decodeURIComponent(match[1].trim());
+            }
+        });
+
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            var msgs = document.getElementById('showcase-drawer-messages');
+            if (msgs) {
+                var errDiv = document.createElement('div');
+                errDiv.className = 'chat-bubble chat-bubble-assistant';
+                errDiv.innerHTML = '<div class="chat-bubble-sender">Showcase Copilot</div><div class="chat-bubble-body" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">⚠️ Could not reach Copilot (HTTP ' + (evt.detail.xhr ? evt.detail.xhr.status : 'error') + '). Please try again.</div>';
+                msgs.appendChild(errDiv);
+                scrollDrawerToBottom();
+            }
+        });
+
         function toggleShowcaseAiDrawer() {
             var drawer = document.getElementById('showcase-ai-drawer');
-            var launcher = document.getElementById('showcase-ai-launcher');
+            var launcher = document.getElementById('showcase-crab-launcher');
             if (!drawer) return;
             var isOpen = drawer.style.display !== 'none';
             if (isOpen) {
@@ -225,13 +249,15 @@ fn render_floating_ai_copilot() -> String {
                 msgs.appendChild(bubble);
                 scrollDrawerToBottom();
             }
-            input.value = '';
         }
 
         function finalizeDrawerChat() {
-            scrollDrawerToBottom();
             var input = document.getElementById('showcase-drawer-input');
-            if (input) input.focus();
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            scrollDrawerToBottom();
         }
 
         document.addEventListener('keydown', function(e) {
@@ -568,40 +594,77 @@ pub fn render_shared_styles() -> String {
         border-top: 1px solid var(--border-color);
     }
 
-    /* == Showcase AI Copilot Widget Styles == */
-    .showcase-ai-launcher {
+    /* == Showcase Crab Mascot AI Launcher Styles == */
+    .showcase-crab-launcher {
         position: fixed;
         bottom: 24px;
         right: 24px;
         z-index: 999;
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 10px 18px;
-        background: linear-gradient(135deg, rgba(6, 182, 212, 0.95), rgba(59, 130, 246, 0.95));
-        color: #fff;
-        font-weight: 700;
-        font-size: 0.88rem;
-        border: none;
-        border-radius: 50px;
+        gap: 12px;
         cursor: pointer;
-        box-shadow: 0 10px 25px -3px rgba(6, 182, 212, 0.4), 0 4px 10px rgba(0,0,0,0.3);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        backdrop-filter: blur(10px);
+        user-select: none;
+        transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .showcase-ai-launcher:hover {
-        transform: translateY(-2px) scale(1.03);
-        box-shadow: 0 14px 30px -3px rgba(6, 182, 212, 0.6);
+    .showcase-crab-launcher:hover {
+        transform: translateY(-4px) scale(1.05);
     }
-    .ai-sparkle { font-size: 1rem; }
-    .ai-groq-pill {
-        font-size: 0.65rem;
-        padding: 2px 6px;
-        background: rgba(0, 0, 0, 0.3);
-        color: #38bdf8;
-        font-weight: 800;
-        border-radius: 20px;
-        text-transform: uppercase;
+    .showcase-crab-bubble {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(6, 182, 212, 0.5);
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 14px;
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(6, 182, 212, 0.25);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        animation: bubbleFloat 3s infinite ease-in-out;
+        white-space: nowrap;
+    }
+    .showcase-crab-bubble::after {
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: rgba(15, 23, 42, 0.95);
+        border-top: 1px solid rgba(6, 182, 212, 0.5);
+        border-right: 1px solid rgba(6, 182, 212, 0.5);
+    }
+    .showcase-crab-avatar {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 8px 20px rgba(6, 182, 212, 0.4));
+        animation: crabWiggle 4s infinite ease-in-out;
+    }
+    .showcase-crab-img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+    .showcase-crab-online {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #10b981;
+        border: 2px solid #0b0f19;
+        box-shadow: 0 0 8px #10b981;
     }
     .showcase-ai-drawer {
         position: fixed;
@@ -743,11 +806,18 @@ pub fn render_shared_styles() -> String {
         font-size: 0.82rem;
     }
     @media (max-width: 640px) {
-        .showcase-ai-launcher {
+        .showcase-crab-launcher {
             bottom: 16px;
             right: 16px;
-            padding: 8px 14px;
-            font-size: 0.8rem;
+            gap: 8px;
+        }
+        .showcase-crab-avatar {
+            width: 48px;
+            height: 48px;
+        }
+        .showcase-crab-bubble {
+            font-size: 0.76rem;
+            padding: 6px 10px;
         }
         .showcase-ai-drawer {
             bottom: 70px;

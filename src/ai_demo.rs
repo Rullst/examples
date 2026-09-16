@@ -75,7 +75,7 @@ fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
          <p style=\"font-size: 0.85rem; color: #38bdf8;\">Live Sandbox Credentials: User <strong>admin</strong> | Pass <strong>SovereignShowcase2026!</strong></p>".to_string()
     } else {
         format!(
-            "<p>Hello! I am the <strong>Sovereign Showcase AI Copilot</strong>, powered by Groq LPU inference and guarded by Rullst.</p>\
+            "<p>Hello! I am the <strong>Sovereign Showcase AI Copilot</strong>, guarded by Rullst Sovereign AI Guardrails.</p>\
              <p style=\"margin-top: 0.5rem;\">Ask me about the <strong>5 Web Paradigms</strong> (HTMX SSR, LiveView, Wasm Islands, Pico CSS, Tera), active SQLite blog posts, WAF/RASP defenses, or testing the Prompt Injection Shield!</p>\
              <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Tip: Try clicking the test prompts below or asking 'Explain the 5 web paradigms'.</em></p>"
         )
@@ -98,7 +98,6 @@ pub async fn chat_api(Form(payload): Form<ShowcaseChatPayload>) -> impl IntoResp
     }
 
     let posts = Post::all().await.unwrap_or_default();
-    let user_msg_escaped = rullst::html::escape_str(raw_msg);
 
     let groq_key = std::env::var("GROQ_API_KEY")
         .or_else(|_| std::env::var("OPENAI_API_KEY"))
@@ -154,7 +153,7 @@ Strict Security Rules:
                         format!(
                             "<div class=\"ai-reply-text\">{}</div>\
                              <div style=\"font-size: 0.68rem; color: #10b981; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);\">\
-                                ⚡ Powered by Groq LPU (Llama 3.3 70B) & Rullst AI Guardrails\
+                                ⚡ Sovereign AI • Protected by Rullst AI Guardrails\
                              </div>",
                             rullst::html::escape_str(&reply).replace("\n", "<br/>")
                         )
@@ -183,15 +182,11 @@ Strict Security Rules:
     };
 
     Html(format!(
-        "<div class=\"chat-bubble chat-bubble-user\">\
-            <div class=\"chat-bubble-sender\">You</div>\
-            <div class=\"chat-bubble-body\">{}</div>\
-        </div>\
-        <div class=\"chat-bubble chat-bubble-assistant\">\
-            <div class=\"chat-bubble-sender\">✨ Showcase Copilot (Groq AI)</div>\
-            <div class=\"chat-bubble-body\">{}</div>\
+        "<div class=\"chat-bubble chat-bubble-assistant\">\
+            <div class=\"chat-bubble-sender\" style=\"font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 4px;\">✨ Showcase Copilot</div>\
+            <div class=\"chat-bubble-body\" style=\"background: #0d121f; border: 1px solid #1e293b; color: #e2e8f0; padding: 0.85rem 1.2rem; border-radius: 10px; font-size: 0.92rem; line-height: 1.5;\">{}</div>\
         </div>",
-        user_msg_escaped, assistant_content
+        assistant_content
     )).into_response()
 }
 
@@ -244,7 +239,7 @@ pub async fn ai_page(Query(query): Query<AiSearchQuery>) -> impl IntoResponse {
 
                         <!-- Typing Indicator -->
                         <div id="showcase-typing" class="ai-typing-indicator" style="display: none; padding: 0.75rem 1rem; color: #38bdf8; font-size: 0.82rem; align-items: center; gap: 6px;">
-                            <span>"⚡"</span> <em>"Copilot analyzing query with Groq LPU..."</em>
+                            <span>"⚡"</span> <em>"Copilot analyzing query..."</em>
                         </div>
 
                         <!-- Chat Input Form -->
@@ -398,17 +393,27 @@ pub async fn ai_page(Query(query): Query<AiSearchQuery>) -> impl IntoResponse {
                         history.appendChild(bubble);
                         setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
                     }
-                    input.value = '';
                 }
 
                 function finalizeShowcaseChat() {
+                    const input = document.getElementById('showcase-msg-input');
+                    if (input) {
+                        input.value = '';
+                        input.focus();
+                    }
                     const history = document.getElementById('showcase-chat-history');
                     if (history) {
                         setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
                     }
-                    const input = document.getElementById('showcase-msg-input');
-                    if (input) input.focus();
                 }
+
+                document.body.addEventListener('htmx:configRequest', function(evt) {
+                    var match = document.cookie.match(/rullst_csrf=([^;]+)/);
+                    if (match) {
+                        evt.detail.parameters['_token'] = decodeURIComponent(match[1].trim());
+                        evt.detail.headers['X-CSRF-Token'] = decodeURIComponent(match[1].trim());
+                    }
+                });
 
                 document.addEventListener('htmx:afterSwap', function(e) {
                     if (e.detail.target && e.detail.target.id === 'showcase-chat-history') {

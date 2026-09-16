@@ -392,6 +392,22 @@ async fn htmx_handler() -> axum::response::Response {
     ).into_response()
 }
 
+const CRAB_PNG: &[u8] = include_bytes!("../static/crab.png");
+
+async fn crab_png_handler() -> axum::response::Response {
+    use axum::http::header;
+    use axum::response::IntoResponse;
+    (
+        axum::http::StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "public, max-age=604800"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        CRAB_PNG,
+    ).into_response()
+}
+
 fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
     const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = Vec::new();
@@ -774,6 +790,7 @@ fn router_with_nexus_auth(
         get("/manifest.webmanifest" => manifest_handler),
         get("/sw.js" => sw_handler),
         get("/static/htmx.js" => htmx_handler),
+        get("/static/crab.png" => crab_png_handler),
         post("/api/showcase-chat" => crate::ai_demo::chat_api),
         get("/wp-admin" => honeypot_trap),
         get("/favicon.ico" => favicon_handler),

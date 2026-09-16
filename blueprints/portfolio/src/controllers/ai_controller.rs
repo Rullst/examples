@@ -18,7 +18,7 @@ fn fallback_offline_response(user_msg: &str, profile: &Profile, skills: &[Skill]
         format!(
             "<p>O <strong>{}</strong> é especializado em: <strong>{}</strong>.</p>\
              <p style=\"margin-top: 0.5rem;\">Seus principais pilares de engenharia envolvem desenvolvimento de microsserviços em Rust, concorrência assíncrona com Tokio/Axum, integração de pipelines de inferência de IA e arquitetura Zero-Bundle com HTMX.</p>\
-             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Demonstração Heurística Ativa — Conecte sua chave gratuita do Groq (<code>GROQ_API_KEY</code>) para inferência ao vivo com Llama 3.3 70B.</em></p>",
+             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Career Copilot • Resposta contextualizada via RAG & Rullst Guardrails.</em></p>",
             profile.name, skills_str
         )
     } else if lower.contains("project") || lower.contains("projeto") || lower.contains("lms") || lower.contains("omni") {
@@ -29,7 +29,7 @@ fn fallback_offline_response(user_msg: &str, profile: &Profile, skills: &[Skill]
         format!(
             "<p>Aqui estão alguns dos projetos mais destacados desenvolvidos por <strong>{}</strong>:</p>\
              <ul style=\"margin: 0.5rem 0; padding-left: 1.25rem; font-size: 0.9rem;\">{}</ul>\
-             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Demonstração Heurística Ativa — Conecte sua chave gratuita do Groq (<code>GROQ_API_KEY</code>) para inferência ao vivo com Llama 3.3 70B.</em></p>",
+             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Career Copilot • Resposta contextualizada via RAG & Rullst Guardrails.</em></p>",
             profile.name, proj_list
         )
     } else if lower.contains("experiência") || lower.contains("experience") || lower.contains("trabalho") || lower.contains("carreira") || lower.contains("cargo") {
@@ -40,7 +40,7 @@ fn fallback_offline_response(user_msg: &str, profile: &Profile, skills: &[Skill]
         format!(
             "<p>Trajetória profissional de <strong>{}</strong>:</p>\
              <ul style=\"margin: 0.5rem 0; padding-left: 1.25rem; font-size: 0.9rem;\">{}</ul>\
-             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Demonstração Heurística Ativa — Conecte sua chave gratuita do Groq (<code>GROQ_API_KEY</code>) para inferência ao vivo com Llama 3.3 70B.</em></p>",
+             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Career Copilot • Resposta contextualizada via RAG & Rullst Guardrails.</em></p>",
             profile.name, exp_list
         )
     } else if lower.contains("contato") || lower.contains("email") || lower.contains("contact") || lower.contains("contratar") || lower.contains("hire") {
@@ -94,8 +94,6 @@ pub async fn chat(
     let skills = Skill::all().await.unwrap_or_default();
     let projects = Project::all().await.unwrap_or_default();
     let experiences = Experience::all().await.unwrap_or_default();
-
-    let user_msg_escaped = rullst::html::escape_str(raw_msg);
 
     // 2. Check for Groq / OpenAI-compatible credentials
     let groq_key = std::env::var("GROQ_API_KEY")
@@ -164,7 +162,7 @@ Projetos em Destaque:
                     Ok(reply) => {
                         format!(
                             "<div class=\"ai-reply-text\">{}</div>\
-                             <div class=\"ai-badge-footer\">⚡ Powered by Groq LPU (Llama 3.3 70B) & Rullst AI Guardrails</div>",
+                             <div class=\"ai-badge-footer\">⚡ Career Copilot • Context-Aware RAG & Rullst AI Guardrails</div>",
                             rullst::html::escape_str(&reply).replace("\n", "<br/>")
                         )
                     }
@@ -192,14 +190,10 @@ Projetos em Destaque:
     };
 
     Html(format!(
-        "<div class=\"chat-bubble chat-bubble-user\">\
-            <div class=\"chat-bubble-sender\">Você</div>\
-            <div class=\"chat-bubble-body\">{}</div>\
-        </div>\
-        <div class=\"chat-bubble chat-bubble-assistant\">\
-            <div class=\"chat-bubble-sender\">✨ Career Copilot (Groq AI)</div>\
+        "<div class=\"chat-bubble chat-bubble-assistant\">\
+            <div class=\"chat-bubble-sender\">✨ Career Copilot</div>\
             <div class=\"chat-bubble-body\">{}</div>\
         </div>",
-        user_msg_escaped, assistant_content
+        assistant_content
     )).into_response()
 }

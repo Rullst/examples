@@ -10,6 +10,7 @@ pub fn index_page(
     query: &str,
     selected_category: Option<i32>,
     csp_nonce: &str,
+    csrf_token: &str,
 ) -> String {
     let category_input = selected_category.map_or_else(String::new, |category| {
         html! {
@@ -70,6 +71,7 @@ pub fn index_page(
                 <link rel="manifest" href="/manifest.webmanifest" />
                 <meta name="theme-color" content="#080b11" />
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
+                <script src="/static/htmx.js"></script>
                 <style nonce={csp_nonce}>
                     "
                     * { box-sizing: border-box; }
@@ -141,6 +143,7 @@ pub fn index_page(
                         </div>
                     </main>
                 </div>
+                {rullst::html::RawHtml(render_lms_ai_widget(csrf_token))}
                 <script nonce={csp_nonce}>
                     "if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(console.error)); }"
                 </script>
@@ -179,8 +182,9 @@ pub fn course_detail_page(
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <title>{&course.title}</title>
+                <title>{&course.title}" — Rullst Academy"</title>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
+                <script src="/static/htmx.js"></script>
                 <style nonce={csp_nonce}>
                     "
                     * { box-sizing: border-box; }
@@ -234,6 +238,7 @@ pub fn course_detail_page(
                         }}
                     </main>
                 </div>
+                {rullst::html::RawHtml(render_lms_ai_widget(csrf_token))}
             </body>
         </html>
     }
@@ -388,7 +393,449 @@ pub fn lesson_player_page(
                         </div>
                     </article>
                 </main>
+                {rullst::html::RawHtml(render_lms_ai_widget(csrf_token))}
             </body>
         </html>
     })
 }
+
+fn render_lms_ai_widget(csrf_token: &str) -> String {
+    r##"
+    <style>
+    .lms-crab-launcher {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .lms-crab-launcher:hover {
+        transform: translateY(-4px) scale(1.05);
+    }
+    .lms-crab-bubble {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(52, 211, 153, 0.5);
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 14px;
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(52, 211, 153, 0.25);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        animation: lmsBubbleFloat 3s infinite ease-in-out;
+        white-space: nowrap;
+    }
+    .lms-crab-bubble::after {
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: rgba(15, 23, 42, 0.95);
+        border-top: 1px solid rgba(52, 211, 153, 0.5);
+        border-right: 1px solid rgba(52, 211, 153, 0.5);
+    }
+    @keyframes lmsBubbleFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+    }
+    .lms-bubble-sparkle { font-size: 0.95rem; }
+    .lms-bubble-text {
+        background: linear-gradient(135deg, #34d399, #10b981);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .lms-crab-avatar {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 8px 20px rgba(52, 211, 153, 0.4));
+        animation: lmsCrabWiggle 4s infinite ease-in-out;
+    }
+    @keyframes lmsCrabWiggle {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-3deg) translateY(-2px); }
+        75% { transform: rotate(3deg) translateY(-1px); }
+    }
+    .lms-crab-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .lms-crab-online {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #10b981;
+        border: 2px solid #080b11;
+        box-shadow: 0 0 8px #10b981;
+    }
+    .lms-ai-drawer {
+        position: fixed;
+        bottom: 84px;
+        right: 24px;
+        width: 420px;
+        max-width: calc(100vw - 32px);
+        height: 590px;
+        max-height: calc(100vh - 110px);
+        background: rgba(15, 23, 42, 0.96);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        border-radius: 20px;
+        box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.15);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: lmsDrawerSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes lmsDrawerSlideUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.97); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .lms-drawer-header {
+        padding: 14px 18px;
+        background: rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid #334155;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .lms-close-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid #334155;
+        color: #94a3b8;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+    }
+    .lms-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.15); }
+    .lms-chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .chat-bubble {
+        display: flex;
+        flex-direction: column;
+        max-width: 90%;
+        animation: bubbleFadeIn 0.2s ease;
+    }
+    @keyframes bubbleFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-bubble-user { align-self: flex-end; }
+    .chat-bubble-assistant { align-self: flex-start; }
+    .chat-bubble-sender {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #94a3b8;
+        margin-bottom: 3px;
+        padding: 0 4px;
+    }
+    .chat-bubble-user .chat-bubble-sender { text-align: right; color: #34d399; }
+    .chat-bubble-body {
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 0.86rem;
+        line-height: 1.55;
+    }
+    .chat-bubble-user .chat-bubble-body {
+        background: #047857;
+        color: #fff;
+        border-bottom-right-radius: 2px;
+    }
+    .chat-bubble-assistant .chat-bubble-body {
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #f1f5f9;
+        border-bottom-left-radius: 2px;
+    }
+    .chat-bubble-assistant.error .chat-bubble-body {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #fca5a5;
+    }
+    .lms-badge-footer {
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.68rem;
+        color: #34d399;
+    }
+    .lms-prompt-suggestions {
+        padding: 8px 14px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(11, 15, 25, 0.7);
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+    .lms-prompt-suggestions::-webkit-scrollbar { display: none; }
+    .lms-pill-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #334155;
+        color: #cbd5e1;
+        font-size: 0.72rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+    }
+    .lms-pill-btn:hover {
+        background: rgba(52, 211, 153, 0.15);
+        border-color: #34d399;
+        color: #34d399;
+    }
+    .lms-typing-indicator {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 16px;
+        background: rgba(15, 23, 42, 0.85);
+    }
+    .lms-typing-indicator.htmx-request { display: flex; }
+    .lms-typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #34d399;
+        animation: aiPulsingDot 1.2s infinite ease-in-out;
+    }
+    .lms-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .lms-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes aiPulsingDot {
+        0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+        40% { transform: scale(1.1); opacity: 1; }
+    }
+    .lms-ai-form {
+        padding: 10px 14px;
+        background: #0f172a;
+        border-top: 1px solid #334155;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .lms-input {
+        flex: 1;
+        background: #080b11;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 9px 13px;
+        color: #fff;
+        font-size: 0.84rem;
+        outline: none;
+    }
+    .lms-input:focus { border-color: #34d399; }
+    .lms-submit-btn {
+        background: #047857;
+        color: #fff;
+        font-weight: 700;
+        border: none;
+        border-radius: 10px;
+        padding: 9px 15px;
+        cursor: pointer;
+        font-size: 0.84rem;
+        transition: opacity 0.15s;
+    }
+    .lms-submit-btn:hover { background: #065f46; }
+    @media (max-width: 640px) {
+        .lms-crab-launcher { bottom: 16px; right: 16px; gap: 8px; }
+        .lms-crab-avatar { width: 48px; height: 48px; }
+        .lms-crab-bubble { font-size: 0.76rem; padding: 6px 10px; }
+        .lms-ai-drawer { bottom: 76px; right: 10px; left: 10px; width: auto; max-width: none; height: 500px; }
+    }
+    </style>
+
+    <div id="lms-crab-launcher" class="lms-crab-launcher" onclick="toggleLmsAiDrawer()" role="button" tabindex="0" aria-label="Ask me anything!">
+        <div class="lms-crab-bubble">
+            <span class="lms-bubble-sparkle">✨</span>
+            <span class="lms-bubble-text">Ask me anything!</span>
+        </div>
+        <div class="lms-crab-avatar">
+            <img src="/static/crab.png" alt="Rullst Crab Mascot" class="lms-crab-img" />
+            <span class="lms-crab-online"></span>
+        </div>
+    </div>
+
+    <div id="lms-ai-drawer" class="lms-ai-drawer" style="display: none;" role="dialog" aria-label="Academic Copilot">
+        <div class="lms-drawer-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">🎓</div>
+                <div>
+                    <div style="font-weight: 800; font-size: 0.95rem; color: #fff;">Academic Copilot</div>
+                    <div style="font-size: 0.72rem; color: #34d399; display: flex; align-items: center; gap: 5px;">
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block;"></span>
+                        <span>AI Learning & Curriculum Assistant</span>
+                    </div>
+                </div>
+            </div>
+            <button class="lms-close-btn" onclick="toggleLmsAiDrawer()" aria-label="Close">×</button>
+        </div>
+
+        <div id="lms-chat-messages" class="lms-chat-messages">
+            <div class="chat-bubble chat-bubble-assistant">
+                <div class="chat-bubble-sender">Academic Copilot</div>
+                <div class="chat-bubble-body">
+                    Hello! I am the Academic Copilot for Rullst Academy. Guarded by Rullst Sovereign AI Guardrails. Ask me anything about courses, Rust web architectures, lesson transcripts, or learning tracks!
+                    <div class="lms-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lms-prompt-suggestions">
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('What courses are available in Rullst Academy?')">📚 Course Catalog</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('Explain memory safety and ownership in Rust.')">🦀 Memory Safety</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('How does HTMX integrate with Rust backend SSR?')">⚡ HTMX + Rust</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('What are smart pointers like Box and Arc in Rust?')">🧠 Smart Pointers</button>
+        </div>
+
+        <div id="lms-typing" class="lms-typing-indicator">
+            <span class="lms-typing-dot"></span>
+            <span class="lms-typing-dot"></span>
+            <span class="lms-typing-dot"></span>
+            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
+        </div>
+
+        <form id="lms-chat-form" class="lms-ai-form"
+              hx-post="/api/lms-chat"
+              hx-target="#lms-chat-messages"
+              hx-swap="beforeend"
+              hx-indicator="#lms-typing"
+              hx-on::before-request="appendLmsUserMessage()"
+              hx-on::after-request="finalizeLmsAiRequest()">
+            <input type="hidden" name="_token" value="__CSRF_TOKEN__" id="lms-csrf-token" />
+            <input id="lms-message-input" type="text" name="message" class="lms-input" placeholder="Ask about Rust concepts, lessons, courses..." autocomplete="off" required maxlength="600" />
+            <button type="submit" class="lms-submit-btn">Send</button>
+        </form>
+    </div>
+
+    <script>
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            var tokenInput = document.getElementById('lms-csrf-token');
+            var token = tokenInput ? tokenInput.value : '';
+            if (!token) {
+                var match = document.cookie.match(/rullst_csrf=([^;]+)/);
+                if (match) token = decodeURIComponent(match[1].trim());
+            }
+            if (token) {
+                evt.detail.parameters['_token'] = token;
+                evt.detail.headers['X-CSRF-Token'] = token;
+            }
+        });
+
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            var msgs = document.getElementById('lms-chat-messages');
+            if (msgs) {
+                var errDiv = document.createElement('div');
+                errDiv.className = 'chat-bubble chat-bubble-assistant error';
+                errDiv.innerHTML = '<div class="chat-bubble-sender">Academic Copilot</div><div class="chat-bubble-body">⚠️ Could not reach the Copilot (HTTP ' + (evt.detail.xhr ? evt.detail.xhr.status : 'error') + '). Please try again.</div>';
+                msgs.appendChild(errDiv);
+                scrollLmsToBottom();
+            }
+        });
+
+        function toggleLmsAiDrawer() {
+            var drawer = document.getElementById('lms-ai-drawer');
+            var launcher = document.getElementById('lms-crab-launcher');
+            if (!drawer) return;
+            var isOpen = drawer.style.display !== 'none';
+            if (isOpen) {
+                drawer.style.display = 'none';
+                if (launcher) launcher.style.display = 'flex';
+            } else {
+                drawer.style.display = 'flex';
+                if (launcher) launcher.style.display = 'none';
+                var input = document.getElementById('lms-message-input');
+                if (input) setTimeout(function() { input.focus(); }, 150);
+                scrollLmsToBottom();
+            }
+        }
+
+        function scrollLmsToBottom() {
+            var msgs = document.getElementById('lms-chat-messages');
+            if (msgs) {
+                setTimeout(function() { msgs.scrollTop = msgs.scrollHeight; }, 50);
+            }
+        }
+
+        function setLmsPrompt(text) {
+            var input = document.getElementById('lms-message-input');
+            if (input) {
+                input.value = text;
+                input.focus();
+            }
+        }
+
+        function escapeLmsHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function appendLmsUserMessage() {
+            var input = document.getElementById('lms-message-input');
+            if (!input || !input.value.trim()) return;
+            var msg = input.value.trim();
+            var msgs = document.getElementById('lms-chat-messages');
+            if (msgs) {
+                var bubble = document.createElement('div');
+                bubble.className = 'chat-bubble chat-bubble-user';
+                bubble.innerHTML = '<div class="chat-bubble-sender">You</div><div class="chat-bubble-body">' + escapeLmsHtml(msg) + '</div>';
+                msgs.appendChild(bubble);
+                scrollLmsToBottom();
+            }
+        }
+
+        function finalizeLmsAiRequest() {
+            var input = document.getElementById('lms-message-input');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            scrollLmsToBottom();
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                var drawer = document.getElementById('lms-ai-drawer');
+                if (drawer && drawer.style.display !== 'none') {
+                    toggleLmsAiDrawer();
+                }
+            }
+        });
+
+        document.addEventListener('htmx:afterSwap', function(e) {
+            if (e.detail.target && e.detail.target.id === 'lms-chat-messages') {
+                scrollLmsToBottom();
+            }
+        });
+    </script>
+    "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
+}
+

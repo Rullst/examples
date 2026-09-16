@@ -6,3 +6,4 @@ pub mod notification_controller;
 pub mod publication_controller; pub mod publication_rollback_controller;
 pub mod review_controller;
 pub mod role_controller;
+pub mod ai_controller;

@@ -6,7 +6,9 @@ use crate::models::experience::Experience;
 use crate::models::skill::Skill;
 use crate::pages::home;
 
-pub async fn index() -> impl IntoResponse {
+pub async fn index(
+    rullst::server::Extension(csrf_token): rullst::server::Extension<rullst::security::CsrfToken>,
+) -> impl IntoResponse {
     let profile = Profile::find(1).await.unwrap_or(None).unwrap_or(Profile {
         id: 1,
         name: "Vene Light".to_string(),
@@ -22,5 +24,5 @@ pub async fn index() -> impl IntoResponse {
     let experiences = Experience::all().await.unwrap_or_default();
     let skills = Skill::all().await.unwrap_or_default();
 
-    Html(home::render(&profile, &projects, &experiences, &skills))
+    Html(home::render(&profile, &projects, &experiences, &skills, csrf_token.as_str()))
 }

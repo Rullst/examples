@@ -137,6 +137,38 @@ async fn studio_logger_handler() -> rullst::server::Response {
     ).into_response()
 }
 
+const HTMX_JS: &str = include_str!("../static/htmx-1.9.12.min.js");
+
+async fn htmx_handler() -> rullst::server::Response {
+    use rullst::server::header;
+    use rullst::server::IntoResponse;
+    (
+        rullst::server::StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=604800"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        HTMX_JS,
+    ).into_response()
+}
+
+const CRAB_PNG: &[u8] = include_bytes!("../static/crab.png");
+
+async fn crab_png_handler() -> rullst::server::Response {
+    use rullst::server::header;
+    use rullst::server::IntoResponse;
+    (
+        rullst::server::StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "public, max-age=604800"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        CRAB_PNG,
+    ).into_response()
+}
+
 async fn studio_tailwind_patch(
     req: rullst::server::Request,
     next: rullst::server::Next,
@@ -379,6 +411,9 @@ let nexus = rullst::nexus::Nexus::new()
         get("/apps" => pages::apps::apps_page),
         get("/manifest.webmanifest" => manifest_handler),
         get("/sw.js" => sw_handler),
+        get("/static/htmx.js" => htmx_handler),
+        get("/static/crab.png" => crab_png_handler),
+        post("/api/lms-chat" => controllers::ai_controller::chat),
         // rullst-access: public — course metadata and lesson titles form the public catalog.
         get("/courses/{id}" => controllers::lms_controller::show_course),
         // rullst-access: public — an opaque certificate key reveals bounded course evidence, never learner PII.

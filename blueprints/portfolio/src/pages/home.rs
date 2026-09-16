@@ -206,41 +206,94 @@ fn cv_styles() -> String {
     }
 
     /* == AI Career Copilot Floating Drawer & Launcher == */
-    .ai-launcher {
+    /* == Floating Crab Mascot AI Launcher == */
+    .ai-crab-launcher {
         position: fixed;
         bottom: 24px;
         right: 24px;
         z-index: 999;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 20px;
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(6, 182, 212, 0.95));
-        color: #050505;
-        font-weight: 700;
-        font-size: 0.92rem;
-        border: none;
-        border-radius: 50px;
+        gap: 12px;
         cursor: pointer;
-        box-shadow: 0 10px 25px -3px rgba(0, 255, 204, 0.4), 0 4px 10px rgba(0,0,0,0.3);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        user-select: none;
+        transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    .ai-launcher:hover {
-        transform: translateY(-2px) scale(1.03);
-        box-shadow: 0 15px 30px -3px rgba(0, 255, 204, 0.6);
+    .ai-crab-launcher:hover {
+        transform: translateY(-4px) scale(1.05);
     }
-    .ai-sparkle { font-size: 1.1rem; }
-    .ai-groq-pill {
-        font-size: 0.68rem;
-        padding: 2px 7px;
-        background: rgba(0, 0, 0, 0.25);
-        color: #050505;
-        font-weight: 800;
-        border-radius: 20px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    .ai-crab-speech-bubble {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(0, 255, 204, 0.5);
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 14px;
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 255, 204, 0.25);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        animation: bubbleFloat 3s infinite ease-in-out;
+        white-space: nowrap;
+    }
+    .ai-crab-speech-bubble::after {
+        content: '';
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: rgba(15, 23, 42, 0.95);
+        border-top: 1px solid rgba(0, 255, 204, 0.5);
+        border-right: 1px solid rgba(0, 255, 204, 0.5);
+    }
+    @keyframes bubbleFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+    }
+    .ai-bubble-sparkle {
+        font-size: 0.95rem;
+    }
+    .ai-bubble-text {
+        background: linear-gradient(135deg, #00ffcc, #38bdf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .ai-crab-avatar-wrapper {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        flex-shrink: 0;
+        filter: drop-shadow(0 8px 20px rgba(0, 255, 204, 0.4));
+        animation: crabWiggle 4s infinite ease-in-out;
+    }
+    @keyframes crabWiggle {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(-3deg) translateY(-2px); }
+        75% { transform: rotate(3deg) translateY(-1px); }
+    }
+    .ai-crab-img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+    .ai-crab-online-dot {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #10b981;
+        border: 2px solid #0b0f19;
+        box-shadow: 0 0 8px #10b981;
     }
 
     .ai-drawer {
@@ -466,14 +519,21 @@ fn cv_styles() -> String {
     }
 
     @media (max-width: 640px) {
-        .ai-launcher {
+        .ai-crab-launcher {
             bottom: 16px;
             right: 16px;
-            padding: 10px 16px;
-            font-size: 0.84rem;
+            gap: 8px;
+        }
+        .ai-crab-avatar-wrapper {
+            width: 48px;
+            height: 48px;
+        }
+        .ai-crab-speech-bubble {
+            font-size: 0.76rem;
+            padding: 6px 10px;
         }
         .ai-drawer {
-            bottom: 72px;
+            bottom: 76px;
             right: 10px;
             left: 10px;
             width: auto;
@@ -570,23 +630,28 @@ fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
     }
 }
 
-fn render_ai_widget() -> String {
+fn render_ai_widget(csrf_token: &str) -> String {
     r##"
-    <button id="ai-launcher-btn" class="ai-launcher" onclick="toggleAiDrawer()" aria-label="Open AI Career Copilot">
-        <span class="ai-sparkle">✨</span>
-        <span>Ask Career Copilot</span>
-        <span class="ai-groq-pill">Groq AI</span>
-    </button>
+    <div id="ai-crab-launcher" class="ai-crab-launcher" onclick="toggleAiDrawer()" role="button" tabindex="0" aria-label="Ask me anything!">
+        <div class="ai-crab-speech-bubble">
+            <span class="ai-bubble-sparkle">✨</span>
+            <span class="ai-bubble-text">Ask me anything!</span>
+        </div>
+        <div class="ai-crab-avatar-wrapper">
+            <img src="/static/crab.png" alt="Rullst Crab Mascot" class="ai-crab-img" />
+            <span class="ai-crab-online-dot"></span>
+        </div>
+    </div>
 
     <div id="ai-drawer" class="ai-drawer" style="display: none;" role="dialog" aria-label="AI Career Copilot">
         <div class="ai-drawer-header">
-            <div class="ai-header-left">
-                <div class="ai-avatar-badge">⚡</div>
+            <div class="ai-header-left" style="display: flex; align-items: center; gap: 10px;">
+                <div class="ai-avatar-badge" style="width: 34px; height: 34px; border-radius: 10px; background: rgba(0, 255, 204, 0.15); border: 1px solid rgba(0, 255, 204, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">⚡</div>
                 <div>
-                    <div class="ai-header-title">Career Copilot</div>
-                    <div class="ai-header-sub">
-                        <span class="ai-status-indicator"></span>
-                        <span>Powered by Groq • Llama 3.3 70B</span>
+                    <div class="ai-header-title" style="font-weight: 800; font-size: 0.95rem; color: #fff;">Career Copilot</div>
+                    <div class="ai-header-sub" style="font-size: 0.72rem; color: #00ffcc; display: flex; align-items: center; gap: 5px;">
+                        <span class="ai-status-indicator" style="width: 6px; height: 6px; border-radius: 50%; background: #00ffcc; display: inline-block;"></span>
+                        <span>AI Architecture & Career Assistant</span>
                     </div>
                 </div>
             </div>
@@ -597,8 +662,8 @@ fn render_ai_widget() -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Career Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the AI Career Copilot for this portfolio, powered by Groq and guarded by Rullst. Ask me anything about skills, architectures, projects, or hireability!
-                    <div class="ai-badge-footer">⚡ Groq Llama 3.3 70B • Context-Aware RAG</div>
+                    Hello! I am the AI Career Copilot for this portfolio. Guarded by Rullst Sovereign AI Guardrails. Ask me anything about skills, architectures, projects, or hireability!
+                    <div class="ai-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
                 </div>
             </div>
         </div>
@@ -614,7 +679,7 @@ fn render_ai_widget() -> String {
             <span class="ai-typing-dot"></span>
             <span class="ai-typing-dot"></span>
             <span class="ai-typing-dot"></span>
-            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot thinking via Groq...</span>
+            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
         </div>
 
         <form id="ai-chat-form" class="ai-form"
@@ -624,15 +689,40 @@ fn render_ai_widget() -> String {
               hx-indicator="#ai-typing"
               hx-on::before-request="appendUserMessage()"
               hx-on::after-request="finalizeAiRequest()">
+            <input type="hidden" name="_token" value="__CSRF_TOKEN__" id="ai-csrf-token" />
             <input id="ai-message-input" type="text" name="message" class="ai-input" placeholder="Ask about projects, skills, experience..." autocomplete="off" required maxlength="600" />
             <button type="submit" class="ai-submit-btn">Send</button>
         </form>
     </div>
 
     <script>
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            var tokenInput = document.getElementById('ai-csrf-token');
+            var token = tokenInput ? tokenInput.value : '';
+            if (!token) {
+                var match = document.cookie.match(/rullst_csrf=([^;]+)/);
+                if (match) token = decodeURIComponent(match[1].trim());
+            }
+            if (token) {
+                evt.detail.parameters['_token'] = token;
+                evt.detail.headers['X-CSRF-Token'] = token;
+            }
+        });
+
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            var msgs = document.getElementById('ai-chat-messages');
+            if (msgs) {
+                var errDiv = document.createElement('div');
+                errDiv.className = 'chat-bubble chat-bubble-assistant error';
+                errDiv.innerHTML = '<div class="chat-bubble-sender">Career Copilot</div><div class="chat-bubble-body">⚠️ Could not reach the assistant (HTTP ' + (evt.detail.xhr ? evt.detail.xhr.status : 'error') + '). Please try again.</div>';
+                msgs.appendChild(errDiv);
+                scrollAiToBottom();
+            }
+        });
+
         function toggleAiDrawer() {
             var drawer = document.getElementById('ai-drawer');
-            var launcher = document.getElementById('ai-launcher-btn');
+            var launcher = document.getElementById('ai-crab-launcher');
             if (!drawer) return;
             var isOpen = drawer.style.display !== 'none';
             if (isOpen) {
@@ -678,13 +768,15 @@ fn render_ai_widget() -> String {
                 msgs.appendChild(bubble);
                 scrollAiToBottom();
             }
-            input.value = '';
         }
 
         function finalizeAiRequest() {
-            scrollAiToBottom();
             var input = document.getElementById('ai-message-input');
-            if (input) input.focus();
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            scrollAiToBottom();
         }
 
         document.addEventListener('keydown', function(e) {
@@ -702,10 +794,10 @@ fn render_ai_widget() -> String {
             }
         });
     </script>
-    "##.to_string()
+    "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
 }
 
-pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience], skills: &[Skill]) -> String {
+pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience], skills: &[Skill], csrf_token: &str) -> String {
     html! {
         <html lang="en">
             <head>
@@ -728,9 +820,10 @@ pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience
                     { rullst::html::RawHtml(render_content(projects, experiences)) }
                 </div>
 
-                { rullst::html::RawHtml(render_ai_widget()) }
+                { rullst::html::RawHtml(render_ai_widget(csrf_token)) }
             </body>
         </html>
     }
 }
+
 

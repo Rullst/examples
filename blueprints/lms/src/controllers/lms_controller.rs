@@ -80,6 +80,7 @@ fn error_response(error: CatalogError) -> Response {
 
 pub async fn index(
     Query(query): Query<CatalogQuery>,
+    csrf: Option<Extension<rullst::security::CsrfToken>>,
     csp_nonce: Option<Extension<rullst::security::CspNonce>>,
 ) -> Response {
     let categories = match Category::query()
@@ -99,12 +100,17 @@ pub async fn index(
         .as_ref()
         .map(|Extension(value)| value.as_str())
         .unwrap_or_default();
+    let token = csrf
+        .as_ref()
+        .map(|Extension(value)| value.as_str())
+        .unwrap_or_default();
     Html(lms::index_page(
         categories,
         courses,
         &normalized,
         category,
         nonce,
+        token,
     ))
     .into_response()
 }

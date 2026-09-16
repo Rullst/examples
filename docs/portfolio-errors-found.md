@@ -281,4 +281,53 @@ An Axum middleware layer `nexus_mobile_patch` is attached to `nexus.layer(...)` 
   4. `@media (max-width: 640px)`:
      - Tighter gutter padding (`1rem 0.75rem`), scaled profile avatar (`100px`), and compact timeline connectors.
 
+---
 
+## Issue 5: Zero-Bundle HTMX Form Submissions Silently Blocked by Framework CSRF Baseline (HTTP 403 "CSRF token cookie missing")
+
+* **Component:** `rullst-core` (v12.0.0) / `security::csrf_middleware` & `cargo-rullst` blueprint templates
+* **Affected Versions:** `v12.0.0-rc.1` and `v12.0.0` (Stable)
+* **Affected Routes:** `POST /api/chat` and any blueprint HTMX mutation endpoints (`POST /...`)
+* **Symptom:** Submitting dynamic chat messages, prompt inputs, or any AJAX/HTMX mutation form (`hx-post="/api/chat"`) fails silently in the browser:
+  - The user sees their optimistic message bubble ("You: hi") inserted into the chat view via client-side DOM scripting.
+  - The Copilot never responds; the typing indicator either spins indefinitely or disappears without a reply bubble.
+  - The browser Network tab shows `POST /api/chat` failing immediately with `HTTP 403 Forbidden` and response body:
+    ```text
+    CSRF token cookie missing
+    ```
+  - HTMX by default ignores HTTP 403 responses and does not swap them into `#ai-chat-messages`, giving the impression that the AI service or API key is completely unresponsive.
+
+* **Root Cause Analysis:**
+  1. **Framework Mandatory CSRF Baseline:**
+     When starting a server with `Server::new(router).run(port)`, Rullst's canonical `apply_security_baseline` wraps the entire application router with `rullst::security::csrf_middleware`. This middleware automatically enforces double-submit cookie validation on all non-safe HTTP methods (`POST`, `PUT`, `DELETE`, `PATCH`).
+  2. **Blueprint Scaffold CSRF Token Omission:**
+     The portfolio blueprint scaffold (`blueprints/portfolio/src/controllers/portfolio_controller.rs`) did not extract `Extension<rullst::security::CsrfToken>` from incoming GET requests, and `home::render` did not receive or render any CSRF token.
+  3. **HTMX Missing CSRF Header / Body Bridge:**
+     The chat form (`<form hx-post="/api/chat">`) lacked a `<input type="hidden" name="_token" ... />` element and did not configure an `htmx:configRequest` listener to forward the `rullst_csrf` cookie value.
+  4. **Premature Input Value Clearing in JavaScript:**
+     In `home.rs`, `appendUserMessage()` executed `input.value = '';` inside the `hx-on::before-request` handler. Because this executed before HTMX serialized the form body, HTMX submitted `message=` (an empty string), compounding the failure.
+  5. **Lack of Route-Level CSRF Exemption in `rullst-core`:**
+     The Rullst framework currently lacks a declarative macro or router builder method (such as `.route_csrf_exempt(...)` or `#[csrf_exempt]`) to whitelist public read-only query endpoints (like AI chat widgets or webhooks) from session-based cookie CSRF enforcement.
+
+### Recommended Permanent Framework Fix for Rullst v12.1.0+
+1. **Add CSRF Route Exemption Capability:**
+   Introduce an explicit exemption layer in `rullst::security` to allow developer-selected public endpoints (e.g., public AI chat, public webhooks) to bypass cookie CSRF checks while maintaining WAF and Rate-Limiting protections:
+   ```rust
+   router.route_csrf_exempt("/api/chat", post(chat_handler))
+   ```
+2. **Standardize Blueprint HTMX CSRF Scaffolding:**
+   Update `cargo-rullst` blueprints to inject the standard HTMX double-submit bridge into the base layout `<head>`:
+   ```javascript
+   document.body.addEventListener('htmx:configRequest', function(evt) {
+       var match = document.cookie.match(/rullst_csrf=([^;]+)/);
+       if (match) {
+           evt.detail.parameters['_token'] = decodeURIComponent(match[1].trim());
+           evt.detail.headers['X-CSRF-Token'] = decodeURIComponent(match[1].trim());
+       }
+   });
+   ```
+
+### Blueprint Workaround (Applied in `blueprints/portfolio`)
+1. **Pass CSRF Token to Home Template:** In `portfolio_controller::index`, extract `Extension(csrf_token): Extension<rullst::security::CsrfToken>` and pass `csrf_token.as_str()` into `home::render`.
+2. **Hidden Form Token & HTMX Bridge:** Render `<input type="hidden" name="_token" value="{csrf_token}" id="ai-csrf-token" />` inside `#ai-chat-form` and attach an `htmx:configRequest` listener.
+3. **Defer Input Clearing:** Move `input.value = ''` from `before-request` to `finalizeAiRequest` (`after-request`), ensuring HTMX successfully serializes the user message.
