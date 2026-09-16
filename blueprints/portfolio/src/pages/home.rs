@@ -676,25 +676,25 @@ fn render_ai_widget(csrf_token: &str) -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Career Copilot</div>
                 <div class="chat-bubble-body">
-                    Olá! Sou o <strong>Career Copilot</strong> deste portfólio. Pergunte-me qualquer coisa sobre habilidades em Rust, arquitetura de sistemas, projetos ou contratação! (You can also ask in English!)
+                    Hello! I am the <strong>Career Copilot</strong> for this portfolio. Ask me anything about Rust systems, architectures, projects, or hireability! (Você também pode perguntar em português!)
                     <div class="ai-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
                 </div>
             </div>
         </div>
 
         <div class="ai-prompt-suggestions">
-            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Quais são as principais habilidades em Rust e backend de Vene?')">🦀 Habilidades Rust</button>
-            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Explique a arquitetura e diferenciais do projeto LMS.')">🏛️ Arquitetura LMS</button>
-            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Como o Rullst protege contra ataques de Prompt Injection?')">🛡️ Segurança IA</button>
-            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Por que contratar o Vene para sistemas de alta concorrência?')">💼 Por que Contratar?</button>
-            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Como posso entrar em contato com o desenvolvedor?')">📧 Contato</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('What are Vene\'s core backend and Rust engineering skills?')">🦀 Rust Skills</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Explain the architecture and technical highlights of the LMS project.')">🏛️ LMS Architecture</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('How does Rullst protect against Prompt Injections and LLM jailbreaks?')">🛡️ AI Security</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Why hire Vene for high-concurrency Rust systems engineering?')">💼 Why Hire?</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('How can I contact the developer directly?')">📧 Contact</button>
         </div>
 
         <div id="ai-typing" class="ai-typing-indicator">
             <span class="ai-typing-dot"></span>
             <span class="ai-typing-dot"></span>
             <span class="ai-typing-dot"></span>
-            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot pensando...</span>
+            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
         </div>
 
         <form id="ai-chat-form" class="ai-form"
@@ -705,8 +705,8 @@ fn render_ai_widget(csrf_token: &str) -> String {
               hx-on::before-request="appendUserMessage()"
               hx-on::after-request="finalizeAiRequest()">
             <input type="hidden" name="_token" value="__CSRF_TOKEN__" id="ai-csrf-token" />
-            <input id="ai-message-input" type="text" name="message" class="ai-input" placeholder="Pergunte sobre projetos, habilidades, Rust..." autocomplete="off" required maxlength="600" />
-            <button type="submit" class="ai-submit-btn">Enviar</button>
+            <input id="ai-message-input" type="text" name="message" class="ai-input" placeholder="Ask about projects, skills, experience..." autocomplete="off" required maxlength="600" />
+            <button type="submit" class="ai-submit-btn">Send</button>
         </form>
     </div>
 
