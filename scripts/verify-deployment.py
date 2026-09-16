@@ -78,7 +78,7 @@ def rendered_online(body):
 def safe_browser_diagnostic(stderr):
     return next((line for line in stderr.splitlines() if re.fullmatch(
         r"Real-browser admin verification failed during "
-        r"(?:starting Chromium|opening the DevTools connection|(?:nexus|studio) "
+        r"(?:starting Chromium|discovering the DevTools target|opening the DevTools WebSocket|(?:nexus|studio) "
         r"(?:page load|UI contract|form submission|AI response|denial check)); "
         r"no credentials or response bodies logged\.", line)), None)
 

@@ -1,7 +1,7 @@
 // Real Chromium check for the admin UI. Credentials arrive over stdin and are
 // never placed in arguments, environment variables, browser URLs or output.
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -27,29 +27,37 @@ if (!chromePath) {
 }
 
 const profile = mkdtempSync(join(tmpdir(), 'rullst-browser-'));
-const port = 19000 + (process.pid % 1000);
 const chrome = spawn(chromePath, [
-  '--headless=new', '--no-sandbox', '--disable-gpu', '--no-first-run',
-  `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank'
+  '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--no-first-run',
+  // DevTools is bound to loopback and the disposable profile below. Current
+  // Chrome versions otherwise reject Node's WebSocket client by Origin.
+  '--remote-allow-origins=*',
+  '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
+  `--user-data-dir=${profile}`, 'about:blank'
 ], { stdio: 'ignore' });
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let stage = 'starting Chromium';
 
 async function devtoolsPage() {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
     try {
+      const [port] = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').trim().split(/\r?\n/);
+      if (!/^\d+$/.test(port)) throw new Error('invalid DevTools port');
       const pages = await fetch(`http://127.0.0.1:${port}/json/list`).then(r => r.json());
       if (pages[0]?.webSocketDebuggerUrl) return pages[0].webSocketDebuggerUrl;
     } catch {}
+    if (chrome.exitCode !== null) break;
     await pause(100);
   }
   throw new Error('devtools unavailable');
 }
 
 async function run() {
-  stage = 'opening the DevTools connection';
-  const socket = new WebSocket(await devtoolsPage());
+  stage = 'discovering the DevTools target';
+  const debuggerUrl = await devtoolsPage();
+  stage = 'opening the DevTools WebSocket';
+  const socket = new WebSocket(debuggerUrl);
   await new Promise((resolve, reject) => {
     socket.addEventListener('open', resolve, { once: true });
     socket.addEventListener('error', reject, { once: true });
