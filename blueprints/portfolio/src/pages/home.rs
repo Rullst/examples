@@ -306,6 +306,7 @@ fn cv_styles() -> String {
         width: 420px;
         max-width: calc(100vw - 32px);
         height: 590px;
+        height: min(590px, calc(100dvh - 110px));
         max-height: calc(100vh - 110px);
         background: rgba(15, 15, 22, 0.94);
         border: 1px solid rgba(0, 255, 204, 0.25);
@@ -335,6 +336,7 @@ fn cv_styles() -> String {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-shrink: 0;
     }
     .ai-drawer-title {
         font-size: 1rem;
@@ -354,8 +356,8 @@ fn cv_styles() -> String {
         background: rgba(255,255,255,0.06);
         border: 1px solid var(--border-color);
         color: #ddd;
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
         border-radius: 8px;
         display: flex;
         align-items: center;
@@ -369,18 +371,22 @@ fn cv_styles() -> String {
 
     .ai-chat-messages {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 18px;
         display: flex;
         flex-direction: column;
         gap: 14px;
         scroll-behavior: smooth;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
 
     .chat-bubble {
         display: flex;
         flex-direction: column;
         max-width: 90%;
+        min-width: 0;
         animation: bubbleFadeIn 0.2s ease;
     }
     @keyframes bubbleFadeIn {
@@ -408,6 +414,9 @@ fn cv_styles() -> String {
         border-radius: 16px;
         font-size: 0.88rem;
         line-height: 1.55;
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
     .chat-bubble-user .chat-bubble-body {
         background: linear-gradient(135deg, rgba(0, 255, 204, 0.25), rgba(0, 255, 204, 0.15));
@@ -425,6 +434,16 @@ fn cv_styles() -> String {
         background: rgba(239, 68, 68, 0.15);
         border-color: rgba(239, 68, 68, 0.4);
         color: #fca5a5;
+    }
+    .chat-bubble-body .rullst-ai-prose { min-width: 0; max-width: 100%; }
+    .chat-bubble-body .rullst-ai-prose > :first-child { margin-top: 0; }
+    .chat-bubble-body .rullst-ai-prose > :last-child { margin-bottom: 0; }
+    .chat-bubble-body .rullst-ai-prose pre,
+    .chat-bubble-body .rullst-ai-prose table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .ai-badge-footer {
         margin-top: 8px;
@@ -479,9 +498,11 @@ fn cv_styles() -> String {
         display: flex;
         gap: 8px;
         align-items: center;
+        flex-shrink: 0;
     }
     .ai-input {
         flex: 1;
+        min-width: 0;
         background: rgba(10, 10, 15, 0.8);
         border: 1px solid var(--border-color);
         border-radius: 12px;
@@ -533,8 +554,8 @@ fn cv_styles() -> String {
 
     @media (max-width: 640px) {
         .ai-crab-launcher {
-            bottom: 16px;
-            right: 16px;
+            bottom: max(16px, env(safe-area-inset-bottom));
+            right: max(16px, env(safe-area-inset-right));
             gap: 8px;
         }
         .ai-crab-avatar-wrapper {
@@ -551,12 +572,39 @@ fn cv_styles() -> String {
             left: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
-            height: 80vh !important;
-            max-height: 85vh !important;
+            height: 92vh !important;
+            height: 92dvh !important;
+            max-height: 100vh !important;
+            max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
             border-radius: 20px 20px 0 0 !important;
             border-bottom: none !important;
             box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
         }
+        .ai-drawer-header { padding: 10px 12px; }
+        .ai-close-btn { width: 44px; height: 44px; font-size: 24px; }
+        .ai-chat-messages { padding: 12px; gap: 10px; }
+        .chat-bubble { max-width: 100%; }
+        .chat-bubble-body { padding: 10px 12px; font-size: 0.95rem; }
+        .ai-prompt-suggestions {
+            flex-wrap: nowrap;
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .ai-pill-btn { min-height: 40px; padding: 8px 12px; flex-shrink: 0; }
+        .ai-form { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+        .ai-input { min-height: 44px; font-size: 16px; padding: 10px 12px; }
+        .ai-submit-btn { min-width: 72px; min-height: 44px; font-size: 0.9rem; }
+    }
+    @media (max-width: 380px) {
+        .ai-crab-speech-bubble { display: none; }
+        .ai-header-sub { max-width: 190px; line-height: 1.25; }
+    }
+    @media (max-height: 500px) and (orientation: landscape) {
+        .ai-drawer { height: 100vh !important; height: 100dvh !important; max-height: 100vh !important; max-height: 100dvh !important; border-radius: 0 !important; }
+        .ai-prompt-suggestions { display: none; }
     }
     "#.to_string()
 }
@@ -746,9 +794,11 @@ fn render_ai_widget(csrf_token: &str) -> String {
             if (isOpen) {
                 drawer.style.display = 'none';
                 if (launcher) launcher.style.display = 'flex';
+                document.body.style.overflow = '';
             } else {
                 drawer.style.display = 'flex';
                 if (launcher) launcher.style.display = 'none';
+                if (window.innerWidth <= 640) document.body.style.overflow = 'hidden';
                 var input = document.getElementById('ai-message-input');
                 if (input) setTimeout(function() { input.focus(); }, 150);
                 scrollAiToBottom();
@@ -831,7 +881,7 @@ pub fn render(
         <html lang="en">
             <head>
                 <meta charset="UTF-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>"Rullst Developer — AI & Rust Portfolio"</title>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
                 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />

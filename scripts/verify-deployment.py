@@ -82,7 +82,8 @@ def safe_browser_diagnostic(stderr):
         r"starting the loopback proxy|(?:nexus|studio) "
         r"(?:page navigation \((?:net::ERR_[A-Z0-9_]+|unknown error)\)|"
         r"page load(?: \(HTTP (?:[1-5]\d\d|unknown)(?:, net::ERR_[A-Z0-9_]+)?\))?|"
-        r"UI contract|form submission|AI response|denial check)); "
+        r"UI contract|form submission|AI response|denial check)|"
+        r"public mobile chat (?:page load|layout)); "
         r"no credentials or response bodies logged\.", line)), None)
 
 

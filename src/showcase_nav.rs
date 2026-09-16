@@ -180,8 +180,12 @@ pub fn render_showcase_nav(active_route: &str) -> String {
 
         <div id="sandbox-notice-banner" class="sandbox-sub-banner">
             <div class="sandbox-sub-banner-content">
-                <span class="sandbox-badge">"🛡️ Public Sandbox:"</span>
-                <span>"Nexus & Studio login — username: "<code>{PUBLIC_DEMO_USERNAME}</code>" · password: "<code>{PUBLIC_DEMO_PASSWORD}</code>". Changes remain visible until the active container resets."</span>
+                <span class="sandbox-badge">"🛡️ Public Admin Sandbox"</span>
+                <div class="sandbox-credentials" role="group" aria-label="Public Nexus and Studio credentials">
+                    <span class="sandbox-credential"><span class="sandbox-credential-label">"Username"</span><code>{PUBLIC_DEMO_USERNAME}</code></span>
+                    <span class="sandbox-credential"><span class="sandbox-credential-label">"Password"</span><code>{PUBLIC_DEMO_PASSWORD}</code></span>
+                </div>
+                <span class="sandbox-reset-note">"Use these credentials for Nexus and Studio. Changes remain visible until the active container resets."</span>
             </div>
             <button type="button" class="sandbox-dismiss-btn" onclick="var b=document.getElementById('sandbox-notice-banner'); if(b){b.style.display='none';}" aria-label="Close notice">"×"</button>
         </div>
@@ -220,7 +224,11 @@ pub fn render_showcase_nav(active_route: &str) -> String {
 
                 <div class="mobile-tenant-info">
                     <div>"Active tenant: " <strong>{&tenant_id}</strong></div>
-                    <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">"Public demo: "<code>{PUBLIC_DEMO_USERNAME}</code>" / "<code>{PUBLIC_DEMO_PASSWORD}</code></div>
+                    <div class="mobile-demo-access">
+                        <strong>"Public Nexus / Studio access"</strong>
+                        <span><span>"Username"</span><code>{PUBLIC_DEMO_USERNAME}</code></span>
+                        <span><span>"Password"</span><code>{PUBLIC_DEMO_PASSWORD}</code></span>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -303,7 +311,7 @@ fn render_floating_ai_copilot() -> String {
             if (msgs) {
                 var errDiv = document.createElement('div');
                 errDiv.className = 'chat-bubble chat-bubble-assistant';
-                errDiv.innerHTML = '<div class="chat-bubble-sender">Showcase Copilot</div><div class="chat-bubble-body" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">⚠️ Não foi possível conectar ao Copilot (HTTP ' + (evt.detail.xhr ? evt.detail.xhr.status : 'erro') + '). Tente novamente.</div>';
+                errDiv.innerHTML = '<div class="chat-bubble-sender">Showcase Copilot</div><div class="chat-bubble-body" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">⚠️ Could not connect to the Copilot (HTTP ' + (evt.detail.xhr ? evt.detail.xhr.status : 'error') + '). Please try again.</div>';
                 msgs.appendChild(errDiv);
                 scrollDrawerToBottom();
             }
@@ -580,11 +588,11 @@ pub fn render_shared_styles() -> String {
 
     /* == Dismissible Sandbox Sub-Banner (Non-sticky) == */
     .sandbox-sub-banner {
-        background: rgba(15, 23, 42, 0.9);
-        border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-        padding: 0.45rem 1.25rem;
+        background: linear-gradient(90deg, rgba(8, 47, 73, 0.96), rgba(15, 23, 42, 0.96));
+        border-bottom: 1px solid rgba(56, 189, 248, 0.45);
+        padding: 0.65rem 1.25rem;
         font-size: 0.8rem;
-        color: #94a3b8;
+        color: #cbd5e1;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -595,22 +603,60 @@ pub fn render_shared_styles() -> String {
     .sandbox-sub-banner-content {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.7rem;
         flex-wrap: wrap;
     }
     .sandbox-badge {
-        color: #38bdf8;
-        font-weight: 700;
+        color: #e0f2fe;
+        background: rgba(14, 165, 233, 0.2);
+        border: 1px solid rgba(125, 211, 252, 0.45);
+        border-radius: 9999px;
+        padding: 0.3rem 0.65rem;
+        font-weight: 800;
         white-space: nowrap;
     }
+    .sandbox-credentials {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+    .sandbox-credential {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        min-height: 32px;
+        padding: 0.25rem 0.55rem;
+        background: #020617;
+        border: 1px solid #38bdf8;
+        border-radius: 0.45rem;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.12);
+    }
+    .sandbox-credential-label {
+        color: #94a3b8;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .sandbox-credential code {
+        color: #f8fafc;
+        font-size: 0.82rem;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+    .sandbox-reset-note { color: #bae6fd; }
     .sandbox-dismiss-btn {
         background: transparent;
         border: none;
-        color: #64748b;
+        color: #bae6fd;
         font-size: 1.2rem;
         line-height: 1;
         cursor: pointer;
-        padding: 0 4px;
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0;
+        flex-shrink: 0;
     }
     .sandbox-dismiss-btn:hover { color: #fff; }
 
@@ -752,6 +798,30 @@ pub fn render_shared_styles() -> String {
         border-radius: 0.5rem;
         font-size: 0.78rem;
     }
+    .mobile-demo-access {
+        display: grid;
+        gap: 0.45rem;
+        margin-top: 0.65rem;
+        padding-top: 0.65rem;
+        border-top: 1px solid #334155;
+    }
+    .mobile-demo-access > strong { color: #7dd3fc; }
+    .mobile-demo-access > span {
+        display: grid;
+        grid-template-columns: 70px minmax(0, 1fr);
+        align-items: center;
+        gap: 0.5rem;
+        color: #94a3b8;
+    }
+    .mobile-demo-access code {
+        color: #f8fafc;
+        background: #020617;
+        border: 1px solid #38bdf8;
+        border-radius: 0.4rem;
+        padding: 0.38rem 0.5rem;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
 
     /* == Responsive Breakpoints for Navigation == */
     @media (max-width: 1024px) {
@@ -828,6 +898,11 @@ pub fn render_shared_styles() -> String {
         .container { padding: 1.25rem 0.85rem !important; }
         .card { padding: 1.2rem !important; margin-bottom: 1rem !important; }
         .card-title { font-size: 1.15rem !important; }
+        .sandbox-sub-banner { align-items: flex-start; padding: 0.75rem; }
+        .sandbox-sub-banner-content { align-items: stretch; width: 100%; }
+        .sandbox-credentials { display: grid; width: 100%; }
+        .sandbox-credential { display: grid; grid-template-columns: 72px minmax(0, 1fr); }
+        .sandbox-reset-note { line-height: 1.45; }
     }
 
     /* == Floating Crab Mascot Launcher == */
@@ -941,6 +1016,7 @@ pub fn render_shared_styles() -> String {
         width: 420px;
         max-width: calc(100vw - 32px);
         height: 560px;
+        height: min(560px, calc(100dvh - 120px));
         max-height: calc(100vh - 120px);
         background: rgba(13, 18, 31, 0.97);
         border: 1px solid #1e293b;
@@ -965,6 +1041,7 @@ pub fn render_shared_styles() -> String {
         padding: 12px 16px;
         background: rgba(15, 23, 42, 0.95);
         border-bottom: 1px solid #1e293b;
+        flex-shrink: 0;
     }
     .ai-close-btn {
         background: transparent;
@@ -973,22 +1050,28 @@ pub fn render_shared_styles() -> String {
         font-size: 20px;
         cursor: pointer;
         line-height: 1;
-        padding: 4px;
+        width: 36px;
+        height: 36px;
+        padding: 0;
     }
     .ai-close-btn:hover { color: #fff; }
 
     .ai-chat-messages {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 14px;
         display: flex;
         flex-direction: column;
         gap: 12px;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
     .chat-bubble {
         display: flex;
         flex-direction: column;
         max-width: 90%;
+        min-width: 0;
         animation: bubbleFadeIn 0.2s ease;
     }
     @keyframes bubbleFadeIn {
@@ -1009,6 +1092,9 @@ pub fn render_shared_styles() -> String {
         border-radius: 12px;
         font-size: 0.85rem;
         line-height: 1.5;
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
     .chat-bubble-user .chat-bubble-body {
         background: #0284c7;
@@ -1020,6 +1106,16 @@ pub fn render_shared_styles() -> String {
         border: 1px solid #334155;
         color: #e2e8f0;
         border-bottom-left-radius: 2px;
+    }
+    .chat-bubble-body .rullst-ai-prose { min-width: 0; max-width: 100%; }
+    .chat-bubble-body .rullst-ai-prose > :first-child { margin-top: 0; }
+    .chat-bubble-body .rullst-ai-prose > :last-child { margin-bottom: 0; }
+    .chat-bubble-body .rullst-ai-prose pre,
+    .chat-bubble-body .rullst-ai-prose table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* == Prompt Suggestion Pills == */
@@ -1066,9 +1162,12 @@ pub fn render_shared_styles() -> String {
         border-top: 1px solid #1e293b;
         display: flex;
         gap: 6px;
+        align-items: center;
+        flex-shrink: 0;
     }
     .ai-input {
         flex: 1;
+        min-width: 0;
         background: #05070c;
         border: 1px solid #334155;
         border-radius: 8px;
@@ -1094,8 +1193,8 @@ pub fn render_shared_styles() -> String {
     /* == Mobile AI Drawer Bottom-Sheet Adaptation == */
     @media (max-width: 640px) {
         .showcase-crab-launcher {
-            bottom: 16px;
-            right: 16px;
+            bottom: max(16px, env(safe-area-inset-bottom));
+            right: max(16px, env(safe-area-inset-right));
             gap: 8px;
         }
         .showcase-crab-avatar {
@@ -1112,12 +1211,39 @@ pub fn render_shared_styles() -> String {
             left: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
-            height: 80vh !important;
-            max-height: 85vh !important;
+            height: 92vh !important;
+            height: 92dvh !important;
+            max-height: 100vh !important;
+            max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
             border-radius: 20px 20px 0 0 !important;
             border-bottom: none !important;
             box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
         }
+        .ai-drawer-header { padding: 10px 12px; }
+        .ai-close-btn { width: 44px; height: 44px; font-size: 24px; }
+        .ai-chat-messages { padding: 12px; gap: 10px; }
+        .chat-bubble { max-width: 100%; }
+        .chat-bubble-body { padding: 10px 12px; font-size: 0.95rem; }
+        .ai-prompt-suggestions {
+            flex-wrap: nowrap;
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .ai-pill-btn { min-height: 40px; padding: 8px 12px; }
+        .ai-form { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+        .ai-input { min-height: 44px; font-size: 16px; padding: 10px 12px; }
+        .ai-submit-btn { min-width: 72px; min-height: 44px; font-size: 0.9rem; }
+    }
+    @media (max-width: 380px) {
+        .showcase-crab-bubble { display: none; }
+        .ai-drawer-header img { width: 22px !important; height: 22px !important; }
+    }
+    @media (max-height: 500px) and (orientation: landscape) {
+        .showcase-ai-drawer { height: 100vh !important; height: 100dvh !important; max-height: 100vh !important; max-height: 100dvh !important; border-radius: 0 !important; }
+        .ai-prompt-suggestions { display: none; }
     }
     "#
     .to_string()

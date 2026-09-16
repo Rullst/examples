@@ -15,7 +15,7 @@ pub async fn omni_page() -> impl IntoResponse {
         <html lang="en">
             <head>
                     <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>"Rullst Omni - Mobile Simulator & Desktop App Exporter"</title>
                 <link rel="manifest" href="/manifest.webmanifest" />
                 <meta name="theme-color" content="#0f172a" />

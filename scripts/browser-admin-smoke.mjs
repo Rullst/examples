@@ -206,6 +206,12 @@ async function run() {
 
   await send('Network.enable');
   await send('Page.enable');
+  await send('Emulation.setDeviceMetricsOverride', {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 3,
+    mobile: true
+  });
 
   for (const [panel, page] of [['nexus', 'chat'], ['studio', 'ai']]) {
     stage = `${panel} page load`;
@@ -232,9 +238,16 @@ async function run() {
     const ui = await evaluate(`({
       english: !/(Voltar|Enviar|Sua pergunta|Olá|Portuguese)/.test(document.body.innerText),
       launcher: !!document.querySelector('a[style*="position:fixed"][aria-label*="AI"]'),
-      token: document.querySelector('[name="_token"]')?.value?.length >= 16
+      token: document.querySelector('[name="_token"]')?.value?.length >= 16,
+      mobile: (() => {
+        const textarea = document.querySelector('#rullst-admin-ai textarea');
+        const button = document.querySelector('#rullst-admin-ai form button');
+        return innerWidth === 390 && document.documentElement.scrollWidth <= innerWidth + 1 &&
+          textarea && parseFloat(getComputedStyle(textarea).fontSize) >= 16 &&
+          button && button.getBoundingClientRect().height >= 44;
+      })()
     })`);
-    if (!ui.english || ui.launcher || !ui.token) throw new Error('admin UI contract failed');
+    if (!ui.english || ui.launcher || !ui.token || !ui.mobile) throw new Error('admin UI contract failed');
     stage = `${panel} form submission`;
     await evaluate(`(() => {
       const form = document.querySelector('#rullst-admin-ai form');
@@ -249,6 +262,61 @@ async function run() {
     if (denied) throw new Error('admin inference denied');
     console.log(`${input.app}: ${panel} real-browser inference verified.`);
   }
+
+  const publicChat = {
+    'rullst-showcase': {
+      launcher: '#showcase-crab-launcher', drawer: '#showcase-ai-drawer',
+      input: '#showcase-drawer-input', button: '#showcase-drawer-form button',
+      credentials: '.sandbox-credential code'
+    },
+    'rullst-portfolio': {
+      launcher: '#ai-crab-launcher', drawer: '#ai-drawer',
+      input: '#ai-message-input', button: '#ai-chat-form button'
+    },
+    'rullst-lms': {
+      launcher: '#lms-crab-launcher', drawer: '#lms-ai-drawer',
+      input: '#lms-message-input', button: '#lms-chat-form button'
+    }
+  }[input.app];
+  if (!publicChat) throw new Error('unknown public chat contract');
+
+  stage = 'public mobile chat page load';
+  lastDocumentStatus = undefined;
+  lastDocumentError = undefined;
+  currentDocumentRequestId = undefined;
+  expectedDocumentUrl = `${browserOrigin}/`;
+  await evaluate(`location.assign(${JSON.stringify(expectedDocumentUrl)})`);
+  await waitFor(`document.readyState === 'complete' && !!document.querySelector(${JSON.stringify(publicChat.launcher)})`, 20);
+  stage = 'public mobile chat layout';
+  await evaluate(`document.querySelector(${JSON.stringify(publicChat.launcher)}).click()`);
+  await waitFor(`getComputedStyle(document.querySelector(${JSON.stringify(publicChat.drawer)})).display !== 'none'`, 5);
+  const mobileLayout = await evaluate(`(() => {
+    const drawer = document.querySelector(${JSON.stringify(publicChat.drawer)});
+    const field = document.querySelector(${JSON.stringify(publicChat.input)});
+    const button = document.querySelector(${JSON.stringify(publicChat.button)});
+    const rect = drawer?.getBoundingClientRect();
+    return {
+      fits: !!rect && rect.left >= -1 && rect.right <= innerWidth + 1 &&
+        rect.top >= -1 && rect.bottom <= innerHeight + 1,
+      noPageOverflow: document.documentElement.scrollWidth <= innerWidth + 1,
+      touchInput: !!field && parseFloat(getComputedStyle(field).fontSize) >= 16 &&
+        field.getBoundingClientRect().height >= 44,
+      touchButton: !!button && button.getBoundingClientRect().height >= 44,
+      backgroundLocked: getComputedStyle(document.body).overflow === 'hidden',
+      credentials: ${publicChat.credentials
+        ? `(() => {
+          const credentials = Array.from(document.querySelectorAll(${JSON.stringify(publicChat.credentials)}));
+          return credentials.length === 2 && credentials.every(item => {
+            const itemRect = item.getBoundingClientRect();
+            const style = getComputedStyle(item);
+            return itemRect.width > 0 && itemRect.height > 0 && style.visibility !== 'hidden';
+          });
+        })()`
+        : 'true'}
+    };
+  })()`);
+  if (!Object.values(mobileLayout).every(Boolean)) throw new Error('public mobile chat contract failed');
+  console.log(`${input.app}: public mobile chat layout verified.`);
   socket.close();
 }
 

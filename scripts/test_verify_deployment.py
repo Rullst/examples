@@ -37,6 +37,36 @@ class DeploymentChecks(unittest.TestCase):
         self.assertNotIn("console.log(input", source)
         self.assertNotIn("${input.username}@", source)
 
+    def test_all_ai_chats_keep_the_mobile_touch_and_overflow_contract(self):
+        public_chats = (
+            ROOT / "src/showcase_nav.rs",
+            ROOT / "blueprints/portfolio/src/pages/home.rs",
+            ROOT / "blueprints/lms/src/pages/lms.rs",
+        )
+        for path in public_chats:
+            source = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.relative_to(ROOT)):
+                self.assertIn("height: 92dvh", source)
+                self.assertIn("font-size: 16px", source)
+                self.assertIn("min-height: 44px", source)
+                self.assertIn("overflow-wrap: anywhere", source)
+                self.assertIn("safe-area-inset-bottom", source)
+                self.assertIn("overflow-x: auto", source)
+
+        admin = (ROOT / "crates/blueprint-ai/static/admin.html").read_text(encoding="utf-8")
+        self.assertIn("min-height:100dvh", admin)
+        self.assertIn("font-size:16px", admin)
+        self.assertIn("min-height:44px", admin)
+        self.assertIn("overflow-wrap:anywhere", admin)
+        self.assertIn("safe-area-inset-bottom", admin)
+
+    def test_showcase_public_credentials_are_visually_grouped(self):
+        source = (ROOT / "src/showcase_nav.rs").read_text(encoding="utf-8")
+        self.assertIn('class="sandbox-credentials"', source)
+        self.assertIn('class="sandbox-credential-label">"Username"', source)
+        self.assertIn('class="sandbox-credential-label">"Password"', source)
+        self.assertIn('class="mobile-demo-access"', source)
+
     def test_browser_diagnostic_only_accepts_bounded_stage_names(self):
         safe = ("Real-browser admin verification failed during nexus AI response; "
                 "no credentials or response bodies logged.")
@@ -47,6 +77,9 @@ class DeploymentChecks(unittest.TestCase):
         safe_network = ("Real-browser admin verification failed during nexus page navigation "
                         "(net::ERR_NAME_NOT_RESOLVED); no credentials or response bodies logged.")
         self.assertEqual(deployment.safe_browser_diagnostic(safe_network), safe_network)
+        safe_mobile = ("Real-browser admin verification failed during public mobile chat layout; "
+                       "no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe_mobile), safe_mobile)
         self.assertIsNone(deployment.safe_browser_diagnostic(
             "Real-browser admin verification failed during password=hunter2; "
             "no credentials or response bodies logged."))
