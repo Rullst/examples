@@ -60,7 +60,6 @@ ENV APP_ENV="production"
 ENV RUST_LOG="info,rullst=info"
 ENV DATABASE_URL="sqlite:///app/data/blog.db"
 ENV NEXUS_ADMIN_USERNAME="rullst_admin"
-ENV NEXUS_ADMIN_PASSWORD="SovereignRullst2026!Key"
 
 EXPOSE 3000
 

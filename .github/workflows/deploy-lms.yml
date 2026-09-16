@@ -5,6 +5,8 @@ on:
     branches: [ "main" ]
     paths:
       - 'blueprints/lms/**'
+      - 'crates/blueprint-ai/**'
+      - '.dockerignore'
       - '.github/workflows/deploy-lms.yml'
   workflow_dispatch:
 
@@ -22,6 +24,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: blueprints/lms -> target
+      - name: Verify application and shared AI boundaries
+        run: |
+          cargo test --manifest-path blueprints/lms/Cargo.toml --all-targets -j 2
+          cargo test --manifest-path crates/blueprint-ai/Cargo.toml -j 2
+          node --check crates/blueprint-ai/static/admin.js
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,7 +58,7 @@ jobs:
       - name: Build and push LMS OCI image with cargo-chef cache
         uses: docker/build-push-action@v6
         with:
-          context: ./blueprints/lms
+          context: .
           file: ./blueprints/lms/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}

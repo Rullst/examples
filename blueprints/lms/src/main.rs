@@ -1,6 +1,4 @@
-async fn studio_cache_handler(
-    headers: rullst::server::HeaderMap,
-) -> rullst::server::Response {
+async fn studio_cache_handler(headers: rullst::server::HeaderMap) -> rullst::server::Response {
     use rullst::server::IntoResponse;
     let content = rullst::html! {
         <div class="space-y-6">
@@ -55,41 +53,14 @@ async fn studio_cache_handler(
     rullst::response::Html(full_html).into_response()
 }
 
-use rullst::{routes, Server};
+use rullst::{Server, routes};
 
-pub mod migrations;
-pub mod models;
 pub mod controllers;
 pub mod middlewares;
+pub mod migrations;
+pub mod models;
 pub mod pages;
 pub mod services;
-
-
-fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
-    let mut out = Vec::new();
-    let mut buf = 0u32;
-    let mut bits = 0;
-    for &b in input.as_bytes() {
-        let val = match b {
-            b'A'..=b'Z' => b - b'A',
-            b'a'..=b'z' => b - b'a' + 26,
-            b'0'..=b'9' => b - b'0' + 52,
-            b'+' => 62,
-            b'/' => 63,
-            b'=' => break,
-            _ if b.is_ascii_whitespace() => continue,
-            _ => return None,
-        };
-        buf = (buf << 6) | u32::from(val);
-        bits += 6;
-        if bits >= 8 {
-            bits -= 8;
-            out.push((buf >> bits) as u8);
-        }
-    }
-    Some(out)
-}
-
 
 async fn coep_policy_patch(
     req: rullst::server::Request,
@@ -110,8 +81,8 @@ const STUDIO_CSS: &str = include_str!("../static/studio.css");
 const LOGGER_JS: &str = r#"document.addEventListener("DOMContentLoaded",()=>{const target=document.getElementById("studio-request-stream");if(!target||typeof EventSource==="undefined")return;const source=new EventSource("/studio/requests/stream");source.onmessage=(event)=>{const row=document.createElement("div");row.innerHTML=event.data;while(row.lastChild)target.prepend(row.lastChild);};window.addEventListener("beforeunload",()=>source.close(),{once:true});});"#;
 
 async fn studio_css_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
@@ -120,44 +91,53 @@ async fn studio_css_handler() -> rullst::server::Response {
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         STUDIO_CSS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 async fn studio_logger_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
             (header::CACHE_CONTROL, "public, max-age=86400"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         LOGGER_JS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 const HTMX_JS: &str = include_str!("../static/htmx-1.9.12.min.js");
 
 async fn htmx_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
             (header::CACHE_CONTROL, "public, max-age=604800"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         HTMX_JS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 const CRAB_PNG: &[u8] = include_bytes!("../static/crab.png");
 
 async fn crab_png_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
@@ -166,7 +146,8 @@ async fn crab_png_handler() -> rullst::server::Response {
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         CRAB_PNG,
-    ).into_response()
+    )
+        .into_response()
 }
 
 async fn studio_tailwind_patch(
@@ -177,7 +158,11 @@ async fn studio_tailwind_patch(
     let res = next.run(req).await;
     let (mut parts, body) = res.into_parts();
     let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
-        return (rullst::server::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer studio body").into_response();
+        return (
+            rullst::server::StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to buffer studio body",
+        )
+            .into_response();
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("cdn.tailwindcss.com") {
@@ -205,7 +190,11 @@ async fn nexus_mobile_patch(
         return rullst::server::Response::from_parts(parts, body);
     }
     let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
-        return (rullst::server::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer nexus body").into_response();
+        return (
+            rullst::server::StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to buffer nexus body",
+        )
+            .into_response();
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("nexus-sidebar") {
@@ -290,59 +279,24 @@ document.addEventListener('DOMContentLoaded', () => {
     rullst::server::Response::from_parts(parts, axum::body::Body::from(bytes))
 }
 
-async fn studio_auth_guard(
-    req: rullst::server::Request,
-    next: rullst::server::Next,
-) -> rullst::server::Response {
-    let path = req.uri().path();
-    if path.ends_with(".css") || path.ends_with(".js") {
-        return next.run(req).await;
-    }
-    use rullst::server::header;
-    use rullst::server::{HeaderValue, IntoResponse, StatusCode};
-
-    let auth_header = req.headers().get(header::AUTHORIZATION).and_then(|v| v.to_str().ok());
-    let expected_user = std::env::var("NEXUS_ADMIN_USERNAME").ok();
-    let expected_pass = std::env::var("NEXUS_ADMIN_PASSWORD").ok();
-
-    let mut is_authorized = false;
-    if let (Some(exp_user), Some(exp_pass)) = (expected_user, expected_pass) {
-        if !exp_user.trim().is_empty() && !exp_pass.trim().is_empty() {
-            if let Some(auth) = auth_header {
-                if let Some(encoded) = auth.strip_prefix("Basic ") {
-                    if let Some(decoded) = decode_base64_cred(encoded.trim()) {
-                        if let Ok(credentials) = String::from_utf8(decoded) {
-                            if let Some((user, pass)) = credentials.split_once(':') {
-                                if user == exp_user && pass == exp_pass {
-                                    is_authorized = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if is_authorized {
-        next.run(req).await
-    } else {
-        let mut res = (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-        res.headers_mut().insert(
-            header::WWW_AUTHENTICATE,
-            HeaderValue::from_static("Basic realm=\"Rullst Studio & Nexus\""),
-        );
-        res
-    }
-}
-
-
 async fn manifest_handler() -> impl rullst::server::IntoResponse {
-    ([(rullst::server::header::CONTENT_TYPE, "application/manifest+json")], include_str!("../static/manifest.webmanifest"))
+    (
+        [(
+            rullst::server::header::CONTENT_TYPE,
+            "application/manifest+json",
+        )],
+        include_str!("../static/manifest.webmanifest"),
+    )
 }
 
 async fn sw_handler() -> impl rullst::server::IntoResponse {
-    ([(rullst::server::header::CONTENT_TYPE, "application/javascript")], include_str!("../static/sw.js"))
+    (
+        [(
+            rullst::server::header::CONTENT_TYPE,
+            "application/javascript",
+        )],
+        include_str!("../static/sw.js"),
+    )
 }
 
 #[rullst::runtime::main]
@@ -350,16 +304,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::artisan!(crate::migrations::get_migrations());
 
     let nexus_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-    let nexus_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_default();
-    let nexus_auth = if nexus_pass.len() >= 16 {
-        rullst::nexus::NexusAuthPolicy::basic(nexus_user, nexus_pass)?
-    } else {
-        eprintln!("⚠️ NEXUS_ADMIN_PASSWORD environment variable not set or under 16 characters. Generating ephemeral secret.");
-        let ephemeral_pass = format!("ephemeral_{:x}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
-        rullst::nexus::NexusAuthPolicy::basic(nexus_user, ephemeral_pass)?
-    };
-let nexus = rullst::nexus::Nexus::new()
-        .with_auth_policy(nexus_auth)
+    let nexus_pass = std::env::var("NEXUS_ADMIN_PASSWORD")?;
+    let nexus_auth = rullst::nexus::NexusAuthPolicy::basic(nexus_user, nexus_pass)?;
+    let nexus = rullst::nexus::Nexus::new()
+        .with_auth_policy(nexus_auth.clone())
         .with_brand("LMS Admin")
         .register::<models::category::Category>()
         .register::<models::course::Course>()
@@ -478,31 +426,54 @@ let nexus = rullst::nexus::Nexus::new()
         .route("/cache", axum::routing::get(studio_cache_handler))
         .route("/studio/cache", axum::routing::get(studio_cache_handler))
         .route("/assets/studio.css", axum::routing::get(studio_css_handler))
-        .route("/studio/assets/studio.css", axum::routing::get(studio_css_handler))
-        .route("/assets/logger.js", axum::routing::get(studio_logger_handler))
-        .route("/studio/assets/logger.js", axum::routing::get(studio_logger_handler))
-        .layer(rullst::server::from_fn(studio_tailwind_patch))
-        .layer(rullst::server::from_fn(studio_auth_guard));
+        .route(
+            "/studio/assets/studio.css",
+            axum::routing::get(studio_css_handler),
+        )
+        .route(
+            "/assets/logger.js",
+            axum::routing::get(studio_logger_handler),
+        )
+        .route(
+            "/studio/assets/logger.js",
+            axum::routing::get(studio_logger_handler),
+        )
+        .layer(rullst::server::from_fn(studio_tailwind_patch));
+
+    use blueprint_ai::admin::{Blueprint, Surface, integrate};
+    let nexus = integrate(nexus, &nexus_auth, Blueprint::Lms, Surface::Nexus)?;
+    let studio_router = integrate(studio_router, &nexus_auth, Blueprint::Lms, Surface::Studio)?;
 
     let is_prod_or_staging = std::env::var("RULLST_ENV")
         .or_else(|_| std::env::var("APP_ENV"))
-        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "production" | "prod" | "staging" | "stage"))
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "production" | "prod" | "staging" | "stage"
+            )
+        })
         .unwrap_or(false);
 
     let router = if !is_prod_or_staging {
         public
             .merge_axum(learning.into_axum())
             .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
-            .layer(rullst::server::from_fn(rullst::security::headers_middleware))
+            .layer(rullst::server::from_fn(
+                rullst::security::headers_middleware,
+            ))
             .nest_axum("/nexus", nexus)
             .nest_axum("/studio", studio_router)
-            .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+            .layer(rullst::server::Extension(
+                rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination(),
+            ))
     } else {
         public
             .merge_axum(learning.into_axum())
             .nest_axum("/nexus", nexus)
             .nest_axum("/studio", studio_router)
-            .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+            .layer(rullst::server::Extension(
+                rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination(),
+            ))
     }
     .layer(rullst::server::from_fn(coep_policy_patch));
 
@@ -515,7 +486,8 @@ let nexus = rullst::nexus::Nexus::new()
         });
         println!("📊 Rullst Studio running on http://127.0.0.1:5555");
     }
-    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:///app/db.sqlite?mode=rwc".to_string());
+    let db_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite:///app/db.sqlite?mode=rwc".to_string());
     println!("📦 Connecting to database: {db_url}");
     match rullst::db::Orm::init(&db_url).await {
         Ok(_) => {
@@ -528,7 +500,9 @@ let nexus = rullst::nexus::Nexus::new()
             println!("✅ Database migrations applied successfully!");
             if let Ok(pool) = rullst::db::Orm::pool() {
                 // Seed permanent demo learner account
-                if let Ok(demo_hash) = rullst::auth::hash_password_async("RullstAcademy2026!".to_string()).await {
+                if let Ok(demo_hash) =
+                    rullst::auth::hash_password_async("RullstAcademy2026!".to_string()).await
+                {
                     let _ = rullst::db::sqlx::query(
                         "INSERT OR IGNORE INTO users (id, name, email, password_hash, created_at, updated_at) VALUES (100, 'Demo Learner', 'demo@rullst.dev', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                     ).bind(&demo_hash).execute(pool).await;
@@ -544,11 +518,11 @@ let nexus = rullst::nexus::Nexus::new()
                 ).execute(pool).await;
 
                 // Remove prerequisite blocking from Lesson 2 so all showcase lessons are playable
-            let _ = rullst::db::sqlx::query(
+                let _ = rullst::db::sqlx::query(
                 "UPDATE lesson_release_rules SET prerequisite_lesson_id = 0, required_progress_percent = 0 WHERE lesson_id = 2"
             ).execute(pool).await;
 
-            // Seed real YouTube video lessons for Rust & Web Development
+                // Seed real YouTube video lessons for Rust & Web Development
                 let _ = rullst::db::sqlx::query(
                     "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/5C_HPTJg5ek', title = 'Introduction to Memory Safety in Rust', transcript = 'Rust achieves memory safety without a garbage collector through its ownership model. In this lesson, we explore how ownership, borrowing, and lifetimes guarantee that references always point to valid data.' WHERE id = 1"
                 ).execute(pool).await;
@@ -564,7 +538,9 @@ let nexus = rullst::nexus::Nexus::new()
                 let _ = rullst::db::sqlx::query(
                     "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/r-GSGH2RxJs', title = 'Building Interactive UIs with HTMX', transcript = 'HTMX gives you access to AJAX, CSS Transitions, and Server-Sent Events directly in HTML. Pair HTMX with Rust server-side rendering for rich, dynamic user interfaces without heavy JavaScript bundle complexity.' WHERE id = 4"
                 ).execute(pool).await;
-                println!("🎥 Educational YouTube video lessons and open course scopes initialized!");
+                println!(
+                    "🎥 Educational YouTube video lessons and open course scopes initialized!"
+                );
             }
         }
         Err(err) => {

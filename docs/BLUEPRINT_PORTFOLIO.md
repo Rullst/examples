@@ -55,7 +55,7 @@ Live system telemetry and developer control room:
 ### 🔑 Public Sandbox Credentials
 For public demonstrations and showcases, the application includes a sandbox access policy:
 - **Username:** `admin` (or configured via `NEXUS_ADMIN_USERNAME`)
-- **Password:** `SovereignPortfolio2026!` (or configured via `NEXUS_ADMIN_PASSWORD`)
+- **Password:** Set a unique secret through `NEXUS_ADMIN_PASSWORD`
 
 Protected by HTTP Basic Auth and verified through `NexusVerifiedTls::from_trusted_tls_termination()`.
 
@@ -121,7 +121,7 @@ az containerapp create \
     RULLST_ENV=production \
     DATABASE_URL="sqlite:///app/db.sqlite?mode=rwc" \
     NEXUS_ADMIN_USERNAME=admin \
-    NEXUS_ADMIN_PASSWORD="SovereignPortfolio2026!"
+    NEXUS_ADMIN_PASSWORD="<your-unique-secret>"
 ```
 
 ### 2. Automated GitHub Actions CI/CD

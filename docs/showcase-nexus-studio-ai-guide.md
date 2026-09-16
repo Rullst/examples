@@ -50,8 +50,8 @@ Both the **Nexus Admin CMS** and **Studio Dev Cockpit** are fully accessible to 
 
 | Portal | Route | Role | Default Sandbox Credentials |
 | :--- | :--- | :--- | :--- |
-| **🛡️ Nexus Admin CMS** | `/nexus` | Active Record Data Management | **User:** `admin`<br>**Password:** `SovereignShowcase2026!` |
-| **🚀 Studio Cockpit** | `/studio` | Developer AST, Cache & Route Profiler | **User:** `admin`<br>**Password:** `SovereignShowcase2026!` |
+| **🛡️ Nexus Admin CMS** | `/nexus` | Active Record Data Management | Configured administrator credentials |
+| **🚀 Studio Cockpit** | `/studio` | Developer AST, Cache & Route Profiler | Configured administrator credentials |
 
 > [!NOTE]
 > Environment variables `NEXUS_ADMIN_USERNAME` and `NEXUS_ADMIN_PASSWORD` can be set in Azure Container Apps to override these defaults if required.

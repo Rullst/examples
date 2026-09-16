@@ -178,7 +178,7 @@ pub fn render_showcase_nav(active_route: &str) -> String {
         <div id="sandbox-notice-banner" class="sandbox-sub-banner">
             <div class="sandbox-sub-banner-content">
                 <span class="sandbox-badge">"🛡️ Sandbox Ativo:"</span>
-                <span>"Nexus CMS (<code>/nexus</code>) & Studio Cockpit (<code>/studio</code>) liberados para teste. (Usuário: <strong style=\"color: #00ffcc;\">admin</strong> | Senha: <strong style=\"color: #00ffcc;\">SovereignShowcase2026!</strong>)"</span>
+                <span>"Nexus CMS (<code>/nexus</code>) & Studio Cockpit (<code>/studio</code>): acesso com as credenciais fornecidas pelo administrador."</span>
             </div>
             <button type="button" class="sandbox-dismiss-btn" onclick="var b=document.getElementById('sandbox-notice-banner'); if(b){b.style.display='none';}" aria-label="Fechar aviso">"×"</button>
         </div>
@@ -217,7 +217,7 @@ pub fn render_showcase_nav(active_route: &str) -> String {
 
                 <div class="mobile-tenant-info">
                     <div>"Tenant Ativo: " <strong>{&tenant_id}</strong></div>
-                    <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">"Credenciais: admin / SovereignShowcase2026!"</div>
+                    <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">"Acesso administrativo autenticado"</div>
                 </div>
             </div>
         </aside>

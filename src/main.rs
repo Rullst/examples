@@ -102,9 +102,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or(3000);
 
     println!("🚀 Rullst Sovereign SaaS Showcase running at http://127.0.0.1:{port}");
-    println!("   - Studio Developer Control Room: http://127.0.0.1:{port}/studio (User: admin | Pass: SovereignShowcase2026!)");
-    println!("   - Nexus Admin CMS: http://127.0.0.1:{port}/nexus (User: admin | Pass: SovereignShowcase2026!)");
-    println!("   - Groq AI Copilot: Active with GPT-OSS 120B & Prompt Injection Shield");
+    println!(
+        "   - Studio Developer Control Room: http://127.0.0.1:{port}/studio (administrator authentication required)"
+    );
+    println!(
+        "   - Nexus Admin CMS: http://127.0.0.1:{port}/nexus (administrator authentication required)"
+    );
+    println!(
+        "   - AI assistants: Groq when configured; public assistants include an offline fallback"
+    );
 
     server.run(port).await?;
 

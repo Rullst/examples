@@ -577,7 +577,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                     </p>
                     <div style="background: rgba(0, 0, 0, 0.5); border-radius: 8px; padding: 0.6rem 0.8rem; font-family: monospace; font-size: 0.82rem; color: #f3f4f6; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <div style="margin-bottom: 0.25rem;"><span style="color: #9ca3af;">"User: "</span><strong style="color: #00ffcc; user-select: all;">"admin"</strong></div>
-                        <div><span style="color: #9ca3af;">"Pass: "</span><strong style="color: #00ffcc; user-select: all;">"SovereignPortfolio2026!"</strong></div>
+                        <div style="color: #9ca3af;">"Use the credentials supplied by the administrator."</div>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                         <a href="/nexus" target="_blank" style="display: block; text-align: center; background: #10b981; color: #000; padding: 0.6rem 1rem; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.85rem;">"⚙️ Manage via Nexus CMS"</a>

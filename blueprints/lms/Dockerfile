@@ -7,24 +7,24 @@
 # Stage 1: Cargo Chef Base
 # ------------------------------------------------------------------------------
 FROM lukemathwalker/cargo-chef:latest-rust-1.98-bookworm AS chef
-WORKDIR /app
+WORKDIR /app/blueprints/lms
 
 # ------------------------------------------------------------------------------
 # Stage 2: Recipe Planner (Dependency Skeleton)
 # ------------------------------------------------------------------------------
 FROM chef AS planner
-COPY . .
+COPY . /app
 RUN cargo chef prepare --recipe-path recipe.json
 
 # ------------------------------------------------------------------------------
 # Stage 3: Dependency Cooker (Cached Layer)
 # ------------------------------------------------------------------------------
 FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
+COPY --from=planner /app/blueprints/lms/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build the application source code
-COPY . .
+COPY . /app
 RUN cargo build --release --bin lms
 
 # ------------------------------------------------------------------------------
@@ -41,11 +41,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy compiled binary from builder
-COPY --from=builder /app/target/release/lms /app/lms
+COPY --from=builder /app/blueprints/lms/target/release/lms /app/lms
 
 # Copy assets and static resources
-COPY static /app/static
-COPY Rullst.toml /app/Rullst.toml
+COPY blueprints/lms/static /app/static
+COPY blueprints/lms/Rullst.toml /app/Rullst.toml
 
 RUN chown -R 1000:1000 /app
 
