@@ -8,7 +8,7 @@ This document details the AI architecture implemented for `portfolio.rullst.win`
 
 The Rullst Portfolio Blueprint is architected as an active **engineering showcase**. Rather than relying on static HTML or bloated client-side single-page applications, it leverages:
 1. **Server-Side Rendered (SSR) Zero-Bundle HTMX Engine:** High-performance, streaming-ready HTML directly from Rust.
-2. **Groq LPU Inference Engine:** Cloud inference powered by `llama-3.3-70b-versatile` operating at over 500 tokens/second with zero cost on the developer's personal AI quotas (isolated from Gemini/OpenAI accounts).
+2. **Groq LPU Inference Engine:** Cloud inference powered by `openai/gpt-oss-120b`, isolated from Gemini/OpenAI API credentials.
 3. **Retrieval-Augmented Generation (RAG) on SQLite:** Live database models (`Profile`, `Skill`, `Project`, `Experience`) fed as bounded grounding data.
 4. **Zero-Trust Input Sandboxing:** Hardened against adversarial inputs and automated prompt-injection scanners.
 
@@ -36,7 +36,7 @@ The diagram below outlines the defensive boundaries:
    [ XML-Delimited Candidate Context ]
                     │ (Prompt payload via HTTPS POST)
                     ▼
-     [ Remote Groq LPU Cluster ] ────▶ (Inference Only: llama-3.3-70b)
+     [ Remote Groq LPU Cluster ] ────▶ (Inference Only: openai/gpt-oss-120b)
                     │ (Text Response Stream)
                     ▼
        [ Ammonia HTML Sanitizer ] ────▶ (Strips script, iframe, onload, XSS)
@@ -139,11 +139,13 @@ To enable live Groq inference in development or production:
 1. Obtain a free API key from [console.groq.com](https://console.groq.com/).
 2. In your `.env` or Azure Container Apps Environment Variables:
    ```env
-   OPENAI_BASE_URL="https://api.groq.com/openai/v1"
-   OPENAI_API_KEY="gsk_your_actual_groq_api_key"
-   GROQ_MODEL="llama-3.3-70b-versatile"
+   GROQ_API_KEY="gsk_your_actual_groq_api_key"
+   GROQ_MODEL="openai/gpt-oss-120b"
+   # Optional; this is already the application default:
+   GROQ_BASE_URL="https://api.groq.com/openai/v1"
    ```
-3. If no key is set, the portfolio automatically operates in **Graceful Offline Mode**, answering visitor questions using local deterministic heuristics without crashing or throwing 500 errors.
+3. Do not use `OPENAI_API_KEY` or `OPENAI_BASE_URL` for Groq; provider-specific variables prevent an unrelated OpenAI configuration from redirecting Groq traffic.
+4. The former default, `llama-3.3-70b-versatile`, was retired for Free and Developer plans on August 16, 2026. If no key is set, the portfolio automatically operates in **Graceful Offline Mode**, answering visitor questions using local deterministic heuristics without crashing or throwing 500 errors.
 
 ---
 

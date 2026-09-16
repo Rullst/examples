@@ -1,5 +1,5 @@
 //! AI & RAG Semantic Search and Architecture Copilot demonstration for Rullst AI.
-//! Powered by Groq (Llama 3.3 70B) with Rullst Prompt Injection Shield & Defense-in-Depth.
+//! Powered by Groq (GPT-OSS 120B) with Rullst Prompt Injection Shield & Defense-in-Depth.
 
 use axum::extract::Query;
 use axum::response::{Html, IntoResponse};
@@ -138,7 +138,7 @@ fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
     } else {
         format!(
             "<p>Hello! I am the <strong>Sovereign Showcase AI Copilot</strong> for Rullst.</p>\
-             <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">Currently operating in <strong>offline heuristic mode</strong> (add <code>GROQ_API_KEY</code> in Azure to enable dynamic generative answers with Llama 3.3 70B).</p>\
+             <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">Currently operating in <strong>offline heuristic mode</strong> (add <code>GROQ_API_KEY</code> in Azure to enable dynamic generative answers with GPT-OSS 120B).</p>\
              <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">In this mode, you can explore the <strong>5 Web Paradigms</strong>, <strong>LiveView vs HTMX</strong>, <strong>Security & WAF</strong>, or <strong>Nexus & Studio</strong> (use the suggestion buttons below!).</p>"
         )
     }
@@ -165,7 +165,6 @@ pub async fn chat_api(Form(payload): Form<ShowcaseChatPayload>) -> impl IntoResp
         .or_else(|_| std::env::var("GROQ_KEY"))
         .or_else(|_| std::env::var("GROQ_APIKEY"))
         .or_else(|_| std::env::var("GROQ_TOKEN"))
-        .or_else(|_| std::env::var("OPENAI_API_KEY"))
         .ok()
         .map(|k| k.trim().trim_matches('"').trim_matches('\'').to_string())
         .filter(|k| !k.is_empty() && !k.starts_with("mock_"));
@@ -209,8 +208,22 @@ Strict Security Rules:
             posts_context = posts_context
         );
 
-        let base_url = std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.groq.com/openai/v1".to_string());
-        let model = std::env::var("GROQ_MODEL").unwrap_or_else(|_| "llama-3.3-70b-versatile".to_string());
+        let base_url = std::env::var("GROQ_BASE_URL")
+            .ok()
+            .map(|url| url.trim().trim_matches('"').trim_matches('\'').to_string())
+            .filter(|url| !url.is_empty())
+            .unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string());
+        let mut model = std::env::var("GROQ_MODEL")
+            .ok()
+            .map(|model| model.trim().trim_matches('"').trim_matches('\'').to_string())
+            .filter(|model| !model.is_empty())
+            .unwrap_or_else(|| "openai/gpt-oss-120b".to_string());
+        if model.eq_ignore_ascii_case("llama-3.3-70b-versatile") {
+            eprintln!(
+                "⚠️ GROQ_MODEL=llama-3.3-70b-versatile is retired; using openai/gpt-oss-120b"
+            );
+            model = "openai/gpt-oss-120b".to_string();
+        }
 
         match rullst::ai::providers::openai_compatible::OpenAiCompatibleProvider::try_cloud(
             base_url,
@@ -268,7 +281,7 @@ Strict Security Rules:
              <div style=\"margin-top: 10px; font-size: 0.78rem; color: #38bdf8; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 8px 12px; line-height: 1.45;\">\
                💡 <strong>Offline Mode Active (Key not detected in this container):</strong><br/>\
                The <code>GROQ_API_KEY</code> environment variable was not found in this Showcase Azure container.<br/>\
-               <em>To activate humanized AI with Groq/Llama 3.3:</em> In Azure Portal &rarr; Showcase Container App &rarr; <strong>Containers &rarr; Edit and deploy &rarr; Environment variables</strong> &rarr; add <code>GROQ_API_KEY</code> and click Save/Deploy.\
+               <em>To activate humanized AI with Groq/GPT-OSS 120B:</em> In Azure Portal &rarr; Showcase Container App &rarr; <strong>Containers &rarr; Edit and deploy &rarr; Environment variables</strong> &rarr; add <code>GROQ_API_KEY</code> and click Save/Deploy.\
              </div>",
             fallback_offline_response(raw_msg, &posts)
         )
@@ -309,7 +322,7 @@ pub async fn ai_page(Query(query): Query<AiSearchQuery>) -> impl IntoResponse {
                             <div>
                                 <h1 class="card-title" style="margin: 0; font-size: 1.6rem; color: #fff; display: flex; align-items: center; gap: 0.6rem;">
                                     <span>"🤖"</span> "Sovereign AI Architectural Copilot"
-                                    <span class="feature-tag tag-ai" style="background: rgba(6, 182, 212, 0.2); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.4); font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">"Groq • Llama 3.3 70B"</span>
+                                    <span class="feature-tag tag-ai" style="background: rgba(6, 182, 212, 0.2); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.4); font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">"Groq • GPT-OSS 120B"</span>
                                 </h1>
                                 <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.5;">
                                     "Real-time RAG inference over active SQLite database posts and Rullst architectural components with sub-500ms token generation."

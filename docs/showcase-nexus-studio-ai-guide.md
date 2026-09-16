@@ -71,7 +71,7 @@ Rullst Studio was originally designed for local loopback development (`127.0.0.1
 
 ## 🤖 4. Groq AI Copilot & 5-Layer Prompt Injection Shield
 
-The showcase integrates an AI Architectural Copilot powered by **Groq** (`llama-3.3-70b-versatile`) across two interfaces:
+The showcase integrates an AI Architectural Copilot powered by **Groq** (`openai/gpt-oss-120b`) across two interfaces:
 1. **Interactive AI Lab & Pentest Arena (`/ai-assistant`)**: A dedicated interface where developers can query the framework and test adversarial prompt injection attacks against the live shield.
 2. **Global Floating Copilot Drawer**: A floating widget accessible from every page on `showcase.rullst.win`, providing quick access to architecture explanations.
 
@@ -97,7 +97,7 @@ The showcase integrates an AI Architectural Copilot powered by **Groq** (`llama-
                            │
                            ▼
 ┌────────────────────────────────────────────────────────┐
-│ Layer 3: Groq LPU Inference (Llama 3.3 70B)            │
+│ Layer 3: Groq LPU Inference (GPT-OSS 120B)             │
 │   - Sub-500ms ultra-fast cloud generation              │
 │   - Zero token consumption for personal OpenAI/Gemini  │
 └──────────────────────────┬─────────────────────────────┘
@@ -140,7 +140,9 @@ To enable live Groq cloud inference:
    az containerapp update \
      --name rullst-showcase \
      --resource-group rg-rullst \
-     --set-env-vars GROQ_API_KEY="gsk_..."
+     --set-env-vars GROQ_API_KEY="gsk_..." GROQ_MODEL="openai/gpt-oss-120b"
    ```
+
+`GROQ_BASE_URL` is optional and defaults to `https://api.groq.com/openai/v1`. Do not use `OPENAI_BASE_URL` for Groq configuration. The former default, `llama-3.3-70b-versatile`, was retired for Free and Developer plans on August 16, 2026.
 
 *(If `GROQ_API_KEY` is not provided, the application runs in heuristic simulation mode, ensuring zero crashes or service disruptions).*

@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Rullst Sovereign SaaS Showcase running at http://127.0.0.1:{port}");
     println!("   - Studio Developer Control Room: http://127.0.0.1:{port}/studio (User: admin | Pass: SovereignShowcase2026!)");
     println!("   - Nexus Admin CMS: http://127.0.0.1:{port}/nexus (User: admin | Pass: SovereignShowcase2026!)");
-    println!("   - Groq AI Copilot: Active with Llama 3.3 70B & Prompt Injection Shield");
+    println!("   - Groq AI Copilot: Active with GPT-OSS 120B & Prompt Injection Shield");
 
     server.run(port).await?;
 

@@ -165,7 +165,6 @@ pub async fn chat(
         .or_else(|_| std::env::var("GROQ_KEY"))
         .or_else(|_| std::env::var("GROQ_APIKEY"))
         .or_else(|_| std::env::var("GROQ_TOKEN"))
-        .or_else(|_| std::env::var("OPENAI_API_KEY"))
         .ok()
         .map(|k| k.trim().trim_matches('"').trim_matches('\'').to_string())
         .filter(|k| !k.is_empty() && !k.starts_with("mock_"));
@@ -224,8 +223,22 @@ Featured Projects:
             projects_summary = projects_summary
         );
 
-        let base_url = std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.groq.com/openai/v1".to_string());
-        let model = std::env::var("GROQ_MODEL").unwrap_or_else(|_| "llama-3.3-70b-versatile".to_string());
+        let base_url = std::env::var("GROQ_BASE_URL")
+            .ok()
+            .map(|url| url.trim().trim_matches('"').trim_matches('\'').to_string())
+            .filter(|url| !url.is_empty())
+            .unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string());
+        let mut model = std::env::var("GROQ_MODEL")
+            .ok()
+            .map(|model| model.trim().trim_matches('"').trim_matches('\'').to_string())
+            .filter(|model| !model.is_empty())
+            .unwrap_or_else(|| "openai/gpt-oss-120b".to_string());
+        if model.eq_ignore_ascii_case("llama-3.3-70b-versatile") {
+            eprintln!(
+                "⚠️ GROQ_MODEL=llama-3.3-70b-versatile is retired; using openai/gpt-oss-120b"
+            );
+            model = "openai/gpt-oss-120b".to_string();
+        }
 
         match rullst::ai::providers::openai_compatible::OpenAiCompatibleProvider::try_cloud(
             base_url,
@@ -281,7 +294,7 @@ Featured Projects:
              <div style=\"margin-top: 10px; font-size: 0.78rem; color: #38bdf8; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 8px 12px; line-height: 1.45;\">\
                💡 <strong>Offline Mode Active (Key not detected in this container):</strong><br/>\
                The <code>GROQ_API_KEY</code> environment variable was not found in this Azure container.<br/>\
-               <em>To activate humanized AI with Groq/Llama 3.3:</em> In Azure Portal &rarr; Portfolio Container App (<code>portfolio</code>) &rarr; <strong>Containers &rarr; Edit and deploy &rarr; Environment variables</strong> &rarr; add <code>GROQ_API_KEY</code> and click Save/Deploy.\
+               <em>To activate humanized AI with Groq/GPT-OSS 120B:</em> In Azure Portal &rarr; Portfolio Container App (<code>portfolio</code>) &rarr; <strong>Containers &rarr; Edit and deploy &rarr; Environment variables</strong> &rarr; add <code>GROQ_API_KEY</code> and click Save/Deploy.\
              </div>",
             fallback_offline_response(raw_msg, &profile, &skills, &projects, &experiences)
         )
