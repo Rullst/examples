@@ -53,6 +53,8 @@ let chrome;
 let proxyRequestCount = 0;
 let lastProxyStatus;
 let lastProxyFailure;
+let mobileLayoutFailures = [];
+let mobileLayoutMetrics;
 
 async function startLoopbackProxy() {
   const authorization = `Basic ${Buffer.from(`${input.username}:${input.password}`, 'utf8').toString('base64')}`;
@@ -290,32 +292,51 @@ async function run() {
   stage = 'public mobile chat layout';
   await evaluate(`document.querySelector(${JSON.stringify(publicChat.launcher)}).click()`);
   await waitFor(`getComputedStyle(document.querySelector(${JSON.stringify(publicChat.drawer)})).display !== 'none'`, 5);
-  const mobileLayout = await evaluate(`(() => {
+  // Measure the settled layout, not the temporary scale/translation used by
+  // the 250 ms opening animation in all three public chat drawers.
+  await pause(350);
+  const mobileResult = await evaluate(`(() => {
     const drawer = document.querySelector(${JSON.stringify(publicChat.drawer)});
     const field = document.querySelector(${JSON.stringify(publicChat.input)});
     const button = document.querySelector(${JSON.stringify(publicChat.button)});
     const rect = drawer?.getBoundingClientRect();
+    const fieldRect = field?.getBoundingClientRect();
+    const buttonRect = button?.getBoundingClientRect();
+    const fieldFont = field ? parseFloat(getComputedStyle(field).fontSize) : 0;
+    const bodyOverflow = getComputedStyle(document.body).overflow;
     return {
-      fits: !!rect && rect.left >= -1 && rect.right <= innerWidth + 1 &&
-        rect.top >= -1 && rect.bottom <= innerHeight + 1,
-      noPageOverflow: document.documentElement.scrollWidth <= innerWidth + 1,
-      touchInput: !!field && parseFloat(getComputedStyle(field).fontSize) >= 16 &&
-        field.getBoundingClientRect().height >= 44,
-      touchButton: !!button && button.getBoundingClientRect().height >= 44,
-      backgroundLocked: getComputedStyle(document.body).overflow === 'hidden',
-      credentials: ${publicChat.credentials
-        ? `(() => {
-          const credentials = Array.from(document.querySelectorAll(${JSON.stringify(publicChat.credentials)}));
-          return credentials.length === 2 && credentials.every(item => {
-            const itemRect = item.getBoundingClientRect();
-            const style = getComputedStyle(item);
-            return itemRect.width > 0 && itemRect.height > 0 && style.visibility !== 'hidden';
-          });
-        })()`
-        : 'true'}
+      checks: {
+        fits: !!rect && rect.left >= -1 && rect.right <= innerWidth + 1 &&
+          rect.top >= -1 && rect.bottom <= innerHeight + 1,
+        noPageOverflow: document.documentElement.scrollWidth <= innerWidth + 1,
+        touchInput: !!fieldRect && fieldFont >= 16 && fieldRect.height >= 44,
+        touchButton: !!buttonRect && buttonRect.height >= 44,
+        backgroundLocked: bodyOverflow === 'hidden',
+        credentials: ${publicChat.credentials
+          ? `(() => {
+            const credentials = Array.from(document.querySelectorAll(${JSON.stringify(publicChat.credentials)}));
+            return credentials.length === 2 && credentials.every(item => {
+              const itemRect = item.getBoundingClientRect();
+              const style = getComputedStyle(item);
+              return itemRect.width > 0 && itemRect.height > 0 && style.visibility !== 'hidden';
+            });
+          })()`
+          : 'true'}
+      },
+      metrics: {
+        viewportWidth: innerWidth, viewportHeight: innerHeight,
+        drawerLeft: Math.round(rect?.left || 0), drawerTop: Math.round(rect?.top || 0),
+        drawerRight: Math.round(rect?.right || 0), drawerBottom: Math.round(rect?.bottom || 0),
+        inputFont: fieldFont, inputHeight: Math.round(fieldRect?.height || 0),
+        buttonHeight: Math.round(buttonRect?.height || 0), bodyOverflow
+      }
     };
   })()`);
-  if (!Object.values(mobileLayout).every(Boolean)) throw new Error('public mobile chat contract failed');
+  mobileLayoutMetrics = mobileResult.metrics;
+  mobileLayoutFailures = Object.entries(mobileResult.checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  if (mobileLayoutFailures.length) throw new Error('public mobile chat contract failed');
   console.log(`${input.app}: public mobile chat layout verified.`);
   socket.close();
 }
@@ -326,6 +347,10 @@ try {
   const proxyStatus = Number.isInteger(lastProxyStatus) ? lastProxyStatus : 'none';
   const proxyFailure = lastProxyFailure ? ', upstream failure' : '';
   console.error(`Browser proxy diagnostic: requests=${proxyRequestCount}, last status=${proxyStatus}${proxyFailure}.`);
+  if (mobileLayoutFailures.length) {
+    console.error(`Mobile layout diagnostic: ${mobileLayoutFailures.join(',')}.`);
+    console.error(`Mobile metrics: ${JSON.stringify(mobileLayoutMetrics)}.`);
+  }
   console.error(`Real-browser admin verification failed during ${stage}; no credentials or response bodies logged.`);
   process.exitCode = 1;
 } finally {
