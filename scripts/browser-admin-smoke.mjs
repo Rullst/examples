@@ -227,9 +227,26 @@ async function run() {
       // Chrome builds can abort the first loopback Page.navigate before I/O.
       await evaluate(`location.assign(${JSON.stringify(expectedDocumentUrl)})`);
     }
-    try {
-      await waitFor("document.readyState === 'complete' && !!document.querySelector('#rullst-admin-ai form')", 20);
-    } catch {
+    let pageLoaded = false;
+    for (let attempt = 0; attempt < 2 && !pageLoaded; attempt += 1) {
+      if (attempt > 0) {
+        // A new Azure revision can briefly close the first connection even
+        // after the HTTP probe succeeds. Retry only the same allowlisted URL.
+        await pause(750);
+        lastDocumentStatus = undefined;
+        lastDocumentError = undefined;
+        currentDocumentRequestId = undefined;
+        await evaluate(`location.assign(${JSON.stringify(expectedDocumentUrl)})`);
+      }
+      try {
+        await waitFor(
+          "document.readyState === 'complete' && !!document.querySelector('#rullst-admin-ai form')",
+          attempt === 0 ? 10 : 15
+        );
+        pageLoaded = true;
+      } catch {}
+    }
+    if (!pageLoaded) {
       const safeError = /^net::ERR_[A-Z0-9_]+$/.test(lastDocumentError || '')
         ? `, ${lastDocumentError}` : '';
       const status = Number.isInteger(lastDocumentStatus) ? lastDocumentStatus : 'unknown';
@@ -363,5 +380,12 @@ try {
     });
   }
   if (proxyServer) await new Promise(resolve => proxyServer.close(resolve));
-  if (profile) rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  if (profile) {
+    try {
+      rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    } catch {
+      // Verification already completed and the profile contains no Basic Auth
+      // credential. The ephemeral runner/OS can reclaim a briefly locked dir.
+    }
+  }
 }
