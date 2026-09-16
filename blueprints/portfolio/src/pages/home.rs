@@ -432,31 +432,41 @@ fn cv_styles() -> String {
     }
 
     .ai-prompt-suggestions {
-        padding: 10px 16px;
+        padding: 8px 14px;
         border-top: 1px solid rgba(255,255,255,0.06);
         background: rgba(10, 10, 15, 0.7);
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none;
+        max-height: 84px;
+        overflow-y: auto;
     }
-    .ai-prompt-suggestions::-webkit-scrollbar { display: none; }
+    .ai-prompt-suggestions::-webkit-scrollbar {
+        width: 3px;
+    }
+    .ai-prompt-suggestions::-webkit-scrollbar-thumb {
+        background: rgba(0, 255, 204, 0.3);
+        border-radius: 3px;
+    }
     .ai-pill-btn {
         background: rgba(255,255,255,0.05);
         border: 1px solid var(--border-color);
         color: #d4d4d8;
-        font-size: 0.74rem;
-        padding: 5px 11px;
+        font-size: 0.73rem;
+        padding: 5px 10px;
         border-radius: 20px;
         cursor: pointer;
         transition: all 0.15s ease;
-        flex-shrink: 0;
+        line-height: 1.2;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
     }
     .ai-pill-btn:hover {
-        background: rgba(0, 255, 204, 0.12);
-        border-color: rgba(0, 255, 204, 0.4);
+        background: rgba(0, 255, 204, 0.15);
+        border-color: rgba(0, 255, 204, 0.5);
         color: #00ffcc;
+        transform: translateY(-1px);
     }
 
     .ai-form {
@@ -666,24 +676,25 @@ fn render_ai_widget(csrf_token: &str) -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Career Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the AI Career Copilot for this portfolio. Guarded by Rullst Sovereign AI Guardrails. Ask me anything about skills, architectures, projects, or hireability!
+                    Olá! Sou o <strong>Career Copilot</strong> deste portfólio. Pergunte-me qualquer coisa sobre habilidades em Rust, arquitetura de sistemas, projetos ou contratação! (You can also ask in English!)
                     <div class="ai-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
                 </div>
             </div>
         </div>
 
         <div class="ai-prompt-suggestions">
-            <button class="ai-pill-btn" onclick="setAiQuestion('What are your main backend and Rust skills?')">🦀 Rust Skills</button>
-            <button class="ai-pill-btn" onclick="setAiQuestion('Explain the architecture of Rullst Blueprint LMS.')">🏛️ LMS Architecture</button>
-            <button class="ai-pill-btn" onclick="setAiQuestion('How does Rullst protect against Prompt Injections?')">🛡️ AI Security</button>
-            <button class="ai-pill-btn" onclick="setAiQuestion('Why hire this engineer for high-concurrency systems?')">💼 Why Hire?</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Quais são as principais habilidades em Rust e backend de Vene?')">🦀 Habilidades Rust</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Explique a arquitetura e diferenciais do projeto LMS.')">🏛️ Arquitetura LMS</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Como o Rullst protege contra ataques de Prompt Injection?')">🛡️ Segurança IA</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Por que contratar o Vene para sistemas de alta concorrência?')">💼 Por que Contratar?</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Como posso entrar em contato com o desenvolvedor?')">📧 Contato</button>
         </div>
 
         <div id="ai-typing" class="ai-typing-indicator">
             <span class="ai-typing-dot"></span>
             <span class="ai-typing-dot"></span>
             <span class="ai-typing-dot"></span>
-            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
+            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot pensando...</span>
         </div>
 
         <form id="ai-chat-form" class="ai-form"
@@ -694,8 +705,8 @@ fn render_ai_widget(csrf_token: &str) -> String {
               hx-on::before-request="appendUserMessage()"
               hx-on::after-request="finalizeAiRequest()">
             <input type="hidden" name="_token" value="__CSRF_TOKEN__" id="ai-csrf-token" />
-            <input id="ai-message-input" type="text" name="message" class="ai-input" placeholder="Ask about projects, skills, experience..." autocomplete="off" required maxlength="600" />
-            <button type="submit" class="ai-submit-btn">Send</button>
+            <input id="ai-message-input" type="text" name="message" class="ai-input" placeholder="Pergunte sobre projetos, habilidades, Rust..." autocomplete="off" required maxlength="600" />
+            <button type="submit" class="ai-submit-btn">Enviar</button>
         </form>
     </div>
 

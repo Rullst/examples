@@ -1026,13 +1026,16 @@ pub fn render_shared_styles() -> String {
         border-top: 1px solid rgba(255,255,255,0.06);
         background: rgba(10, 15, 26, 0.85);
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
+        max-height: 84px;
+        overflow-y: auto;
     }
-    .ai-prompt-suggestions::-webkit-scrollbar { display: none; }
+    .ai-prompt-suggestions::-webkit-scrollbar { width: 3px; }
+    .ai-prompt-suggestions::-webkit-scrollbar-thumb {
+        background: rgba(56, 189, 248, 0.3);
+        border-radius: 3px;
+    }
     .ai-pill-btn {
         background: rgba(255,255,255,0.06);
         border: 1px solid #334155;

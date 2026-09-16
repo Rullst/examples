@@ -592,27 +592,35 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         border-top: 1px solid rgba(255, 255, 255, 0.06);
         background: rgba(11, 15, 25, 0.7);
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none;
+        max-height: 84px;
+        overflow-y: auto;
     }
-    .lms-prompt-suggestions::-webkit-scrollbar { display: none; }
+    .lms-prompt-suggestions::-webkit-scrollbar { width: 3px; }
+    .lms-prompt-suggestions::-webkit-scrollbar-thumb {
+        background: rgba(52, 211, 153, 0.3);
+        border-radius: 3px;
+    }
     .lms-pill-btn {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid #334155;
         color: #cbd5e1;
         font-size: 0.72rem;
-        padding: 4px 10px;
+        padding: 5px 10px;
         border-radius: 20px;
         cursor: pointer;
-        flex-shrink: 0;
         transition: all 0.15s ease;
+        line-height: 1.2;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
     }
     .lms-pill-btn:hover {
         background: rgba(52, 211, 153, 0.15);
         border-color: #34d399;
         color: #34d399;
+        transform: translateY(-1px);
     }
     .lms-typing-indicator {
         display: none;
@@ -685,10 +693,10 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
     }
     </style>
 
-    <div id="lms-crab-launcher" class="lms-crab-launcher" onclick="toggleLmsAiDrawer()" role="button" tabindex="0" aria-label="Ask me anything!">
+    <div id="lms-crab-launcher" class="lms-crab-launcher" onclick="toggleLmsAiDrawer()" role="button" tabindex="0" aria-label="Ask me anything about Rullst or Rust!">
         <div class="lms-crab-bubble">
             <span class="lms-bubble-sparkle">✨</span>
-            <span class="lms-bubble-text">Ask me anything!</span>
+            <span class="lms-bubble-text">Ask me anything about Rullst or Rust!</span>
         </div>
         <div class="lms-crab-avatar">
             <img src="/static/crab.png" alt="Rullst Crab Mascot" class="lms-crab-img" />
@@ -715,24 +723,25 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Academic Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the Academic Copilot for Rullst Academy. Guarded by Rullst Sovereign AI Guardrails. Ask me anything about courses, Rust web architectures, lesson transcripts, or learning tracks!
+                    Olá! Sou o <strong>Academic Copilot</strong> da Rullst Academy. Pergunte-me qualquer dúvida sobre a linguagem <strong>Rust</strong> (ownership, concorrência, tipos), sobre o framework <strong>Rullst</strong> ou sobre nossos cursos! (You can also ask in English!)
                     <div class="lms-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
                 </div>
             </div>
         </div>
 
         <div class="lms-prompt-suggestions">
-            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('What courses are available in Rullst Academy?')">📚 Course Catalog</button>
-            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('Explain memory safety and ownership in Rust.')">🦀 Memory Safety</button>
-            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('How does HTMX integrate with Rust backend SSR?')">⚡ HTMX + Rust</button>
-            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('What are smart pointers like Box and Arc in Rust?')">🧠 Smart Pointers</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('O que é o Rullst e quais seus diferenciais para desenvolvimento web em Rust?')">⚡ O que é Rullst?</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('Como funciona a segurança de memória, ownership e lifetimes em Rust?')">🦀 Memory Safety & Rust</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('Quais cursos e trilhas de aprendizado estão disponíveis na Rullst Academy?')">📚 Catálogo de Cursos</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('Como o HTMX se integra ao backend em Rust sem overhead de JavaScript?')">🌐 HTMX + Rust SSR</button>
+            <button type="button" class="lms-pill-btn" onclick="setLmsPrompt('Explique concorrência assíncrona com Tokio, Arc e Mutex em Rust.')">🧠 Tokio & Concorrência</button>
         </div>
 
         <div id="lms-typing" class="lms-typing-indicator">
             <span class="lms-typing-dot"></span>
             <span class="lms-typing-dot"></span>
             <span class="lms-typing-dot"></span>
-            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
+            <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot pensando...</span>
         </div>
 
         <form id="lms-chat-form" class="lms-ai-form"
@@ -743,8 +752,8 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
               hx-on::before-request="appendLmsUserMessage()"
               hx-on::after-request="finalizeLmsAiRequest()">
             <input type="hidden" name="_token" value="__CSRF_TOKEN__" id="lms-csrf-token" />
-            <input id="lms-message-input" type="text" name="message" class="lms-input" placeholder="Ask about Rust concepts, lessons, courses..." autocomplete="off" required maxlength="600" />
-            <button type="submit" class="lms-submit-btn">Send</button>
+            <input id="lms-message-input" type="text" name="message" class="lms-input" placeholder="Pergunte qualquer dúvida sobre Rust ou Rullst..." autocomplete="off" required maxlength="600" />
+            <button type="submit" class="lms-submit-btn">Enviar</button>
         </form>
     </div>
 
