@@ -34,6 +34,7 @@ const chrome = spawn(chromePath, [
 ], { stdio: 'ignore' });
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+let stage = 'starting Chromium';
 
 async function devtoolsPage() {
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -47,6 +48,7 @@ async function devtoolsPage() {
 }
 
 async function run() {
+  stage = 'opening the DevTools connection';
   const socket = new WebSocket(await devtoolsPage());
   await new Promise((resolve, reject) => {
     socket.addEventListener('open', resolve, { once: true });
@@ -86,21 +88,26 @@ async function run() {
   await send('Network.setExtraHTTPHeaders', { headers: { Authorization: `Basic ${basic}` } });
 
   for (const [panel, page] of [['nexus', 'chat'], ['studio', 'ai']]) {
+    stage = `${panel} page load`;
     await send('Page.navigate', { url: `${input.origin}/${panel}/${page}` });
     await waitFor("document.readyState === 'complete' && !!document.querySelector('#rullst-admin-ai form')", 20);
+    stage = `${panel} UI contract`;
     const ui = await evaluate(`({
       english: !/(Voltar|Enviar|Sua pergunta|Olá|Portuguese)/.test(document.body.innerText),
       launcher: !!document.querySelector('a[style*="position:fixed"][aria-label*="AI"]'),
       token: document.querySelector('[name="_token"]')?.value?.length >= 16
     })`);
     if (!ui.english || ui.launcher || !ui.token) throw new Error('admin UI contract failed');
+    stage = `${panel} form submission`;
     await evaluate(`(() => {
       const form = document.querySelector('#rullst-admin-ai form');
       form.querySelector('textarea').value = 'In English only, explain this panel in one short sentence.';
       form.requestSubmit();
       return true;
     })()`);
+    stage = `${panel} AI response`;
     await waitFor("document.querySelectorAll('.ai-message.ai-assistant .rullst-ai-prose').length > 0");
+    stage = `${panel} denial check`;
     const denied = await evaluate("/(access denied|security token expired|authentication expired)/i.test(document.querySelector('.ai-messages').innerText)");
     if (denied) throw new Error('admin inference denied');
     console.log(`${input.app}: ${panel} real-browser inference verified.`);
@@ -111,7 +118,7 @@ async function run() {
 try {
   await run();
 } catch {
-  console.error('Real-browser admin verification failed; no credentials or response bodies logged.');
+  console.error(`Real-browser admin verification failed during ${stage}; no credentials or response bodies logged.`);
   process.exitCode = 1;
 } finally {
   chrome.kill('SIGKILL');

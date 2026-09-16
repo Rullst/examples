@@ -75,6 +75,14 @@ def rendered_online(body):
     )), "AI returned an offline, blocked, busy or unavailable response.")
 
 
+def safe_browser_diagnostic(stderr):
+    return next((line for line in stderr.splitlines() if re.fullmatch(
+        r"Real-browser admin verification failed during "
+        r"(?:starting Chromium|opening the DevTools connection|(?:nexus|studio) "
+        r"(?:page load|UI contract|form submission|AI response|denial check)); "
+        r"no credentials or response bodies logged\.", line)), None)
+
+
 def smoke(app, username, password):
     origin, public_path, _ = APPS[app]
     cookies = http.cookiejar.CookieJar()
@@ -127,7 +135,9 @@ def smoke(app, username, password):
         input=json.dumps({"app": app, "origin": origin, "username": username, "password": password}),
         capture_output=True, text=True, timeout=120,
     )
-    require(browser.returncode == 0, "Real-browser Nexus/Studio verification failed; no credentials logged.")
+    if browser.returncode != 0:
+        require(False, safe_browser_diagnostic(browser.stderr) or
+                "Real-browser Nexus/Studio verification failed; no credentials logged.")
     for line in browser.stdout.splitlines():
         require(line.startswith(f"{app}: "), "Unexpected browser verification output.")
         print(line, flush=True)

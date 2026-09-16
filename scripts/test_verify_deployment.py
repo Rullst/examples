@@ -33,6 +33,14 @@ class DeploymentChecks(unittest.TestCase):
         self.assertNotIn("console.log(input", source)
         self.assertNotIn("${input.username}@", source)
 
+    def test_browser_diagnostic_only_accepts_bounded_stage_names(self):
+        safe = ("Real-browser admin verification failed during nexus AI response; "
+                "no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe), safe)
+        self.assertIsNone(deployment.safe_browser_diagnostic(
+            "Real-browser admin verification failed during password=hunter2; "
+            "no credentials or response bodies logged."))
+
     def test_required_configuration_fails_closed(self):
         properties = {"template": {"containers": [{"env": []}]}}
         with self.assertRaisesRegex(RuntimeError, "NEXUS_ADMIN_PASSWORD"):
