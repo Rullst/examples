@@ -9,6 +9,7 @@ ammonia = "4.1"
 axum = "0.8"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 rullst-ai = "12.0.0"
+rullst-core = "12.0.0"
 rullst-nexus = "12.0.0"
 serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"

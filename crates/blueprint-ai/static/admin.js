@@ -5,6 +5,7 @@
   const form = root.querySelector('form');
   const input = form.querySelector('textarea');
   const submit = form.querySelector('[type="submit"]');
+  const csrf = form.querySelector('[name="_token"]');
   const messages = root.querySelector('.ai-messages');
   const status = root.querySelector('.ai-status');
   root.querySelectorAll('[data-prompt]').forEach(button => button.addEventListener('click', () => {
@@ -27,30 +28,34 @@
     bubble(message, 'user');
     input.value = '';
     submit.disabled = true;
-    status.textContent = 'Pensando… / Thinking…';
+    status.textContent = 'Thinking…';
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 35000);
     try {
       const response = await fetch(form.action, {
         method: 'POST', credentials: 'same-origin', signal: controller.signal,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Rullst-AI': '1' },
-        body: new URLSearchParams({ message })
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Rullst-AI': '1',
+          'X-CSRF-Token': csrf.value
+        },
+        body: new URLSearchParams({ message, _token: csrf.value })
       });
       if (!response.ok) {
         const errors = {
-          400: 'Não foi possível atender ao pedido. Reformule sua pergunta. / Please rephrase your question.',
-          401: 'Sua autenticação expirou. Reabra o painel. / Please reopen the panel to sign in.',
-          403: 'Acesso recusado. Reabra o assistente pelo painel. / Access denied.',
-          429: 'O assistente está ocupado. Tente novamente em um minuto. / Please retry in a minute.'
+          400: 'Please rephrase your question.',
+          401: 'Your authentication expired. Reopen the panel to sign in.',
+          403: 'The security token expired. Reload this page and try again.',
+          429: 'The assistant is busy. Please retry in a minute.'
         };
-        bubble(errors[response.status] || 'IA indisponível no momento. Tente novamente. / AI temporarily unavailable.', 'assistant');
+        bubble(errors[response.status] || 'AI is temporarily unavailable. Please try again.', 'assistant');
       } else {
         // Only our authenticated endpoint's server-sanitized fragment is HTML.
         const html = await response.text();
         bubble('', 'assistant').innerHTML = html;
       }
     } catch {
-      bubble('Não foi possível obter uma resposta. Tente novamente. / Could not get a reply. Please retry.', 'assistant');
+      bubble('Could not get a reply. Please retry.', 'assistant');
     } finally {
       clearTimeout(timeout);
       submit.disabled = false;

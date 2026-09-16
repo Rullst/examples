@@ -29,6 +29,7 @@ jobs:
           cargo test --all-targets -j 2
           cargo test --manifest-path crates/blueprint-ai/Cargo.toml -j 2
           node --check crates/blueprint-ai/static/admin.js
+          node --check scripts/browser-admin-smoke.mjs
           python3 -B -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Set up Docker Buildx

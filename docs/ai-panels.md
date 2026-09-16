@@ -7,9 +7,12 @@ event handlers, styles and HTMX attributes from model output are not permitted.
 Lists, headings, emphasis, links, tables and code blocks have scoped styles.
 
 Each application's existing `/nexus/chat` and `/studio/ai` navigation now opens
-an application-aware assistant. A visible AI link is also added to full panel
-pages. The same Nexus authentication/role/TLS policy protects both panels and
-all AI endpoints. Production administrators must supply
+an application-aware assistant. No floating launcher is injected into native
+Nexus or Studio pages. The administrative interface is English-only; model
+replies use only the language of the latest user question and are not repeated
+in a second language unless translation was requested. The same Nexus
+authentication/role/TLS policy protects both panels and all AI endpoints.
+Production administrators must supply
 `NEXUS_ADMIN_PASSWORD` (at least 16 characters); there is no password fallback.
 Earlier versions published demo administrator passwords. Removing them from
 the UI and source does not rotate existing container secrets; deployments that
@@ -29,8 +32,9 @@ learner information, grades, credentials, logs or live metrics. They cannot
 run SQL, execute commands, modify content or deploy changes. The UI explains
 what is sent to the AI provider and asks operators not to submit private data.
 
-The admin POST endpoint requires authentication, a matching Origin and a custom
-request header. Input is bounded to 1,200 characters / 8 KiB encoded body.
+The admin POST endpoint requires authentication, the framework's double-submit
+CSRF cookie/header proof, a same-origin Fetch Metadata value when supplied, and
+a custom request header. Input is bounded to 1,200 characters / 8 KiB encoded body.
 The provider has a 30-second deadline, four concurrent calls and 30 calls per
 minute per application process, shared by public and admin assistants. These
 are process limits, not a distributed quota; multiple replicas multiply them.
@@ -65,7 +69,9 @@ are missing. `scripts/verify-deployment.py` checks settings before updating the
 image, then checks the expected ready revision and the actual public URLs.
 The live checks cover formatted public inference, authenticated Nexus/Studio
 pages and inference, anonymous-access rejection and cross-origin rejection.
-They make three short AI calls per application; no private records are sent.
+A headless Chromium check also submits both admin forms through the actual page
+JavaScript, so simulated HTTP headers cannot hide a browser-only denial. The
+checks make five short AI calls per application; no private records are sent.
 Administrator credentials are read only inside the deployment runner, never
 printed, and only sent over HTTPS to the fixed blueprint hostname. Redirects
 are not followed. No credentials are created, rotated or changed by the check.

@@ -121,6 +121,16 @@ def smoke(app, username, password):
         rendered_online(body)
         print(f"{app}: {panel} authentication, CSRF and formatted AI reply verified.", flush=True)
 
+    browser = subprocess.run(
+        ["node", "scripts/browser-admin-smoke.mjs"],
+        input=json.dumps({"app": app, "origin": origin, "username": username, "password": password}),
+        capture_output=True, text=True, timeout=120,
+    )
+    require(browser.returncode == 0, "Real-browser Nexus/Studio verification failed; no credentials logged.")
+    for line in browser.stdout.splitlines():
+        require(line.startswith(f"{app}: "), "Unexpected browser verification output.")
+        print(line, flush=True)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

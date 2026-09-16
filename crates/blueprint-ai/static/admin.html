@@ -12,12 +12,12 @@ __STYLES__
 @media(max-width:600px){#rullst-admin-ai{margin:8px;padding:14px}#rullst-admin-ai form{flex-direction:column;align-items:stretch}#rullst-admin-ai textarea{width:100%}}
 </style></head><body style="margin:0;background:#020617">
 <section id="rullst-admin-ai" aria-label="AI assistant">
-<nav><a href="__PREFIX__">← Back to panel / Voltar ao painel</a></nav>
+<nav><a href="__PREFIX__">← Back to panel</a></nav>
 <h1>__TITLE__</h1>
-<p class="ai-note">Ask in English or Portuguese. Orientações e rascunhos para sua revisão; nenhuma alteração é executada. Apenas sua pergunta e uma descrição pública do blueprint são enviados ao provedor de IA. Não inclua senhas ou dados privados.</p>
-<div class="ai-prompts"><button type="button" data-prompt="Como uso este painel?">Como usar</button><button type="button" data-prompt="Que cuidados de segurança devo ter neste blueprint?">Segurança</button><button type="button" data-prompt="Help me plan the next steps for this blueprint.">Plan next steps</button></div>
-<div class="ai-messages" role="log" aria-live="polite" aria-label="Conversation"><div class="ai-message ai-assistant">Olá! Como posso ajudar com este painel? / How can I help with this panel?</div></div>
-<form action="__PREFIX__/copilot/query" method="post"><label for="admin-ai-message" hidden>Message / Mensagem</label><textarea id="admin-ai-message" name="message" maxlength="1200" required placeholder="Sua pergunta / Your question"></textarea><button type="submit">Send / Enviar</button></form>
+<p class="ai-note">Guidance and drafts for your review; no action is executed. Only your question and a public blueprint description are sent to the AI provider. Do not include passwords or private data.</p>
+<div class="ai-prompts"><button type="button" data-prompt="How do I use this panel?">How to use</button><button type="button" data-prompt="What security precautions should I take in this blueprint?">Security</button><button type="button" data-prompt="Help me plan the next steps for this blueprint.">Plan next steps</button></div>
+<div class="ai-messages" role="log" aria-live="polite" aria-label="Conversation"><div class="ai-message ai-assistant">Hello! How can I help with this panel?</div></div>
+<form action="__PREFIX__/copilot/query" method="post"><input type="hidden" name="_token" value="__CSRF__"><label for="admin-ai-message" hidden>Message</label><textarea id="admin-ai-message" name="message" maxlength="1200" required placeholder="Your question"></textarea><button type="submit">Send</button></form>
 <p class="ai-status ai-note" role="status"></p>
 <noscript>JavaScript is required to use the assistant securely.</noscript>
 </section><script src="__PREFIX__/copilot.js"></script></body></html>

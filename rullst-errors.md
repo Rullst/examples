@@ -102,6 +102,17 @@ integration. The new assistant supplies it at the existing `/studio/ai` URL.
 
 ## Not framework defects
 
+- The bilingual English/Portuguese administrative copy and floating Nexus/Studio
+  AI launcher were added by `crates/blueprint-ai`; they are not rendered by the
+  published framework. The examples now use English-only panel chrome, inject no
+  floating launcher, and instruct the model to reply only in the question's
+  language (any language), without a second-language duplicate.
+- The admin assistant's browser-visible `Access denied` response came from the
+  examples' application-owned request boundary and error mapping, not from the
+  native v12 AI implementation. Its strict Origin/Host comparison was unsuitable
+  behind the deployed proxy. The integration now uses Rullst's double-submit CSRF
+  middleware plus Fetch Metadata and a custom header, and deployment verification
+  exercises the real JavaScript flow in headless Chromium.
 - Missing `blueprint-ai` during the container dependency-cooking stage: all
   three GitHub image builds for commit `0ef2434` failed on 2026-09-16 with
   `failed to read /app/crates/blueprint-ai/Cargo.toml`. Tests passed, but Azure

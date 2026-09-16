@@ -1,5 +1,7 @@
 use super::*;
+use axum::body::Body;
 use axum::extract::ConnectInfo;
+use axum::http::Method;
 use base64::Engine;
 use std::net::SocketAddr;
 use tower::ServiceExt;
@@ -39,9 +41,23 @@ fn request(
     }
     if let Some(origin) = origin {
         builder = builder.header(header::ORIGIN, origin);
+        builder = builder.header(
+            "sec-fetch-site",
+            if origin == "https://example.test" {
+                "same-origin"
+            } else {
+                "cross-site"
+            },
+        );
     }
     if custom {
-        builder = builder.header("x-rullst-ai", "1");
+        builder = builder
+            .header("x-rullst-ai", "1")
+            .header("x-csrf-token", "test-csrf-token")
+            .header(header::COOKIE, "rullst_csrf=test-csrf-token");
+        if origin.is_none() {
+            builder = builder.header("sec-fetch-site", "same-origin");
+        }
     }
     let mut request = builder
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -76,6 +92,9 @@ async fn all_six_admin_assistants_are_authenticated_and_contextual() {
             let html = String::from_utf8(body.to_vec()).unwrap();
             assert!(html.contains(blueprint.name()));
             assert!(html.contains(&format!("{}/copilot/query", surface.prefix())));
+            assert!(html.contains("name=\"_token\" value=\""));
+            assert!(!html.contains("Portuguese"));
+            assert!(!html.contains("Voltar"));
             assert!(!html.contains("test-only-long-password"));
             // New endpoints fall back through the native router but must still
             // pass the same policy, including assets and direct query requests.
@@ -105,7 +124,6 @@ async fn rejects_csrf_and_oversized_input_before_inference() {
         let router = app(Blueprint::Lms, surface);
         let path = format!("{}/copilot/query", surface.prefix());
         for (origin, custom) in [
-            (None, true),
             (Some("https://evil.test"), true),
             (Some("https://example.test.evil.test"), true),
             (Some("http://example.test"), true),
@@ -179,7 +197,8 @@ async fn protects_legacy_endpoints_and_adds_entry_points() {
         let body = to_bytes(response.into_body(), 65536).await.unwrap();
         let html = String::from_utf8(body.to_vec()).unwrap();
         assert!(html.contains("Native panel"));
-        assert!(html.contains("AI assistant"));
+        assert!(!html.contains("position:fixed"));
+        assert!(!html.contains("Open Nexus AI assistant"));
     }
     let response = app(Blueprint::Showcase, Surface::Nexus)
         .oneshot(request(
@@ -196,7 +215,7 @@ async fn protects_legacy_endpoints_and_adds_entry_points() {
 }
 
 #[test]
-fn csrf_rejects_duplicate_origins_and_cross_site_fetch() {
+fn browser_boundary_requires_custom_header_and_rejects_cross_site_fetch() {
     let mut req = request(
         "/",
         Method::POST,
@@ -205,15 +224,12 @@ fn csrf_rejects_duplicate_origins_and_cross_site_fetch() {
         true,
         "",
     );
-    assert!(same_origin(&req));
-    req.headers_mut()
-        .append(header::ORIGIN, "https://evil.test".parse().unwrap());
-    assert!(!same_origin(&req));
-    req.headers_mut()
-        .insert(header::ORIGIN, "https://example.test".parse().unwrap());
+    assert!(browser_request(&req));
     req.headers_mut()
         .insert("sec-fetch-site", "cross-site".parse().unwrap());
-    assert!(!same_origin(&req));
+    assert!(!browser_request(&req));
+    req.headers_mut().remove("x-rullst-ai");
+    assert!(!browser_request(&req));
 }
 
 #[test]
@@ -224,10 +240,36 @@ fn htmx_navigation_keeps_styles_and_initializes_the_chat() {
             surface: Surface::Nexus,
         },
         true,
+        "test-csrf-token",
     );
     assert!(!html.contains("<html"));
     assert!(!html.contains("<body"));
     assert!(html.starts_with("<style>"));
     assert!(html.contains("/nexus/copilot.js"));
     assert!(html.contains("id=\"rullst-admin-ai\""));
+    assert!(html.contains("value=\"test-csrf-token\""));
+}
+
+#[test]
+fn language_contract_is_single_language_and_ui_is_english_only() {
+    let prompt = system_prompt(AdminAi {
+        blueprint: Blueprint::Lms,
+        surface: Surface::Studio,
+    });
+    assert!(prompt.contains("Reply only in the language predominantly used"));
+    assert!(prompt.contains("Never repeat the answer in a second language"));
+    let html = page(
+        AdminAi {
+            blueprint: Blueprint::Lms,
+            surface: Surface::Studio,
+        },
+        false,
+        "test-csrf-token",
+    );
+    for unwanted in ["Portuguese", "Voltar", "Enviar", "Sua pergunta", "Olá"] {
+        assert!(
+            !html.contains(unwanted),
+            "unexpected bilingual UI text: {unwanted}"
+        );
+    }
 }

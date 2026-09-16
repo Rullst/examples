@@ -27,6 +27,12 @@ class DeploymentChecks(unittest.TestCase):
         self.assertIsNone(deployment.NoRedirect().redirect_request(
             None, None, 302, "redirect", {}, "https://invalid.example"))
 
+    def test_browser_check_never_puts_credentials_in_urls_or_output(self):
+        source = (ROOT / "scripts/browser-admin-smoke.mjs").read_text(encoding="utf-8")
+        self.assertIn("process.stdin", source)
+        self.assertNotIn("console.log(input", source)
+        self.assertNotIn("${input.username}@", source)
+
     def test_required_configuration_fails_closed(self):
         properties = {"template": {"containers": [{"env": []}]}}
         with self.assertRaisesRegex(RuntimeError, "NEXUS_ADMIN_PASSWORD"):
