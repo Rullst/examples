@@ -65,6 +65,7 @@ async function run() {
   let id = 0;
   let authChallenges = 0;
   let lastDocumentStatus;
+  let lastDocumentError;
   const pending = new Map();
   socket.addEventListener('message', event => {
     const message = JSON.parse(event.data);
@@ -82,6 +83,10 @@ async function run() {
     }
     if (message.method === 'Network.responseReceived' && message.params.type === 'Document') {
       lastDocumentStatus = message.params.response.status;
+      return;
+    }
+    if (message.method === 'Network.loadingFailed' && message.params.type === 'Document') {
+      lastDocumentError = message.params.errorText;
       return;
     }
     if (message.method === 'Fetch.requestPaused') {
@@ -120,13 +125,22 @@ async function run() {
     stage = `${panel} page load`;
     authChallenges = 0;
     lastDocumentStatus = undefined;
-    await send('Page.navigate', { url: `${input.origin}/${panel}/${page}` });
+    lastDocumentError = undefined;
+    const navigation = await send('Page.navigate', { url: `${input.origin}/${panel}/${page}` });
+    const navigationError = navigation.errorText || lastDocumentError;
+    if (navigationError) {
+      const safeError = /^net::ERR_[A-Z0-9_]+$/.test(navigationError) ? navigationError : 'unknown error';
+      stage = `${panel} page navigation (${safeError})`;
+      throw new Error('admin page navigation failed');
+    }
     try {
       await waitFor("document.readyState === 'complete' && !!document.querySelector('#rullst-admin-ai form')", 20);
     } catch {
+      const safeError = /^net::ERR_[A-Z0-9_]+$/.test(lastDocumentError || '')
+        ? `, ${lastDocumentError}` : '';
       const status = Number.isInteger(lastDocumentStatus) ? lastDocumentStatus : 'unknown';
       const auth = authChallenges > 0 ? 'auth challenge seen' : 'no auth challenge';
-      stage = `${panel} page load (HTTP ${status}, ${auth})`;
+      stage = `${panel} page load (HTTP ${status}, ${auth}${safeError})`;
       throw new Error('admin page did not load');
     }
     stage = `${panel} UI contract`;

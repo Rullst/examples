@@ -42,6 +42,9 @@ class DeploymentChecks(unittest.TestCase):
         safe_status = ("Real-browser admin verification failed during studio page load "
                        "(HTTP 401, auth challenge seen); no credentials or response bodies logged.")
         self.assertEqual(deployment.safe_browser_diagnostic(safe_status), safe_status)
+        safe_network = ("Real-browser admin verification failed during nexus page navigation "
+                        "(net::ERR_NAME_NOT_RESOLVED); no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe_network), safe_network)
         self.assertIsNone(deployment.safe_browser_diagnostic(
             "Real-browser admin verification failed during password=hunter2; "
             "no credentials or response bodies logged."))
