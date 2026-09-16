@@ -1,4 +1,6 @@
 import importlib.util
+import contextlib
+import io
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -9,6 +11,9 @@ spec.loader.exec_module(recovery)
 
 
 class PortfolioRecoveryChecks(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(contextlib.redirect_stdout(io.StringIO()))
+
     def test_no_reads_or_writes_without_explicit_approval(self):
         with patch.object(recovery.verify, "azure") as read, patch.object(recovery, "azure_write") as write:
             with self.assertRaises(RuntimeError):
@@ -30,7 +35,7 @@ class PortfolioRecoveryChecks(unittest.TestCase):
 
     def test_only_destination_image_and_password_are_updated(self):
         password = "synthetic-test-password-long-enough"
-        target = {"template": {"containers": [{"name": "portfolio", "env": [
+        target = {"configuration": {"secrets": None}, "template": {"containers": [{"name": "portfolio", "env": [
             {"name": "NEXUS_ADMIN_USERNAME", "value": "existing-user"},
         ]}]}}
         with patch.object(recovery.verify, "azure", return_value={"properties": target}), \

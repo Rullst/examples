@@ -57,7 +57,8 @@ def repair(approved):
     ] + [{"name": "NEXUS_ADMIN_PASSWORD", "value": password}]
     verify.configuration(TARGET, candidate)
 
-    declared = target.get("configuration", {}).get("secrets", [])
+    # Azure uses JSON null, not an empty array, before the first secret exists.
+    declared = (target.get("configuration") or {}).get("secrets") or []
     if any(secret["name"] == SECRET for secret in declared):
         current = verify.azure(TARGET, "secret", "list", "--show-values", "--query",
                                f"[?name=='{SECRET}'].value | [0]")
@@ -83,6 +84,6 @@ if __name__ == "__main__":
     except RuntimeError as error:
         print(f"::error::{error}", file=sys.stderr)
         sys.exit(1)
-    except Exception:
-        print("::error::Portfolio recovery failed; no response bodies or credentials logged.", file=sys.stderr)
+    except Exception as error:
+        print(f"::error::Portfolio recovery failed ({type(error).__name__}); no response bodies or credentials logged.", file=sys.stderr)
         sys.exit(1)
