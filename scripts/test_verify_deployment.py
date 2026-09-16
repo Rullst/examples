@@ -30,7 +30,9 @@ class DeploymentChecks(unittest.TestCase):
     def test_browser_check_never_puts_credentials_in_urls_or_output(self):
         source = (ROOT / "scripts/browser-admin-smoke.mjs").read_text(encoding="utf-8")
         self.assertIn("process.stdin", source)
-        self.assertIn("Fetch.continueWithAuth", source)
+        self.assertIn("startLoopbackProxy", source)
+        self.assertIn("allowedOrigins", source)
+        self.assertIn("headers.set('authorization', authorization)", source)
         self.assertNotIn("Network.setExtraHTTPHeaders", source)
         self.assertNotIn("console.log(input", source)
         self.assertNotIn("${input.username}@", source)
@@ -40,7 +42,7 @@ class DeploymentChecks(unittest.TestCase):
                 "no credentials or response bodies logged.")
         self.assertEqual(deployment.safe_browser_diagnostic(safe), safe)
         safe_status = ("Real-browser admin verification failed during studio page load "
-                       "(HTTP 401, auth challenge seen); no credentials or response bodies logged.")
+                       "(HTTP 401); no credentials or response bodies logged.")
         self.assertEqual(deployment.safe_browser_diagnostic(safe_status), safe_status)
         safe_network = ("Real-browser admin verification failed during nexus page navigation "
                         "(net::ERR_NAME_NOT_RESOLVED); no credentials or response bodies logged.")
