@@ -96,12 +96,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Server::new(router)
     };
 
-    println!("🚀 Rullst Sovereign SaaS Showcase running at http://127.0.0.1:3000");
-    println!("   - Studio Developer Control Room: http://127.0.0.1:3000/studio (User: admin | Pass: SovereignShowcase2026!)");
-    println!("   - Nexus Admin CMS: http://127.0.0.1:3000/nexus (User: admin | Pass: SovereignShowcase2026!)");
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000);
+
+    println!("🚀 Rullst Sovereign SaaS Showcase running at http://127.0.0.1:{port}");
+    println!("   - Studio Developer Control Room: http://127.0.0.1:{port}/studio (User: admin | Pass: SovereignShowcase2026!)");
+    println!("   - Nexus Admin CMS: http://127.0.0.1:{port}/nexus (User: admin | Pass: SovereignShowcase2026!)");
     println!("   - Groq AI Copilot: Active with Llama 3.3 70B & Prompt Injection Shield");
 
-    server.run(3000).await?;
+    server.run(port).await?;
 
     Ok(())
 }

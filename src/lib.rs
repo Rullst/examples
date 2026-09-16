@@ -470,68 +470,9 @@ async fn studio_auth_guard(
     }
 }
 
-const STUDIO_FALLBACK_CSS: &str = r#"
-:root {
-  --bg-main: #090d16;
-  --panel-bg: rgba(15, 23, 42, 0.85);
-  --border: rgba(51, 65, 85, 0.6);
-  --accent: #00ffcc;
-  --text: #f3f4f6;
-  --text-muted: #94a3b8;
-}
-html, body {
-  background-color: var(--bg-main) !important;
-  color: var(--text) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  margin: 0;
-  padding: 0;
-}
-aside, nav, .sidebar {
-  background: var(--panel-bg) !important;
-  border-color: var(--border) !important;
-}
-header {
-  background: var(--panel-bg) !important;
-  border-bottom: 1px solid var(--border) !important;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th {
-  background: rgba(30, 41, 59, 0.7);
-  color: var(--accent);
-  padding: 10px 14px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  text-transform: uppercase;
-}
-td {
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.3);
-  font-size: 0.88rem;
-}
-tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
-button, .btn {
-  background: #10b981;
-  color: #000;
-  font-weight: 700;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-"#;
+const STUDIO_CSS: &str = include_str!("../static/studio.css");
+const TAILWIND_JS: &str = include_str!("../static/tailwind.js");
+const LOGGER_JS: &str = r#"document.addEventListener("DOMContentLoaded",()=>{const target=document.getElementById("studio-request-stream");if(!target||typeof EventSource==="undefined")return;const source=new EventSource("/studio/requests/stream");source.onmessage=(event)=>{const row=document.createElement("div");row.innerHTML=event.data;while(row.lastChild)target.prepend(row.lastChild);};window.addEventListener("beforeunload",()=>source.close(),{once:true});});"#;
 
 async fn studio_css_handler() -> axum::response::Response {
     use axum::http::header;
@@ -540,9 +481,24 @@ async fn studio_css_handler() -> axum::response::Response {
         axum::http::StatusCode::OK,
         [
             (header::CONTENT_TYPE, "text/css; charset=utf-8"),
-            (header::CACHE_CONTROL, "public, max-age=604800"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
-        STUDIO_FALLBACK_CSS,
+        STUDIO_CSS,
+    ).into_response()
+}
+
+async fn tailwind_handler() -> axum::response::Response {
+    use axum::http::header;
+    use axum::response::IntoResponse;
+    (
+        axum::http::StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=604800"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+        ],
+        TAILWIND_JS,
     ).into_response()
 }
 
@@ -553,10 +509,30 @@ async fn studio_logger_handler() -> axum::response::Response {
         axum::http::StatusCode::OK,
         [
             (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
-            (header::CACHE_CONTROL, "public, max-age=604800"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
-        "// Rullst Studio Live Telemetry Logger (Telemetry Active)\nconsole.log('[Rullst Studio] Telemetry connected.');",
+        LOGGER_JS,
     ).into_response()
+}
+
+async fn studio_tailwind_patch(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let res = next.run(req).await;
+    let (mut parts, body) = res.into_parts();
+    let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer studio body").into_response();
+    };
+    let html = String::from_utf8_lossy(&bytes);
+    if html.contains("cdn.tailwindcss.com") {
+        let patched = html.replace("https://cdn.tailwindcss.com", "/static/tailwind.js");
+        parts.headers.remove(axum::http::header::CONTENT_LENGTH);
+        return axum::response::Response::from_parts(parts, axum::body::Body::from(patched));
+    }
+    axum::response::Response::from_parts(parts, axum::body::Body::from(bytes))
 }
 
 async fn studio_cache_handler(
@@ -765,11 +741,17 @@ fn router_with_nexus_auth(
         .route("/studio/assets/studio.css", axum::routing::get(studio_css_handler))
         .route("/assets/logger.js", axum::routing::get(studio_logger_handler))
         .route("/studio/assets/logger.js", axum::routing::get(studio_logger_handler))
+        .layer(axum::middleware::from_fn(studio_tailwind_patch))
         .layer(axum::middleware::from_fn(studio_auth_guard));
 
     rullst_security::register_deception_trap("/wp-admin");
 
-    Ok(routes![
+    let is_prod_or_staging = std::env::var("RULLST_ENV")
+        .or_else(|_| std::env::var("APP_ENV"))
+        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "production" | "prod" | "staging" | "stage"))
+        .unwrap_or(false);
+
+    let public_routes = routes![
         get("/" => index),
         post("/posts" => store),
         get("/posts/repository" => crate::repository_demo::repository_page),
@@ -791,21 +773,37 @@ fn router_with_nexus_auth(
         get("/sw.js" => sw_handler),
         get("/static/htmx.js" => htmx_handler),
         get("/static/crab.png" => crab_png_handler),
+        get("/static/studio.css" => studio_css_handler),
+        get("/assets/studio.css" => studio_css_handler),
+        get("/assets/logger.js" => studio_logger_handler),
+        get("/static/tailwind.js" => tailwind_handler),
         post("/api/showcase-chat" => crate::ai_demo::chat_api),
         get("/wp-admin" => honeypot_trap),
         get("/favicon.ico" => favicon_handler),
         get("/robots.txt" => robots_txt),
         get("/sitemap.xml" => sitemap_xml),
-    ]
-    .nest_axum("/nexus", nexus_router)
-    .nest_axum("/studio", studio_router)
+    ];
+
+    let router = if !is_prod_or_staging {
+        public_routes
+            .layer(axum::middleware::from_fn(rullst::security::csrf_middleware))
+            .nest_axum("/nexus", nexus_router)
+            .nest_axum("/studio", studio_router)
+            .layer(axum::Extension(rullst_nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+    } else {
+        public_routes
+            .nest_axum("/nexus", nexus_router)
+            .nest_axum("/studio", studio_router)
+            .layer(axum::Extension(rullst_nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+    }
     .layer(axum::middleware::map_response(set_security_headers))
     .layer(rullst::tenant_layer(config))
     .layer(axum::Extension(demo_membership))
     .layer(axum::middleware::from_fn(
         rullst_security::deception_trap_middleware,
-    ))
-    .layer(axum::middleware::from_fn(rullst::security::csrf_middleware)))
+    ));
+
+    Ok(router)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -908,6 +906,7 @@ mod tests {
 
         let token = rullst::security::generate_csrf_token();
         let accepted = app
+            .clone()
             .oneshot(
                 Request::post("/posts")
                     .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -920,5 +919,36 @@ mod tests {
             .await
             .expect("matching-token response");
         assert_eq!(accepted.status(), StatusCode::SEE_OTHER);
+    }
+
+    #[tokio::test]
+    async fn nexus_and_studio_are_accessible_and_exempt_from_public_csrf_blocks() {
+        let app = test_router().into_axum();
+
+        // 1. Static Studio assets return 200 OK without CSRF or auth blocks
+        for asset in ["/assets/studio.css", "/static/studio.css", "/assets/logger.js", "/static/tailwind.js"] {
+            let res = app
+                .clone()
+                .oneshot(Request::get(asset).body(Body::empty()).expect("asset request"))
+                .await
+                .expect("asset response");
+            assert_eq!(res.status(), StatusCode::OK, "Asset {asset} must return 200 OK");
+        }
+
+        // 2. Nexus does not return 426 Upgrade Required (thanks to NexusVerifiedTls)
+        let nexus_get = app
+            .clone()
+            .oneshot(Request::get("/nexus").body(Body::empty()).expect("nexus request"))
+            .await
+            .expect("nexus response");
+        assert_ne!(nexus_get.status(), StatusCode::UPGRADE_REQUIRED, "Nexus must not reject with 426");
+
+        // 3. Studio challenges with 401 Basic Auth
+        let studio_get = app
+            .clone()
+            .oneshot(Request::get("/studio").body(Body::empty()).expect("studio request"))
+            .await
+            .expect("studio response");
+        assert_eq!(studio_get.status(), StatusCode::UNAUTHORIZED, "Studio must challenge with 401 Basic Auth");
     }
 }

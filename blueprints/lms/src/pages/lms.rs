@@ -70,7 +70,7 @@ pub fn index_page(
                 <title>"Rullst Academy — Course catalog"</title>
                 <link rel="manifest" href="/manifest.webmanifest" />
                 <meta name="theme-color" content="#080b11" />
-                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
+                <link rel="icon" type="image/x-icon" href="/favicon.ico" />
                 <script src="/static/htmx.js"></script>
                 <style nonce={csp_nonce}>
                     "
@@ -183,7 +183,7 @@ pub fn course_detail_page(
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>{&course.title}" — Rullst Academy"</title>
-                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
+                <link rel="icon" type="image/x-icon" href="/favicon.ico" />
                 <script src="/static/htmx.js"></script>
                 <style nonce={csp_nonce}>
                     "
@@ -346,7 +346,7 @@ pub fn lesson_player_page(
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <title>{title}</title>
-                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
+                <link rel="icon" type="image/x-icon" href="/favicon.ico" />
                 <style nonce={csp_nonce}>
                     "
                     * { box-sizing: border-box; }
@@ -723,7 +723,7 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Academic Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the <strong>Academic Copilot</strong> for Rullst Academy. Ask me anything about the <strong>Rust</strong> language (ownership, concurrency, types), the <strong>Rullst</strong> web framework, or our courses! (Você também pode perguntar em português!)
+                    Hello! I am the <strong>Academic Copilot</strong> for Rullst Academy. Ask me anything about the <strong>Rust</strong> language (ownership, concurrency, types), the <strong>Rullst</strong> web framework, or our courses!
                     <div class="lms-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
                 </div>
             </div>

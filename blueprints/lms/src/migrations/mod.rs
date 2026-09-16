@@ -3019,6 +3019,7 @@ mod tests {
             "<script>alert(1)</script>",
             Some(1),
             "catalog-csp-nonce",
+            "test-csrf-token",
         );
         assert!(rendered_catalog.contains("nonce=\"catalog-csp-nonce\""));
         assert!(rendered_catalog.contains("&lt;script&gt;"));

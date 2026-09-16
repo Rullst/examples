@@ -16,7 +16,10 @@ fn is_portuguese(text: &str) -> bool {
         "habilidade", "habilidades", "projeto", "projetos", "trabalho", "carreira",
         "experiência", "experiencia", "contato", "gosta", "gosto", "olá", "ola",
         "bom dia", "boa tarde", "boa noite", "ajuda", "curso", "cursos", "aula",
-        "aulas", "trilha", "trilhas", "aluno", "estudante", "ensine", "explique"
+        "aulas", "trilha", "trilhas", "aluno", "estudante", "ensine", "explique",
+        "o que", "quero", "preciso", "meu", "minha", "nosso", "nossa",
+        "linguagem", "programação", "aprender", "aprenda", "me diga", "me explique",
+        "é um", "é uma", "são", "tem", "têm", "consegue", "funciona"
     ];
     pt_markers.iter().any(|&m| lower.contains(m))
 }
@@ -282,3 +285,42 @@ Available Lessons:
         assistant_content
     )).into_response()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_offline_response_defaults_to_english() {
+        let resp = fallback_offline_response("what is Rullst?", &[], &[]);
+        assert!(resp.contains("is a modern full-stack web ecosystem in Rust"));
+        assert!(!resp.contains("ecossistema full-stack"));
+
+        let resp_rust = fallback_offline_response("explain ownership and memory safety in rust", &[], &[]);
+        assert!(resp_rust.contains("Ownership & Borrowing"));
+        assert!(!resp_rust.contains("Cada valor na memória"));
+    }
+
+    #[test]
+    fn test_offline_response_answers_portuguese_only_when_requested_in_portuguese() {
+        let resp = fallback_offline_response("o que é o Rullst?", &[], &[]);
+        assert!(resp.contains("ecossistema full-stack moderno em Rust"));
+
+        let resp_rust = fallback_offline_response("explique ownership e concorrência em rust", &[], &[]);
+        assert!(resp_rust.contains("Cada valor na memória tem um dono exclusivo"));
+    }
+
+    #[test]
+    fn test_guardrails_do_not_block_pedagogical_questions() {
+        use rullst::ai::guardrails::AiGuardrails;
+
+        let query = "what is Rullst?";
+        let report = AiGuardrails::inspect(query);
+        assert!(report.passed_heuristics(), "Normal question 'what is Rullst?' must not be blocked!");
+
+        let query_rust = "How does ownership and borrowing work in Rust?";
+        let report_rust = AiGuardrails::inspect(query_rust);
+        assert!(report_rust.passed_heuristics(), "Rust ownership question must not be blocked!");
+    }
+}
+
