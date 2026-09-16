@@ -533,12 +533,16 @@ fn cv_styles() -> String {
             padding: 6px 10px;
         }
         .ai-drawer {
-            bottom: 76px;
-            right: 10px;
-            left: 10px;
-            width: auto;
-            max-width: none;
-            height: 520px;
+            bottom: 0 !important;
+            right: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 80vh !important;
+            max-height: 85vh !important;
+            border-radius: 20px 20px 0 0 !important;
+            border-bottom: none !important;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
         }
     }
     "#.to_string()
@@ -746,9 +750,14 @@ fn render_ai_widget(csrf_token: &str) -> String {
 
         function setAiQuestion(text) {
             var input = document.getElementById('ai-message-input');
-            if (input) {
+            var form = document.getElementById('ai-chat-form');
+            if (input && form) {
                 input.value = text;
-                input.focus();
+                if (form.requestSubmit) {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
             }
         }
 

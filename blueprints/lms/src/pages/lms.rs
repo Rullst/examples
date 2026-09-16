@@ -670,7 +670,18 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         .lms-crab-launcher { bottom: 16px; right: 16px; gap: 8px; }
         .lms-crab-avatar { width: 48px; height: 48px; }
         .lms-crab-bubble { font-size: 0.76rem; padding: 6px 10px; }
-        .lms-ai-drawer { bottom: 76px; right: 10px; left: 10px; width: auto; max-width: none; height: 500px; }
+        .lms-ai-drawer {
+            bottom: 0 !important;
+            right: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 80vh !important;
+            max-height: 85vh !important;
+            border-radius: 20px 20px 0 0 !important;
+            border-bottom: none !important;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.85) !important;
+        }
     }
     </style>
 
@@ -788,9 +799,14 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
 
         function setLmsPrompt(text) {
             var input = document.getElementById('lms-message-input');
-            if (input) {
+            var form = document.getElementById('lms-chat-form');
+            if (input && form) {
                 input.value = text;
-                input.focus();
+                if (form.requestSubmit) {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
             }
         }
 

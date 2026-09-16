@@ -23,7 +23,7 @@ pub struct ShowcaseChatPayload {
 fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
     let lower = user_msg.to_lowercase();
 
-    if lower.contains("ignore") || lower.contains("system prompt") || lower.contains("jailbreak") || lower.contains("bypass") || lower.contains("drop table") || lower.contains("dan") {
+    if lower.contains("ignore") || lower.contains("system prompt") || lower.contains("jailbreak") || lower.contains("bypass") || lower.contains("drop table") || lower.contains("dan") || lower.contains("ataque") || lower.contains("injeção") || lower.contains("injecao") {
         return format!(
             "<div style=\"background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); padding: 12px 16px; border-radius: 8px; color: #fca5a5;\">\
                 <div style=\"display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; margin-bottom: 6px;\">\
@@ -39,45 +39,59 @@ fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
         );
     }
 
-    if lower.contains("paradigm") || lower.contains("5 web") || lower.contains("front") || lower.contains("arquitetura") {
-        "<p>The <strong>Rullst Sovereign Showcase</strong> unifies <strong>5 Web Paradigms</strong> in a single Rust binary:</p>\
+    if lower.contains("paradigm") || lower.contains("5 web") || lower.contains("front") || lower.contains("arquitetura") || lower.contains("paradigma") {
+        "<p>O <strong>Rullst Sovereign Showcase</strong> unifica <strong>5 Paradigmas Web</strong> em um único binário compilado em Rust:</p>\
          <ol style=\"padding-left: 1.25rem; font-size: 0.88rem; line-height: 1.6; margin: 0.5rem 0;\">\
-            <li><strong>⚡ Zero-Bundle HTMX SSR</strong> (<code>/</code>): Declarative HTML5 attributes with compile-time <code>html!</code> macro (0 KB JS).</li>\
-            <li><strong>🔴 LiveView Server-Driven UI</strong> (<code>/live-feed</code>): Bidirectional WebSocket state synchronization over Tokio.</li>\
-            <li><strong>🏝️ Reactive Wasm Islands</strong> (<code>/editor</code>): Isolated WebAssembly micro-frontends with zero VDOM overhead.</li>\
-            <li><strong>🎨 Zero-Build Semantic CSS</strong> (<code>/pico-demo</code>): Classless HTML5 with Pico.css v2 and auto dark-mode.</li>\
-            <li><strong>📄 Classic File Templates</strong> (<code>/templates-demo</code>): Jinja2/Tera layout inheritance in <code>templates/</code>.</li>\
+            <li><strong>⚡ Zero-Bundle HTMX SSR</strong> (<code>/</code>): Atributos declarativos HTML5 com macro compile-time <code>html!</code> (0 KB de JavaScript).</li>\
+            <li><strong>🔴 LiveView Server-Driven UI</strong> (<code>/live-feed</code>): Sincronização bidirecional de estado via WebSockets nativos em Tokio (padrão Phoenix/Dioxus).</li>\
+            <li><strong>🏝️ Reactive Wasm Islands</strong> (<code>/editor</code>): Micro-frontends isolados compilados em WebAssembly cliente sem overhead de VDOM.</li>\
+            <li><strong>🎨 Zero-Build Semantic CSS</strong> (<code>/pico-demo</code>): HTML5 semântico com Pico.css v2 e alternância automática de dark-mode (0 Node.js/NPM).</li>\
+            <li><strong>📄 Classic File Templates</strong> (<code>/templates-demo</code>): Herança de layouts Jinja2/Tera no diretório <code>templates/</code>.</li>\
          </ol>\
-         <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.5rem;\">⚡ <em>Heuristic RAG Active — Add <code>GROQ_API_KEY</code> for live Llama 3.3 70B inference.</em></p>".to_string()
-    } else if lower.contains("post") || lower.contains("artigo") || lower.contains("história") || lower.contains("story") || lower.contains("blog") {
+         <p style=\"font-size: 0.78rem; color: #38bdf8; margin-top: 0.5rem;\">⚡ <em>Resposta Heurística RAG Ativa — Adicione <code>GROQ_API_KEY</code> no Azure para respostas generativas com Llama 3.3 70B.</em></p>".to_string()
+    } else if lower.contains("post") || lower.contains("artigo") || lower.contains("história") || lower.contains("historia") || lower.contains("story") || lower.contains("blog") || lower.contains("banco") || lower.contains("sqlite") {
         let mut list = String::new();
         for p in posts.iter().take(3) {
             list.push_str(&format!("<li><strong>{}</strong> (Tenant: <em>{}</em>)</li>", rullst::html::escape_str(&p.title), rullst::html::escape_str(&p.tenant_id)));
         }
         format!(
-            "<p>Currently published stories in SQLite Active Record:</p>\
+            "<p>Artigos publicados no banco SQLite Active Record:</p>\
              <ul style=\"padding-left: 1.25rem; font-size: 0.88rem; line-height: 1.6; margin: 0.5rem 0;\">{}</ul>\
-             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.5rem;\">⚡ <em>You can publish new stories directly from the home page. All stories are preserved in the ephemeral database.</em></p>",
+             <p style=\"font-size: 0.8rem; color: #10b981; margin-top: 0.5rem;\">⚡ <em>Você pode publicar novos artigos diretamente na página inicial. Todos são mantidos pelo ciclo FIFO seguro.</em></p>",
             list
         )
     } else if lower.contains("live") || lower.contains("websocket") {
-        "<p><strong>rullst::live (LiveView):</strong> Uses persistent Tokio WebSockets (<code>/_live</code>) to maintain component state entirely in server RAM. When events trigger, the server computes minimal HTML diffs and pushes them to the browser with zero client JS framework overhead.</p>".to_string()
-    } else if lower.contains("wasm") || lower.contains("island") {
-        "<p><strong>rullst::island (Wasm Islands):</strong> Compiles Rust components directly to WebAssembly bytecode mounted on specific DOM elements, delivering near-native performance for heavy computations, games, or offline tools without loading a monolithic client bundle.</p>".to_string()
-    } else if lower.contains("security") || lower.contains("segurança") || lower.contains("rasp") || lower.contains("jail") {
-        "<p><strong>Rullst Security & RASP Suite:</strong> Features active WAF filtering, Honeypot deception traps (<code>/wp-admin</code>), Login Jail with exponential backoff, Bitflags RBAC authorization, and compile-time CSRF validation.</p>".to_string()
-    } else if lower.contains("nexus") || lower.contains("studio") {
-        "<p><strong>Nexus & Studio Cockpit:</strong></p>\
+        "<p><strong>rullst::live (LiveView Server-Driven UI):</strong></p>\
+         <p style=\"font-size: 0.88rem; line-height: 1.5; margin-top: 0.4rem;\">Utiliza conexões persistentes de WebSocket em Tokio (<code>/_live</code>). O estado reside inteiramente na memória RAM do servidor Rust. Ao acionar eventos, o servidor calcula diffs mínimos de HTML e os envia ao navegador, sem necessidade de React, Vue ou bundles JS complexos.</p>".to_string()
+    } else if lower.contains("wasm") || lower.contains("island") || lower.contains("webassembly") {
+        "<p><strong>rullst::island (Wasm Islands):</strong></p>\
+         <p style=\"font-size: 0.88rem; line-height: 1.5; margin-top: 0.4rem;\">Permite compilar código Rust diretamente para WebAssembly montado em componentes isolados do DOM. Proporciona performance nativa para editores, jogos ou ferramentas interativas sem carregar uma SPA inteira.</p>".to_string()
+    } else if lower.contains("security") || lower.contains("segurança") || lower.contains("seguranca") || lower.contains("rasp") || lower.contains("jail") || lower.contains("waf") {
+        "<p><strong>Rullst Security & RASP Suite:</strong></p>\
+         <p style=\"font-size: 0.88rem; line-height: 1.5; margin-top: 0.4rem;\">Proteção em profundidade com WAF integrado, armadilhas Honeypot (<code>/wp-admin</code>), Login Jail com backoff exponencial contra força bruta, autorização Bitflags RBAC e validação CSRF compile-time.</p>".to_string()
+    } else if lower.contains("nexus") || lower.contains("studio") || lower.contains("login") || lower.contains("senha") || lower.contains("admin") || lower.contains("cockpit") {
+        "<p><strong>Nexus & Studio Dev Cockpit (Ambiente Sandbox):</strong></p>\
          <ul style=\"padding-left: 1.25rem; font-size: 0.88rem; line-height: 1.6; margin: 0.5rem 0;\">\
-           <li><strong>🛡️ Nexus (/nexus):</strong> Auto-generated Admin CMS for Active Record models.</li>\
-           <li><strong>🚀 Studio (/studio):</strong> In-memory developer telemetry cockpit, cache profiler, and route inspector.</li>\
+           <li><strong>🛡️ Nexus (/nexus):</strong> CMS administrativo auto-gerado para gerenciar modelos Active Record.</li>\
+           <li><strong>🚀 Studio (/studio):</strong> Cockpit de telemetria, profilamento de cache LRU e inspetor de rotas.</li>\
          </ul>\
-         <p style=\"font-size: 0.85rem; color: #38bdf8;\">Live Sandbox Credentials: User <strong>admin</strong> | Pass <strong>SovereignShowcase2026!</strong></p>".to_string()
+         <div style=\"margin-top: 0.6rem; padding: 8px 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; font-size: 0.82rem;\">\
+           🔑 <strong>Credenciais Sandbox:</strong> Usuário <code style=\"color: #00ffcc;\">admin</code> | Senha <code style=\"color: #00ffcc;\">SovereignShowcase2026!</code>\
+         </div>".to_string()
+    } else if lower.contains("oi") || lower.contains("ola") || lower.contains("olá") || lower.contains("bom dia") || lower.contains("boa tarde") || lower.contains("boa noite") || lower.contains("quem e voce") || lower.contains("quem é você") || lower.contains("quem e vc") || lower.contains("ajuda") || lower.contains("help") || lower.contains("como funciona") {
+        "<p>Olá! Sou o <strong>Sovereign Showcase Copilot</strong> do Rullst, o mascote caranguejo da arquitetura Sovereign SaaS!</p>\
+         <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">Posso explicar os <strong>5 Paradigmas Web</strong>, <strong>Segurança WAF/RASP</strong>, as ferramentas <strong>Nexus & Studio</strong> e consultar artigos no banco SQLite.</p>\
+         <div style=\"margin-top: 0.75rem; padding: 10px 14px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; font-size: 0.8rem; color: #38bdf8; line-height: 1.5;\">\
+           💡 <strong>Para respostas humanas completas:</strong> Adicione sua chave <code>GROQ_API_KEY</code> no Portal Azure (App Settings). Com ela ativa, o modelo Llama 3.3 70B responderá qualquer pergunta de forma fluida, inteligente e em linguagem natural! Enquanto isso, você pode clicar nos botões de sugestão abaixo para testar o Copilot.\
+         </div>".to_string()
     } else {
         format!(
-            "<p>Hello! I am the <strong>Sovereign Showcase AI Copilot</strong>, guarded by Rullst Sovereign AI Guardrails.</p>\
-             <p style=\"margin-top: 0.5rem;\">Ask me about the <strong>5 Web Paradigms</strong> (HTMX SSR, LiveView, Wasm Islands, Pico CSS, Tera), active SQLite blog posts, WAF/RASP defenses, or testing the Prompt Injection Shield!</p>\
-             <p style=\"font-size: 0.75rem; color: #a1a1aa; margin-top: 0.75rem;\">⚡ <em>Tip: Try clicking the test prompts below or asking 'Explain the 5 web paradigms'.</em></p>"
+            "<p>Olá! Sou o <strong>Sovereign Showcase AI Copilot</strong>.</p>\
+             <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">No momento, estou respondendo através do <strong>modo heurístico offline</strong>, pois a chave <code>GROQ_API_KEY</code> ainda não foi adicionada no Portal Azure.</p>\
+             <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">Neste modo, você pode me perguntar sobre os <strong>5 Paradigmas Web</strong>, <strong>LiveView vs HTMX</strong>, <strong>Segurança e Invasão</strong>, ou <strong>Nexus e Studio</strong> (use os botões de atalho abaixo!).</p>\
+             <div style=\"margin-top: 0.75rem; padding: 10px 14px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; font-size: 0.8rem; color: #38bdf8; line-height: 1.5;\">\
+               🚀 <strong>Quer respostas inteligentes e naturais como um humano?</strong><br/>Basta adicionar a variável de ambiente <code>GROQ_API_KEY</code> no Portal do Azure (Container Apps / App Service). A API do Groq é gratuita e ativa o modelo Llama 3.3 70B instantaneamente!\
+             </div>"
         )
     }
 }
