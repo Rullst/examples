@@ -102,6 +102,12 @@ integration. The new assistant supplies it at the existing `/studio/ai` URL.
 
 ## Not framework defects
 
+- Missing `blueprint-ai` during the container dependency-cooking stage: all
+  three GitHub image builds for commit `0ef2434` failed on 2026-09-16 with
+  `failed to read /app/crates/blueprint-ai/Cargo.toml`. Tests passed, but Azure
+  deployment never ran. This is an examples-level packaging regression, not
+  a framework defect; the standalone path dependency must be copied before
+  `cargo chef cook`. This explains why the online sites still showed old UI.
 - Literal `**bold**` and `### headings` in public chat: the examples escaped
   model output and replaced newlines with `<br/>`, without parsing Markdown.
 - Public display of upstream provider error details: implemented by the

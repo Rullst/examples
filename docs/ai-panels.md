@@ -55,6 +55,21 @@ The blueprint Docker builds now use the repository root as their context to
 include the shared crate. The deployment workflows watch shared-crate changes.
 Updating this code locally does not itself update the Azure applications.
 
+The container's dependency-cooking stage must copy `crates/blueprint-ai` before
+running `cargo chef cook`. This crate has its own workspace and is not included
+in the application's cargo-chef recipe. Omitting it caused all three image
+builds for commit `0ef2434` to fail before deployment on 2026-09-16.
+
+Deployment now fails if Azure authentication or required application settings
+are missing. `scripts/verify-deployment.py` checks settings before updating the
+image, then checks the expected ready revision and the actual public URLs.
+The live checks cover formatted public inference, authenticated Nexus/Studio
+pages and inference, anonymous-access rejection and cross-origin rejection.
+They make three short AI calls per application; no private records are sent.
+Administrator credentials are read only inside the deployment runner, never
+printed, and only sent over HTTPS to the fixed blueprint hostname. Redirects
+are not followed. No credentials are created, rotated or changed by the check.
+
 ## Framework finding: Groq provider detection in v12.0.0
 
 In the published `rullst-nexus` 12.0.0 source,

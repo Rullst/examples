@@ -22,7 +22,9 @@ RUN cargo chef prepare --recipe-path recipe.json
 # ------------------------------------------------------------------------------
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-# Cook dependencies - this layer is cached unless Cargo.toml or Cargo.lock change
+# cargo-chef does not include this standalone path dependency in its recipe.
+COPY crates/blueprint-ai /app/crates/blueprint-ai
+# Changes to the shared crate must also invalidate this cached layer.
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build the application source code

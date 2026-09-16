@@ -21,6 +21,8 @@ RUN cargo chef prepare --recipe-path recipe.json
 # ------------------------------------------------------------------------------
 FROM chef AS builder
 COPY --from=planner /app/blueprints/lms/recipe.json recipe.json
+# The standalone shared crate is not part of cargo-chef's blueprint recipe.
+COPY crates/blueprint-ai /app/crates/blueprint-ai
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build the application source code
