@@ -3,6 +3,9 @@
 
 use rullst::html;
 
+const PUBLIC_DEMO_USERNAME: &str = "rullst_demo";
+const PUBLIC_DEMO_PASSWORD: &str = "RullstDemoAccess2026!";
+
 /// Renders the universal Sovereign Showcase Header with navigation buttons.
 pub fn render_showcase_nav(active_route: &str) -> String {
     let routes = [
@@ -177,35 +180,35 @@ pub fn render_showcase_nav(active_route: &str) -> String {
 
         <div id="sandbox-notice-banner" class="sandbox-sub-banner">
             <div class="sandbox-sub-banner-content">
-                <span class="sandbox-badge">"🛡️ Sandbox Ativo:"</span>
-                <span>"Nexus CMS (<code>/nexus</code>) & Studio Cockpit (<code>/studio</code>): acesso com as credenciais fornecidas pelo administrador."</span>
+                <span class="sandbox-badge">"🛡️ Public Sandbox:"</span>
+                <span>"Nexus & Studio login — username: "<code>{PUBLIC_DEMO_USERNAME}</code>" · password: "<code>{PUBLIC_DEMO_PASSWORD}</code>". Changes remain visible until the active container resets."</span>
             </div>
-            <button type="button" class="sandbox-dismiss-btn" onclick="var b=document.getElementById('sandbox-notice-banner'); if(b){b.style.display='none';}" aria-label="Fechar aviso">"×"</button>
+            <button type="button" class="sandbox-dismiss-btn" onclick="var b=document.getElementById('sandbox-notice-banner'); if(b){b.style.display='none';}" aria-label="Close notice">"×"</button>
         </div>
 
         <div id="showcase-mobile-backdrop" class="showcase-mobile-backdrop" onclick="toggleShowcaseDrawer()"></div>
-        <aside id="showcase-drawer" class="showcase-mobile-drawer" role="dialog" aria-label="Menu de Navegação">
+        <aside id="showcase-drawer" class="showcase-mobile-drawer" role="dialog" aria-label="Navigation menu">
             <div class="mobile-drawer-header">
                 <div class="showcase-brand">
                     <img src="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" alt="Rullst Logo" class="showcase-brand-img" />
                     <span class="showcase-logo">"RULLST"</span>
                     <span class="showcase-badge">"v12.0"</span>
                 </div>
-                <button type="button" class="mobile-close-btn" onclick="toggleShowcaseDrawer()" aria-label="Fechar menu">"×"</button>
+                <button type="button" class="mobile-close-btn" onclick="toggleShowcaseDrawer()" aria-label="Close menu">"×"</button>
             </div>
 
             <div class="mobile-drawer-scroll">
-                <div class="mobile-section-heading">"🌐 5 Paradigmas Web"</div>
+                <div class="mobile-section-heading">"🌐 5 Web Paradigms"</div>
                 <div class="mobile-nav-list">
                     { rullst::html::RawHtml(mobile_paradigms_html) }
                 </div>
 
-                <div class="mobile-section-heading">"⚙️ Arquitetura & Recursos"</div>
+                <div class="mobile-section-heading">"⚙️ Architecture & Features"</div>
                 <div class="mobile-nav-list">
                     { rullst::html::RawHtml(mobile_features_html) }
                 </div>
 
-                <div class="mobile-section-heading">"🚀 Cockpits de Administração (Sandbox)"</div>
+                <div class="mobile-section-heading">"🚀 Admin Cockpits (Sandbox)"</div>
                 <div class="mobile-portals-box">
                     <a href="/studio" target="_blank" class="portal-btn studio-btn" style="padding: 0.65rem 1rem; justify-content: center;">
                         "🚀 Studio Developer Cockpit"
@@ -216,8 +219,8 @@ pub fn render_showcase_nav(active_route: &str) -> String {
                 </div>
 
                 <div class="mobile-tenant-info">
-                    <div>"Tenant Ativo: " <strong>{&tenant_id}</strong></div>
-                    <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">"Acesso administrativo autenticado"</div>
+                    <div>"Active tenant: " <strong>{&tenant_id}</strong></div>
+                    <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">"Public demo: "<code>{PUBLIC_DEMO_USERNAME}</code>" / "<code>{PUBLIC_DEMO_PASSWORD}</code></div>
                 </div>
             </div>
         </aside>
@@ -257,7 +260,7 @@ fn render_floating_ai_copilot() -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Showcase Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the <strong>Sovereign Showcase AI Copilot</strong>. Ask me anything about Rullst's 5 Web Paradigms, LiveView, Wasm, Security WAF, or the Nexus & Studio cockpits! (Você também pode perguntar em português!)
+                    Hello! I am the <strong>Sovereign Showcase AI Copilot</strong>. Ask me anything about Rullst's 5 Web Paradigms, LiveView, Wasm, Security WAF, or the Nexus & Studio cockpits!
                 </div>
             </div>
         </div>
@@ -372,7 +375,7 @@ fn render_floating_ai_copilot() -> String {
             if (msgs) {
                 var bubble = document.createElement('div');
                 bubble.className = 'chat-bubble chat-bubble-user';
-                bubble.innerHTML = '<div class="chat-bubble-sender">Você</div><div class="chat-bubble-body">' + 
+                bubble.innerHTML = '<div class="chat-bubble-sender">You</div><div class="chat-bubble-body">' +
                     msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
                 msgs.appendChild(bubble);
                 scrollDrawerToBottom();
@@ -409,7 +412,6 @@ fn render_floating_ai_copilot() -> String {
     </script>
     "##.to_string()
 }
-
 
 /// Renders shared CSS stylesheet for the Showcase theme.
 pub fn render_shared_styles() -> String {
@@ -1120,4 +1122,3 @@ pub fn render_shared_styles() -> String {
     "#
     .to_string()
 }
-

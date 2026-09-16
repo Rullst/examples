@@ -39,6 +39,9 @@ class DeploymentChecks(unittest.TestCase):
         safe = ("Real-browser admin verification failed during nexus AI response; "
                 "no credentials or response bodies logged.")
         self.assertEqual(deployment.safe_browser_diagnostic(safe), safe)
+        safe_status = ("Real-browser admin verification failed during studio page load "
+                       "(HTTP 401, auth challenge seen); no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe_status), safe_status)
         self.assertIsNone(deployment.safe_browser_diagnostic(
             "Real-browser admin verification failed during password=hunter2; "
             "no credentials or response bodies logged."))

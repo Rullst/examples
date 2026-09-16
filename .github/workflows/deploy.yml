@@ -8,6 +8,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  PUBLIC_NEXUS_DEMO_USERNAME: rullst_demo
+  PUBLIC_NEXUS_DEMO_PASSWORD: RullstDemoAccess2026!
 
 jobs:
   build-and-push:
@@ -84,6 +86,10 @@ jobs:
           containerAppName: rullst-showcase
           resourceGroup: rullst-rg
           imageToDeploy: ghcr.io/rullst/examples@${{ needs.build-and-push.outputs.digest }}
+
+      - name: Configure documented public sandbox credentials
+        run: |
+          az containerapp update --name rullst-showcase --resource-group rullst-rg --set-env-vars NEXUS_ADMIN_USERNAME="$PUBLIC_NEXUS_DEMO_USERNAME" NEXUS_ADMIN_PASSWORD="$PUBLIC_NEXUS_DEMO_PASSWORD" --only-show-errors --output none
 
       - name: Verify live public, Nexus and Studio AI
         run: python3 scripts/verify-deployment.py rullst-showcase --image 'ghcr.io/rullst/examples@${{ needs.build-and-push.outputs.digest }}'

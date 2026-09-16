@@ -46,9 +46,9 @@ All applications run in **Microsoft Azure Container Apps** on the **Azure for St
 
 | Application | Live Public URL | Key Features | Admin / Cockpit |
 | :--- | :--- | :--- | :--- |
-| **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Administrator credentials required)*<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |
+| **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>**Public demo login:** `rullst_demo`<br>**Password:** `RullstDemoAccess2026!`<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |
 | **🎓 LMS Academy** | [lms.rullst.win](https://lms.rullst.win) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
-| **💼 Portfolio** | [portfolio.rullst.win](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Administrator credentials required)*<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
+| **💼 Portfolio** | [portfolio.rullst.win](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>**Public demo login:** `rullst_demo`<br>**Password:** `RullstDemoAccess2026!`<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
 
 ---
 
@@ -283,7 +283,7 @@ Caddy will automatically obtain a valid **Let's Encrypt / ZeroSSL** certificate 
 
 ## 🔒 Security & Repository Lifecycle Note
 
-- **Zero-Secret Guarantee:** This repository contains **no credentials, private keys, or API tokens**. All sensitive secrets must be passed via `.env` or container environment variables.
+- **No Private Secrets:** This repository contains no private credentials, keys or API tokens. The documented Showcase/Portfolio login is intentionally public demo data; every sensitive production credential must still be supplied through `.env`, a secret store or container configuration.
 - **Audited Blueprint:** The LMS blueprint has passed the formal pre-flight integration audit ([Protocol](docs/BLUEPRINT_LMS_AUDIT_PROTOCOL.md) | [Report](docs/BLUEPRINT_LMS_AUDIT_REPORT.md)) with a **CONDITIONAL GO** verdict.
 
 ---

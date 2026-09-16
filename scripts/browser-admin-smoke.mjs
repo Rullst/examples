@@ -63,10 +63,13 @@ async function run() {
     socket.addEventListener('error', reject, { once: true });
   });
   let id = 0;
+  let authChallenges = 0;
+  let lastDocumentStatus;
   const pending = new Map();
   socket.addEventListener('message', event => {
     const message = JSON.parse(event.data);
     if (message.method === 'Fetch.authRequired') {
+      authChallenges += 1;
       send('Fetch.continueWithAuth', {
         requestId: message.params.requestId,
         authChallengeResponse: {
@@ -75,6 +78,10 @@ async function run() {
           password: input.password
         }
       }).catch(() => {});
+      return;
+    }
+    if (message.method === 'Network.responseReceived' && message.params.type === 'Document') {
+      lastDocumentStatus = message.params.response.status;
       return;
     }
     if (message.method === 'Fetch.requestPaused') {
@@ -111,8 +118,17 @@ async function run() {
 
   for (const [panel, page] of [['nexus', 'chat'], ['studio', 'ai']]) {
     stage = `${panel} page load`;
+    authChallenges = 0;
+    lastDocumentStatus = undefined;
     await send('Page.navigate', { url: `${input.origin}/${panel}/${page}` });
-    await waitFor("document.readyState === 'complete' && !!document.querySelector('#rullst-admin-ai form')", 20);
+    try {
+      await waitFor("document.readyState === 'complete' && !!document.querySelector('#rullst-admin-ai form')", 20);
+    } catch {
+      const status = Number.isInteger(lastDocumentStatus) ? lastDocumentStatus : 'unknown';
+      const auth = authChallenges > 0 ? 'auth challenge seen' : 'no auth challenge';
+      stage = `${panel} page load (HTTP ${status}, ${auth})`;
+      throw new Error('admin page did not load');
+    }
     stage = `${panel} UI contract`;
     const ui = await evaluate(`({
       english: !/(Voltar|Enviar|Sua pergunta|Olá|Portuguese)/.test(document.body.innerText),

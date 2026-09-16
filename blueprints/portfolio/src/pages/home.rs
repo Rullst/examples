@@ -1,9 +1,12 @@
 // Frontend Adapter: Zero-Bundle HTMX
-use rullst::html;
+use crate::models::experience::Experience;
 use crate::models::profile::Profile;
 use crate::models::project::Project;
-use crate::models::experience::Experience;
 use crate::models::skill::Skill;
+use rullst::html;
+
+const PUBLIC_DEMO_USERNAME: &str = "rullst_demo";
+const PUBLIC_DEMO_PASSWORD: &str = "RullstDemoAccess2026!";
 
 fn cv_styles() -> String {
     r#"
@@ -567,7 +570,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                 <h2 class="role">{&profile.title}</h2>
                 <div class="engine-badge">"Rullst HTMX + Tailwind SSR profile selected"</div>
                 <p class="summary">{&profile.subtitle}</p>
-                
+
                 <div style="margin-top: 1.5rem; background: rgba(0, 255, 204, 0.04); border: 1px solid rgba(0, 255, 204, 0.3); border-radius: 14px; padding: 1.25rem; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.37);">
                     <div style="display: flex; align-items: center; gap: 0.5rem; color: #00ffcc; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
                         <span>"🛡️"</span> "Live Sandbox Access"
@@ -576,8 +579,8 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                         "Public showcase mode enabled. Explore the Nexus Admin CMS or monitor real-time Studio telemetry:"
                     </p>
                     <div style="background: rgba(0, 0, 0, 0.5); border-radius: 8px; padding: 0.6rem 0.8rem; font-family: monospace; font-size: 0.82rem; color: #f3f4f6; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <div style="margin-bottom: 0.25rem;"><span style="color: #9ca3af;">"User: "</span><strong style="color: #00ffcc; user-select: all;">"admin"</strong></div>
-                        <div style="color: #9ca3af;">"Use the credentials supplied by the administrator."</div>
+                        <div style="margin-bottom: 0.25rem;"><span style="color: #9ca3af;">"Username: "</span><strong style="color: #00ffcc; user-select: all;">{PUBLIC_DEMO_USERNAME}</strong></div>
+                        <div><span style="color: #9ca3af;">"Password: "</span><strong style="color: #00ffcc; user-select: all;">{PUBLIC_DEMO_PASSWORD}</strong></div>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                         <a href="/nexus" target="_blank" style="display: block; text-align: center; background: #10b981; color: #000; padding: 0.6rem 1rem; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.85rem;">"⚙️ Manage via Nexus CMS"</a>
@@ -586,12 +589,12 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                     <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: flex-start; gap: 0.4rem;">
                         <span style="font-size: 0.85rem;">"🔄"</span>
                         <p style="font-size: 0.72rem; color: #9ca3af; line-height: 1.35;">
-                            <strong style="color: #e5e7eb;">"Ephemeral Scale-to-Zero Sandbox:"</strong> " Any modifications in Nexus or Studio are non-destructive and temporary. When the container sleeps and wakes, SQLite automatically resets to pristine defaults."
+                            <strong style="color: #e5e7eb;">"Ephemeral Scale-to-Zero Sandbox:"</strong> " Nexus changes remain visible to other visitors until the active container shuts down or restarts; the next container starts with pristine SQLite defaults."
                         </p>
                     </div>
                 </div>
             </div>
-            
+
             <div class="contact-info">
                 <div class="contact-item">"📧 "{&profile.email}</div>
                 <div class="contact-item">"🌐 "<a href={&profile.website} target="_blank" style="color: var(--accent);">{&profile.website}</a></div>
@@ -676,7 +679,7 @@ fn render_ai_widget(csrf_token: &str) -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Career Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the <strong>Career Copilot</strong> for this portfolio. Ask me anything about Rust systems, architectures, projects, or hireability! (Você também pode perguntar em português!)
+                    Hello! I am the <strong>Career Copilot</strong> for this portfolio. Ask me anything about Rust systems, architectures, projects, or hireability!
                     <div class="ai-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
                 </div>
             </div>
@@ -817,7 +820,13 @@ fn render_ai_widget(csrf_token: &str) -> String {
     "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
 }
 
-pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience], skills: &[Skill], csrf_token: &str) -> String {
+pub fn render(
+    profile: &Profile,
+    projects: &[Project],
+    experiences: &[Experience],
+    skills: &[Skill],
+    csrf_token: &str,
+) -> String {
     html! {
         <html lang="en">
             <head>
@@ -834,7 +843,7 @@ pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience
                 <div class="scanlines"></div>
                 <div class="glow-blob glow-1"></div>
                 <div class="glow-blob glow-2"></div>
-                
+
                 <div class="layout">
                     { rullst::html::RawHtml(render_sidebar(profile, skills)) }
                     { rullst::html::RawHtml(render_content(projects, experiences)) }
@@ -845,5 +854,3 @@ pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience
         </html>
     }
 }
-
-

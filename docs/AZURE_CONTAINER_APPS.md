@@ -73,6 +73,11 @@ In release mode (`--release`), Rullst refuses to mount unauthenticated admin end
 - `NEXUS_ADMIN_PASSWORD`: Administrator secret. Must be **at least 16 characters** (`MIN_NEXUS_PASSWORD_LENGTH = 16`).
 - If missing or weak, Rullst halts on startup with `WeakPassword { minimum: 16 }` rather than exposing an insecure portal to the public internet.
 
+The live Showcase and Portfolio are an explicit exception: they publish a
+dedicated shared demo credential so visitors can exercise ephemeral Nexus CRUD.
+That credential must never be reused for a private deployment. LMS and all
+production applications keep administrator credentials private.
+
 ### 2. Strict Content Security Policy (CSP)
 Rullst's built-in WAF (`rullst-security`) enforces bank-grade security headers:
 - Default policy blocks inline `<style>` and external third-party CDN scripts unless explicitly permitted in `Rullst.toml`.

@@ -72,9 +72,11 @@ pages and inference, anonymous-access rejection and cross-origin rejection.
 A headless Chromium check also submits both admin forms through the actual page
 JavaScript, so simulated HTTP headers cannot hide a browser-only denial. The
 checks make five short AI calls per application; no private records are sent.
-Administrator credentials are read only inside the deployment runner, never
-printed, and only sent over HTTPS to the fixed blueprint hostname. Redirects
-are not followed. No credentials are created, rotated or changed by the check.
+Credentials are read only inside the deployment runner and sent over HTTPS to
+the fixed blueprint hostname. Redirects are not followed. LMS credentials stay
+private and are never printed. Showcase and Portfolio intentionally use the
+public sandbox login documented on their home pages; their workflows keep the
+Azure configuration synchronized with that non-secret demo credential.
 
 ## Framework finding: Groq provider detection in v12.0.0
 
