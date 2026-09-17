@@ -344,6 +344,28 @@ A direct local HTTP release deployment leaves it unset and continues to fail
 closed. This was an application integration omission, not a framework defect;
 the v12 Nexus source and README explicitly require the capability.
 
+### APP-SAAS-003 — A rejected retry consumes the checkout creation limit
+
+The first Stripe staging acceptance attempt created a valid Checkout Session
+and returned HTTP 303. A second form submission then received HTTP 409 because
+the database correctly rejected another open attempt, but that rejected request
+still consumed the second slot in the process-local limiter. The next request
+received HTTP 429 for ten minutes. The application also stored the provider
+session ID without offering a way to resume its trusted Checkout URL.
+
+**Correction implemented here:** resolve an authenticated account's open
+attempt before consuming the new-session limiter. For a `checkout_created`
+attempt, retrieve the session from Stripe, verify test mode, operation, local
+attempt metadata, product, hashed opaque client reference and exact trusted
+Checkout host, then redirect to the existing open session. Expired sessions are
+closed before creating a replacement; completed sessions return to local
+processing. Pending or unknown outcomes remain fail-closed for reconciliation.
+Only a request that actually needs a new provider session reaches the limiter,
+and HTTP 429 now includes `Retry-After: 600`.
+
+This is an application checkout-orchestration defect in this repository, not a
+defect in the Rullst framework rate limiter.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance
