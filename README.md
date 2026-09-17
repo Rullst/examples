@@ -21,7 +21,11 @@
 
 AI chat rendering and authenticated Nexus/Studio assistants are documented in
 [AI panels](docs/ai-panels.md). Framework findings are tracked in
-[rullst-errors.md](rullst-errors.md).
+[rullst-errors.md](rullst-errors.md). The Capital/SaaS payment audit and
+required framework updates are tracked separately in
+[saas-improvements-needed.md](saas-improvements-needed.md). Every deployable
+example is also governed by the engineering
+[global privacy baseline](docs/GLOBAL_PRIVACY_BASELINE.md).
 
 Welcome to the official showcase and blueprints repository for the **Rullst Framework (`12.0.0`)**. This repository demonstrates how to architect, build, and deploy production-grade, sovereign web applications in pure Rust without JavaScript framework lock-in.
 
@@ -87,6 +91,30 @@ The **LMS Blueprint** is a full production-grade application generated via `carg
   - 🚀 **Studio Cockpit (`/studio`):** Live telemetry, query profiler, and security radar.
   - **Access Security:** Protected by HTTP Basic Auth configured via `NEXUS_ADMIN_USERNAME` and `NEXUS_ADMIN_PASSWORD` environment variables.
 - **Pre-Flight Verification:** See the official [LMS Audit Protocol](docs/BLUEPRINT_LMS_AUDIT_PROTOCOL.md) and [LMS Audit Report](docs/BLUEPRINT_LMS_AUDIT_REPORT.md).
+
+---
+
+## 💳 The SaaS Payment Blueprint (`blueprints/saas`)
+
+The audited SaaS example contains a deliberately constrained provider test-mode
+harness. Rullst Capital 12.0.0 exports **10 incoming billing adapters and 1
+outgoing payout adapter**, but adapter presence is not the same as a usable
+live checkout. This example currently enables only an application-owned Stripe
+one-time sandbox path after a server-side Price check; Razorpay and the other
+providers remain report/roadmap entries until each has an audited one-time
+contract. Known Capital defects and v12 capability boundaries are shown
+directly in its UI.
+
+Payments are disabled by default. The planned first published environment uses
+the Stripe sandbox plus persistent PostgreSQL; it requires sandbox credentials
+from a secret manager, an HTTPS return URL, a provider-owned one-time Price and
+an exact server-owned amount/currency. Live mode remains blocked until sandbox,
+refund, monitoring and legal acceptance evidence exists. No credentials are
+included in this repository.
+
+See the [SaaS blueprint guide](blueprints/saas/README.md) for setup and the
+[framework improvement report](saas-improvements-needed.md) for the full
+provider-by-provider audit.
 
 ---
 
@@ -175,7 +203,7 @@ This showcase serves as the companion guide to the official scaffolds generated 
 cargo install cargo-rullst --version 12.0.0
 
 # 2. Scaffold official blueprints:
-cargo rullst new my-saas      --blueprint saas       # Multi-tenant SaaS with Billing, Stripe, and Subscriptions
+cargo rullst new my-saas      --blueprint saas       # SaaS auth, billing models and Capital adapters; audit live operations before use
 cargo rullst new my-erp       --blueprint erp        # Double-entry Accounting, Inventory, Ledger, and RBAC
 cargo rullst new my-lms       --blueprint lms        # Courses, Lessons, Quizzes, and Certifications
 cargo rullst new my-portfolio --blueprint portfolio  # Ultra-fast developer showcase with dark glassmorphic UI
@@ -221,6 +249,20 @@ cd blueprints/portfolio
 cargo run
 # Open http://127.0.0.1:3000 (Dark Glassmorphism Portfolio & Nexus CMS at /nexus)
 ```
+
+### Running the Audited SaaS Blueprint Locally
+
+```bash
+cd blueprints/saas
+cp .env.example .env
+cargo rullst db:migrate
+cargo run
+# Open http://127.0.0.1:3000; payment checkout remains disabled by default.
+```
+
+Read [the payment setup and safety checklist](blueprints/saas/README.md)
+before adding any provider secret. Use provider test data before considering a
+live charge.
 
 ---
 

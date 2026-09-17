@@ -1,0 +1,8 @@
+[database]
+# Local-development fallback only. Azure must inject a secret DATABASE_URL
+# pointing to persistent managed PostgreSQL.
+url = "postgres://postgres:postgres@localhost:5432/rullst_saas"
+
+[security]
+# This exact path must also remain wrapped by rullst-capital signature verification.
+csrf_signed_webhook_paths = ["/billing/webhook"]
