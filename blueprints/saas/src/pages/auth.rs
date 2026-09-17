@@ -27,7 +27,7 @@ pub fn login_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Htm
          input:focus {{ outline: none; border-color: #10b981; }}\
          .btn-primary {{ width: 100%; padding: 0.85rem; border-radius: 0.5rem; background: #10b981; color: #000; font-weight: 700; border: none; cursor: pointer; font-size: 1rem; margin-top: 0.5rem; }}\
          .btn-primary:hover {{ background: #34d399; }}\
-         .links {{ margin-top: 1.5rem; font-size: 0.85rem; color: #9ca3af; }}\
+         .links {{ margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.8; color: #9ca3af; }}\
          .links a {{ color: #10b981; text-decoration: none; }}\
          .error {{ background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); color: #f87171; padding: .75rem 1rem; border-radius: .5rem; margin-bottom: 1.5rem; font-size: .9rem; }}\
          </style></head><body>\
@@ -38,7 +38,7 @@ pub fn login_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Htm
          <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
          <button type=\"submit\" class=\"btn-primary\">Sign In</button>\
          </form>\
-         <div class=\"links\">Don't have an account? <a href=\"/register\">Register</a> | <a href=\"/\">Pricing</a></div>\
+         <div class=\"links\">Don't have an account? <a href=\"/register\">Register</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">Sandbox terms</a></div>\
          </div></body></html>",
         rullst::html::escape_str(csp_nonce),
         error_html,
@@ -73,7 +73,7 @@ pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> 
          input:focus {{ outline: none; border-color: #10b981; }}\
          .btn-primary {{ width: 100%; padding: 0.85rem; border-radius: 0.5rem; background: #10b981; color: #000; font-weight: 700; border: none; cursor: pointer; font-size: 1rem; margin-top: 0.5rem; }}\
          .btn-primary:hover {{ background: #34d399; }}\
-         .links {{ margin-top: 1.5rem; font-size: 0.85rem; color: #9ca3af; }}\
+         .links {{ margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.8; color: #9ca3af; }}\
          .links a {{ color: #10b981; text-decoration: none; }}\
          .error {{ background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); color: #f87171; padding: .75rem 1rem; border-radius: .5rem; margin-bottom: 1.5rem; font-size: .9rem; }}\
          </style></head><body>\
@@ -83,9 +83,10 @@ pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> 
          <div class=\"form-group\"><label>Name</label><input type=\"text\" name=\"name\" placeholder=\"John Doe\" required /></div>\
          <div class=\"form-group\"><label>Email</label><input type=\"email\" name=\"email\" placeholder=\"you@example.com\" required /></div>\
          <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
+         <p class=\"links\">By creating this sandbox account, you acknowledge the <a href=\"/privacy\">Privacy notice</a> and <a href=\"/terms\">Sandbox terms</a>. This is not optional marketing consent.</p>\
          <button type=\"submit\" class=\"btn-primary\">Register</button>\
          </form>\
-         <div class=\"links\">Already have an account? <a href=\"/login\">Sign In</a> | <a href=\"/\">Pricing</a></div>\
+         <div class=\"links\">Already have an account? <a href=\"/login\">Sign In</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">Sandbox terms</a></div>\
          </div></body></html>",
         rullst::html::escape_str(csp_nonce),
         error_html,
@@ -156,6 +157,8 @@ pub fn dashboard_page(
          <div class="topbar">
            <div class="logo">⚡ Rullst SaaS Dashboard</div>
            <div class="topbar-actions">
+             <a href="/privacy" class="btn-nexus">Privacy</a>
+             <a href="/terms" class="btn-nexus">Sandbox terms</a>
              <a href="/nexus" class="btn-nexus">⚙️ Nexus CMS</a>
              <form method="post" action="/logout" class="logout-form"><input type="hidden" name="_token" value="__RULLST_CSRF_TOKEN__" /><button type="submit" class="btn-logout">Logout</button></form>
            </div>

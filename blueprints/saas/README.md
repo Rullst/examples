@@ -72,6 +72,13 @@ be printed or saved as PDF. Its public `/verify/{public_id}` page uses a random
 validity. It omits the holder's name, email and all provider/payment IDs. The
 identifier is not listed publicly; the holder decides whether to share it.
 
+The public `/privacy` and `/terms` pages disclose the staging data boundary,
+international hosting path, essential cookies, data-rights contact, minors
+policy and the fact that sandbox activity is not a real purchase. Registration
+links to both notices without treating the privacy notice as optional marketing
+consent. Automated self-service export/deletion remains a production blocker;
+staging requests are handled through the documented privacy contact.
+
 ## Persistent database
 
 The blueprint uses Rullst's strict PostgreSQL backend. Azure Container Apps

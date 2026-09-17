@@ -56,6 +56,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         get("/" => controllers::billing_controller::pricing_view),
         get("/healthz" => healthz),
         get("/pricing" => controllers::billing_controller::pricing_view),
+        get("/privacy" => controllers::legal_controller::privacy_notice),
+        get("/terms" => controllers::legal_controller::sandbox_terms),
         get("/login" => controllers::auth_controller::login_view),
         post("/login" => controllers::auth_controller::login_submit),
         get("/register" => controllers::auth_controller::register_view),
