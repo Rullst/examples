@@ -113,7 +113,9 @@ cargo run
 
 The application is available at `http://localhost:3000`. Nexus is mounted at
 `/nexus`. Studio is compiled and started only in debug builds and is absent
-from the release container.
+from the release container. Do not set `NEXUS_TRUSTED_TLS_TERMINATION` for a
+direct local HTTP listener: release-mode Basic Auth must fail closed unless a
+reviewed deployment boundary has actually terminated TLS.
 
 ## Stripe staging setup
 
@@ -161,9 +163,11 @@ after configuring these secrets:
 
 The target Container App `rullst-saas-staging` must already exist in
 `rullst-rg`. The staging workflow constrains it to one replica, runs migrations
-before server startup and checks `/healthz`. Select `disabled` for the first
-revision. Select `test` only after the custom domain is healthy and the Stripe
-sandbox webhook points to
+before server startup, explicitly asserts the reviewed Azure Container Apps TLS
+terminator for Nexus and checks `/healthz`. The marker is a deployment trust
+assertion and must not be copied to a direct HTTP deployment. Select `disabled`
+for the first revision. Select `test` only after the custom domain is healthy
+and the Stripe sandbox webhook points to
 `https://saas-staging.rullst.win/billing/webhook`.
 
 ## Publishing the link in Showcase

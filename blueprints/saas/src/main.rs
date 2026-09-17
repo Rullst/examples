@@ -7,6 +7,10 @@ pub mod migrations;
 pub mod models;
 pub mod pages;
 
+fn trusts_nexus_tls_termination(value: Option<&str>) -> bool {
+    value.is_some_and(|value| value.trim().eq_ignore_ascii_case("azure-container-apps"))
+}
+
 async fn healthz() -> Response {
     let database_ready = match rullst::db::Orm::pool() {
         Ok(pool) => rullst::db::sqlx::query_scalar::<_, i32>("SELECT 1")
@@ -88,6 +92,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(rullst::server::from_fn(staging_headers))
         .nest_axum("/nexus", nexus);
 
+    let nexus_tls_termination = std::env::var("NEXUS_TRUSTED_TLS_TERMINATION").ok();
+    let router = if trusts_nexus_tls_termination(nexus_tls_termination.as_deref()) {
+        router.layer(rullst::server::Extension(
+            rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination(),
+        ))
+    } else {
+        router
+    };
+
     #[cfg(debug_assertions)]
     {
         rullst::runtime::spawn(async {
@@ -101,4 +114,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::new(router).run(3000).await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::trusts_nexus_tls_termination;
+
+    #[test]
+    fn only_the_reviewed_azure_terminator_enables_the_nexus_tls_capability() {
+        assert!(trusts_nexus_tls_termination(Some("azure-container-apps")));
+        assert!(trusts_nexus_tls_termination(Some(" Azure-Container-Apps ")));
+        assert!(!trusts_nexus_tls_termination(None));
+        assert!(!trusts_nexus_tls_termination(Some("true")));
+        assert!(!trusts_nexus_tls_termination(Some("untrusted-proxy")));
+    }
 }

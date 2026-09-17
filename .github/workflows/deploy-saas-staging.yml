@@ -150,6 +150,7 @@ jobs:
             --set-env-vars \
               RULLST_ENV=production \
               DEPLOYMENT_TIER=staging \
+              NEXUS_TRUSTED_TLS_TERMINATION=azure-container-apps \
               MIGRATE_ON_STARTUP=true \
               PAYMENTS_MODE="$PAYMENTS_MODE" \
               BILLING_PROVIDER=stripe \
