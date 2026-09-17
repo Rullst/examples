@@ -52,13 +52,29 @@ public summary and must not be described as exclusive paid content.
 Badges are private by default. A separately recorded opt-in is required before
 public profile display. A badge reveals neither price nor transaction details.
 
+The implemented Stripe sandbox credential is named `Rullst Sandbox Pioneer`.
+It is issued in the same transaction as the entitlement after the signed
+webhook is reconciled with Stripe. Its authenticated printable page may show
+the holder's account name. Its random public verification URL shows only the
+badge type, issue date, `test` environment and current validity; it contains no
+name, email, provider identifier or financial data. A return-page redirect
+cannot issue it.
+
+`Founding Customer` is reserved for a later live-production cohort. Before
+using that label, publish a finite eligibility rule, implement refund/dispute
+revocation and retain auditable evidence that each certificate came from a
+legitimate live customer purchase. Test-mode certificates must never imply
+that real money moved.
+
 ## Rollout order
 
 1. The current sandbox milestone implements purchase attempts, provider-event
    replay protection and report entitlements. Move the complete report and
    tutorial bytes to private storage before any live sale.
 2. Complete Stripe sandbox acceptance, then add signed refund/dispute handling,
-   scheduled reconciliation, the private badge and privacy lifecycle controls.
+   scheduled reconciliation and the remaining privacy lifecycle controls. The
+   Sandbox Pioneer certificate is implemented, but its end-to-end issuance
+   still requires a completed sandbox Checkout acceptance run.
 3. Complete one provider-approved live launch with a genuine product purchase;
    never use a real card as integration test data.
 4. Fix or replace each blocked adapter one at a time. Retain protocol fixtures

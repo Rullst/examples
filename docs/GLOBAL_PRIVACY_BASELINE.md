@@ -99,10 +99,14 @@ identical for every purchaser of the same report version and contain no buyer
 data. Authorization checks whether an account owns an entitlement and then
 serves the static artifact through a short-lived, non-public download route.
 
-A badge records only `(user_id, badge_key, awarded_at, public_opt_in)`. Public
-display is false by default. The badge never exposes amount, provider customer
-identity, transaction time, country or payment method. Revoking public display
-does not revoke the private entitlement.
+A private profile badge records only the subject, badge key, award time and a
+separate public-display opt-in. Public profile display is false by default. A
+verifiable certificate may additionally use a high-entropy random public ID,
+badge type, environment and validity status. Its public verification response
+must omit the holder's name unless a separate, revocable opt-in exists, and it
+must never expose email, amount, provider customer/session/payment identity,
+transaction time, country or payment method. Possession of a verification URL
+is not authorization to access the private entitlement.
 
 ## Blueprint risk levels
 
