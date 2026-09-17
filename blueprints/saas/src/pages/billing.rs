@@ -13,6 +13,8 @@ pub struct PaymentPageState {
 fn pricing_navbar() -> String {
     html! {
         <nav class="pricing-nav" aria-label="Application links">
+            <a href="/privacy" class="pricing-nav__link">"Privacy"</a>
+            <a href="/terms" class="pricing-nav__link">"Sandbox terms"</a>
             <a href="/login" class="pricing-nav__link">"Sign in"</a>
             <a href="/register" class="pricing-nav__link">"Create account"</a>
             <a href="/nexus" class="pricing-nav__link pricing-nav__link--solid">"Nexus CMS"</a>
