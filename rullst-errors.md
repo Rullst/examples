@@ -131,3 +131,29 @@ integration. The new assistant supplies it at the existing `/studio/ai` URL.
 
 Deployment and verification status are reported separately; this document
 records source findings and must not be read as proof that Azure is updated.
+
+## RULLST-002 — SaaS/Capital live-payment contract defects
+
+The v12.0.0 SaaS generator and Capital adapters have confirmed payment defects
+that should not be collapsed into a broad claim of "11 supported gateways."
+They include a hard-coded Lemon Squeezy store ID, stale Paddle and Polar
+checkout contracts, insufficient Stripe checkout-to-local-user binding, an
+HTTP 307 checkout handoff, a generated live portal route backed only by an
+unsupported operation, an invalid Wise transfer flow, missing checkout
+idempotency, provider-less generated billing records and non-atomic generated
+webhook persistence. The generated Windows Cargo configuration also forces the
+now-unsupported `/DEBUG:FASTLINK` option and triggers linker warning LNK4315.
+The deployable binary scaffold also ignores `Cargo.lock` and builds its
+container without `--locked`, so dependency resolution is not reproducible.
+
+The complete evidence, capability boundaries, low-value test constraints and
+acceptance criteria are maintained in
+[`saas-improvements-needed.md`](saas-improvements-needed.md), findings
+**SAAS-001** through **SAAS-015**. This now also records that the v12
+`strict-postgres` feature graph still activates the default ORM backend set,
+including SQLite and MySQL, instead of remaining backend-exclusive, and that
+the hosted Stripe checkout API has no one-time purchase mode. It also records
+that the Stripe signature verifier checks only the last `v1` value, which can
+reject a valid event while endpoint secrets overlap during rotation. The
+hardened example under `blueprints/saas` contains application workarounds and
+does not mean the published framework defects have been fixed upstream.

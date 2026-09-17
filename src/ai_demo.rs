@@ -76,8 +76,7 @@ fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
         || lower.contains("injeção")
         || lower.contains("injecao")
     {
-        return format!(
-            "<div style=\"background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); padding: 12px 16px; border-radius: 8px; color: #fca5a5;\">\
+        return "<div style=\"background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); padding: 12px 16px; border-radius: 8px; color: #fca5a5;\">\
                 <div style=\"display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; margin-bottom: 6px;\">\
                     <span>🛡️</span> <strong>Rullst AI Prompt Injection Shield [BLOCKED]</strong>\
                 </div>\
@@ -88,7 +87,7 @@ fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
                     Layer 1: Input Heuristic Filter • Layer 2: Read-Only System Boundary • Layer 3: Output HTML Escaping\
                 </div>\
             </div>"
-        );
+            .to_string();
     }
 
     // Portuguese responses ONLY when user explicitly asked in Portuguese AND there is a repertoire match
@@ -195,7 +194,7 @@ fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
             "<p>Articles published in the SQLite Active Record database:</p>\
              <ul style=\"padding-left: 1.25rem; font-size: 0.88rem; line-height: 1.6; margin: 0.5rem 0;\">{}</ul>\
              <p style=\"font-size: 0.8rem; color: #10b981; margin-top: 0.5rem;\">⚡ <em>You can publish new articles directly on the home page. All are maintained by a secure FIFO lifecycle.</em></p>",
-            list
+            list,
         )
     } else if lower.contains("live") || lower.contains("websocket") {
         "<p><strong>rullst::live (LiveView Server-Driven UI):</strong></p>\
@@ -226,11 +225,10 @@ fn fallback_offline_response(user_msg: &str, posts: &[Post]) -> String {
            🔑 Use the credentials supplied by the deployment administrator. The assistant does not disclose passwords.\
          </div>".to_string()
     } else {
-        format!(
-            "<p>Hello! I am the <strong>Sovereign Showcase AI Copilot</strong> for Rullst.</p>\
+        "<p>Hello! I am the <strong>Sovereign Showcase AI Copilot</strong> for Rullst.</p>\
              <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">Currently operating in <strong>offline heuristic mode</strong> (add <code>GROQ_API_KEY</code> in Azure to enable dynamic generative answers with GPT-OSS 120B).</p>\
              <p style=\"margin-top: 0.5rem; font-size: 0.88rem; line-height: 1.5;\">In this mode, you can explore the <strong>5 Web Paradigms</strong>, <strong>LiveView vs HTMX</strong>, <strong>Security & WAF</strong>, or <strong>Nexus & Studio</strong> (use the suggestion buttons below!).</p>"
-        )
+            .to_string()
     }
 }
 

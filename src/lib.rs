@@ -375,7 +375,6 @@ pub mod app {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-
 const HTMX_JS: &str = include_str!("../static/htmx.js");
 
 async fn htmx_handler() -> axum::response::Response {

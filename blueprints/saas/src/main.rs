@@ -1,0 +1,104 @@
+use rullst::server::{IntoResponse, Next, Request, Response, StatusCode};
+use rullst::{Server, routes};
+
+pub mod controllers;
+pub mod middlewares;
+pub mod migrations;
+pub mod models;
+pub mod pages;
+
+async fn healthz() -> Response {
+    let database_ready = match rullst::db::Orm::pool() {
+        Ok(pool) => rullst::db::sqlx::query_scalar::<_, i32>("SELECT 1")
+            .fetch_one(pool)
+            .await
+            .is_ok(),
+        Err(_) => false,
+    };
+    if database_ready {
+        (StatusCode::OK, "ready").into_response()
+    } else {
+        (StatusCode::SERVICE_UNAVAILABLE, "not ready").into_response()
+    }
+}
+
+async fn staging_headers(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    if std::env::var("DEPLOYMENT_TIER").is_ok_and(|value| value.eq_ignore_ascii_case("staging")) {
+        response.headers_mut().insert(
+            rullst::server::header::HeaderName::from_static("x-robots-tag"),
+            rullst::server::HeaderValue::from_static("noindex, nofollow, noarchive"),
+        );
+    }
+    response
+}
+
+#[rullst::runtime::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    rullst::artisan!(crate::migrations::get_migrations());
+    controllers::billing_controller::initialize_billing_provider()?;
+
+    let nexus_auth = rullst::nexus::NexusAuthPolicy::local_development_or_basic_from_env()?;
+    let nexus = rullst::nexus::Nexus::new()
+        .with_auth_policy(nexus_auth)
+        .with_brand("SaaS Admin")
+        .register::<models::user::User>()
+        .register::<models::purchase_attempt::PurchaseAttempt>()
+        .register::<models::entitlement::Entitlement>()
+        .try_build()?;
+
+    let router = routes![
+        get("/" => controllers::billing_controller::pricing_view),
+        get("/healthz" => healthz),
+        get("/pricing" => controllers::billing_controller::pricing_view),
+        get("/login" => controllers::auth_controller::login_view),
+        post("/login" => controllers::auth_controller::login_submit),
+        get("/register" => controllers::auth_controller::register_view),
+        post("/register" => controllers::auth_controller::register_submit),
+        post("/logout" => controllers::auth_controller::logout),
+    ];
+
+    let router = router
+        .route(
+            "/dashboard",
+            rullst::routing::get(controllers::auth_controller::dashboard).layer(
+                rullst::server::from_fn(middlewares::auth_middleware::auth_middleware),
+            ),
+        )
+        .route(
+            "/billing/checkout",
+            rullst::routing::post(controllers::billing_controller::checkout_redirect).layer(
+                rullst::server::from_fn(middlewares::auth_middleware::auth_middleware),
+            ),
+        )
+        .route(
+            "/reports/stripe-gateway-field-report-v1.md",
+            rullst::routing::get(controllers::billing_controller::download_stripe_report).layer(
+                rullst::server::from_fn(middlewares::auth_middleware::auth_middleware),
+            ),
+        )
+        .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
+        .route(
+            "/billing/webhook",
+            rullst::routing::post(controllers::billing_controller::webhook_handler),
+        )
+        .layer(rullst::server::from_fn(
+            rullst::security::headers_middleware,
+        ))
+        .layer(rullst::server::from_fn(staging_headers))
+        .nest_axum("/nexus", nexus);
+
+    #[cfg(debug_assertions)]
+    {
+        rullst::runtime::spawn(async {
+            if let Err(error) = rullst::studio::run_studio(5555).await {
+                eprintln!("Rullst Studio could not start: {error}");
+            }
+        });
+        println!("📊 Rullst Studio running on http://127.0.0.1:5555");
+    }
+    println!("🚀 SaaS server starting on port 3000...");
+    Server::new(router).run(3000).await?;
+
+    Ok(())
+}
