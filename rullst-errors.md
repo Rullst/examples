@@ -132,6 +132,67 @@ integration. The new assistant supplies it at the existing `/studio/ai` URL.
 Deployment and verification status are reported separately; this document
 records source findings and must not be read as proof that Azure is updated.
 
+## RULLST-003 — Shield blocks legitimate machine clients by default
+
+**Classification:** default WAF false positive / operational availability.
+**Affected package:** `rullst-core` 12.0.0.
+**Evidence status:** confirmed from the published source and an HTTPS
+reproduction against the deployed SaaS staging application on 2026-09-17.
+
+### Cause and evidence
+
+`rullst-core/src/config.rs::default_user_agent_blocklist()` includes generic
+HTTP clients such as `curl`, `wget`, `python-requests` and `go-http-client`.
+`rullst-core/src/security/waf.rs::waf_middleware()` applies substring matching
+to the `User-Agent` header before routing the request. A match returns HTTP 403
+with `Access Denied: Suspicious User-Agent blocked by Rullst Shield WAF.`
+
+The production-mode SaaS application exposes `GET /healthz` for deployment and
+database-readiness verification. Its GitHub Actions deployment used `curl` and
+received this framework-generated 403 even though the Azure revision was
+provisioned, healthy and running. The WAF therefore caused the deployment to
+be reported as unavailable after a successful application start.
+
+Blocking a generic client identifier is also not a reliable bot boundary: an
+abusive client can send a different `User-Agent`, while legitimate probes,
+API consumers and command-line diagnostics are denied by default.
+
+### Reproduction
+
+1. Start a v12.0.0 server with the default security configuration and a public
+   `GET /healthz` route.
+2. Send `curl https://application.example/healthz`.
+3. Observe HTTP 403 and the Rullst Shield suspicious-agent response.
+4. Repeat the same request with a non-blocklisted `User-Agent` and observe that
+   the request reaches the route.
+
+**Expected behavior:** default security policy should not classify standard
+HTTP libraries as malicious solely from a forgeable header. Applications must
+be able to expose narrowly scoped health and API routes to authenticated or
+rate-limited machine clients without disabling unrelated WAF protections.
+
+### Suggested framework correction
+
+Remove generic HTTP libraries from the default blocklist. Keep known crawler
+policy configurable, and use route-aware authentication, authorization, rate
+limits, request validation and behavioral controls for machine traffic. If a
+route exemption mechanism is introduced, require exact paths and methods and
+do not exempt request-body or signature validation for sensitive endpoints.
+
+Suggested regression coverage:
+
+- default `curl`, `wget`, Python and Go clients can reach a benign GET route;
+- configured crawler entries are still rejected case-insensitively;
+- health-route access does not weaken CSRF, webhook-signature or body checks;
+- an application override can add and remove exact blocklist entries.
+
+### Application workaround implemented here
+
+The SaaS deployment probe now sends the explicit
+`Rullst-SaaS-Deployment-Healthcheck/1.0` identifier. This restores deployment
+verification without disabling Shield, but it does not fix the overly broad
+framework default or turn `User-Agent` matching into an authentication control.
+
 ## RULLST-002 — SaaS/Capital live-payment contract defects
 
 The v12.0.0 SaaS generator and Capital adapters have confirmed payment defects
