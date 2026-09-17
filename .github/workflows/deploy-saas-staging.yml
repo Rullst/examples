@@ -26,7 +26,10 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: rullst/saas-staging
+  # Reuse the repository's existing public GHCR package. A separate package
+  # would default to private and the Container App intentionally has no
+  # long-lived registry credential.
+  IMAGE_NAME: rullst/examples
   CONTAINER_APP: rullst-saas-staging
   RESOURCE_GROUP: rullst-rg
   STRIPE_TEST_PRICE_ID: price_1UGen0CWTlr9100lrR2hLPXG
@@ -68,7 +71,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: image
         shell: bash
-        run: echo "value=${REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+        run: echo "value=${REGISTRY}/${IMAGE_NAME}:saas-staging-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
       - name: Build and publish immutable staging image
         uses: docker/build-push-action@v6
         with:
