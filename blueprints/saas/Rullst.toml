@@ -6,3 +6,7 @@ url = "postgres://postgres:postgres@localhost:5432/rullst_saas"
 [security]
 # This exact path must also remain wrapped by rullst-capital signature verification.
 csrf_signed_webhook_paths = ["/billing/webhook"]
+# The strict framework default permits forms only on this origin. Chrome also
+# applies form-action to the 303 that hands a local POST to hosted Checkout, so
+# allow only Stripe's already server-validated HTTPS Checkout host.
+csp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://checkout.stripe.com; script-src 'self' 'nonce-{NONCE}'; style-src 'self' 'nonce-{NONCE}'; img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:"

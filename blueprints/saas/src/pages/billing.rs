@@ -8,15 +8,23 @@ pub struct PaymentPageState {
     pub payment_mode: PaymentMode,
     pub expected_price: String,
     pub setup_error: Option<String>,
+    pub signed_in: bool,
 }
 
-fn pricing_navbar() -> String {
+fn pricing_navbar(csrf_token: &str, signed_in: bool) -> String {
+    let account_actions = if signed_in {
+        format!(
+            "<span class=\"pricing-nav__status\">Signed in</span><a href=\"/dashboard\" class=\"pricing-nav__link\">Dashboard</a><form method=\"post\" action=\"/logout\" class=\"pricing-nav__form\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><button type=\"submit\" class=\"pricing-nav__link pricing-nav__button\">Sign out</button></form>",
+            rullst::html::escape_str(csrf_token)
+        )
+    } else {
+        "<a href=\"/login\" class=\"pricing-nav__link\">Sign in</a><a href=\"/register\" class=\"pricing-nav__link\">Create account</a>".to_owned()
+    };
     html! {
         <nav class="pricing-nav" aria-label="Application links">
             <a href="/privacy" class="pricing-nav__link">"Privacy"</a>
             <a href="/terms" class="pricing-nav__link">"Sandbox terms"</a>
-            <a href="/login" class="pricing-nav__link">"Sign in"</a>
-            <a href="/register" class="pricing-nav__link">"Create account"</a>
+            { rullst::html::RawHtml(account_actions) }
             <a href="/nexus" class="pricing-nav__link pricing-nav__link--solid">"Nexus CMS"</a>
         </nav>
     }
@@ -69,17 +77,21 @@ fn setup_banner(state: &PaymentPageState) -> String {
 }
 
 fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
-    let action = if state.payment_mode != PaymentMode::Disabled && state.setup_error.is_none() {
+    let checkout_available =
+        state.payment_mode != PaymentMode::Disabled && state.setup_error.is_none();
+    let action = if checkout_available && state.signed_in {
         let button_label = if state.payment_mode == PaymentMode::Test {
             "Continue to provider test checkout"
         } else {
             "Continue to live checkout"
         };
         format!(
-            "<form method=\"post\" action=\"/billing/checkout\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><input type=\"hidden\" name=\"offer\" value=\"gateway-report-stripe\"><label class=\"purchase-authority\"><input type=\"checkbox\" name=\"purchase_authority\" value=\"adult_or_guardian\" required> I am 18 or older, or I am the parent/legal guardian making this purchase.</label><button type=\"submit\" class=\"btn-checkout primary\">{}</button></form>",
+            "<form id=\"checkout-form\" method=\"post\" action=\"/billing/checkout\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><input type=\"hidden\" name=\"offer\" value=\"gateway-report-stripe\"><label class=\"purchase-authority\"><input type=\"checkbox\" name=\"purchase_authority\" value=\"adult_or_guardian\" required> I am 18 or older, or I am the parent/legal guardian making this purchase.</label><button id=\"checkout-submit\" type=\"submit\" class=\"btn-checkout primary\">{}</button><p id=\"checkout-status\" class=\"checkout-status\" role=\"status\" aria-live=\"polite\" hidden>Verifying the sandbox Price and opening Stripe Checkout&hellip;</p></form>",
             rullst::html::escape_str(csrf_token),
             button_label,
         )
+    } else if checkout_available {
+        "<a href=\"/login\" class=\"btn-checkout primary\">Sign in to open sandbox checkout</a><p class=\"checkout-status checkout-status--visible\">Checkout is tied to your authenticated account. Sign in first, then return here.</p>".to_owned()
     } else {
         "<button type=\"button\" class=\"btn-checkout\" disabled>Payment checkout is disabled</button>"
             .to_owned()
@@ -162,7 +174,32 @@ fn gateway_matrix() -> String {
     }
 }
 
-pub fn pricing_page(csrf_token: &str, _csp_nonce: &str, state: &PaymentPageState) -> Html<String> {
+pub fn pricing_page(csrf_token: &str, csp_nonce: &str, state: &PaymentPageState) -> Html<String> {
+    let checkout_script = if state.signed_in
+        && state.payment_mode != PaymentMode::Disabled
+        && state.setup_error.is_none()
+    {
+        format!(
+            r#"<script nonce="{}">(() => {{
+const form = document.getElementById('checkout-form');
+const button = document.getElementById('checkout-submit');
+const status = document.getElementById('checkout-status');
+if (!form || !button || !status) return;
+const originalLabel = button.textContent;
+const reset = () => {{ button.disabled = false; button.textContent = originalLabel; status.hidden = true; }};
+form.addEventListener('submit', () => {{
+  if (!form.checkValidity()) return;
+  button.disabled = true;
+  button.textContent = 'Opening Stripe Checkout…';
+  status.hidden = false;
+}});
+window.addEventListener('pageshow', reset);
+}})();</script>"#,
+            rullst::html::escape_str(csp_nonce)
+        )
+    } else {
+        String::new()
+    };
     let document = html! {
         <html lang="en">
             <head>
@@ -176,7 +213,7 @@ pub fn pricing_page(csrf_token: &str, _csp_nonce: &str, state: &PaymentPageState
                 <div class="glow-bg"></div>
                 <div class="glow-bg-right"></div>
                 <main class="container">
-                    { rullst::html::RawHtml(pricing_navbar()) }
+                    { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in)) }
                     <header class="header">
                         <span class="badge">"Rullst SaaS Blueprint"</span>
                         <h1>"Payment testing without hidden assumptions"</h1>
@@ -200,8 +237,44 @@ pub fn pricing_page(csrf_token: &str, _csp_nonce: &str, state: &PaymentPageState
                     </div>
                     { rullst::html::RawHtml(gateway_matrix()) }
                 </main>
+                { rullst::html::RawHtml(checkout_script) }
             </body>
         </html>
     };
     Html(format!("<!DOCTYPE html>{document}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn state(signed_in: bool) -> PaymentPageState {
+        PaymentPageState {
+            selected_provider: "stripe".to_owned(),
+            payment_mode: PaymentMode::Test,
+            expected_price: "BRL 1.00".to_owned(),
+            setup_error: None,
+            signed_in,
+        }
+    }
+
+    #[test]
+    fn signed_in_page_keeps_account_context_and_submit_feedback() {
+        let page = pricing_page("csrf-token", "csp-nonce", &state(true)).0;
+
+        assert!(page.contains("Signed in"));
+        assert!(page.contains("href=\"/dashboard\""));
+        assert!(page.contains("id=\"checkout-form\""));
+        assert!(page.contains("Opening Stripe Checkout"));
+        assert!(!page.contains("href=\"/login\" class=\"pricing-nav__link\""));
+    }
+
+    #[test]
+    fn signed_out_page_requires_login_before_checkout() {
+        let page = pricing_page("csrf-token", "csp-nonce", &state(false)).0;
+
+        assert!(page.contains("Sign in to open sandbox checkout"));
+        assert!(page.contains("href=\"/login\" class=\"pricing-nav__link\""));
+        assert!(!page.contains("id=\"checkout-form\""));
+    }
 }

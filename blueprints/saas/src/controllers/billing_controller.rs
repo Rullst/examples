@@ -1,4 +1,5 @@
 use crate::models::purchase_attempt::PurchaseAttempt;
+use crate::models::user::User;
 use crate::pages::billing::{self, PaymentPageState};
 use reqwest::{Client, Response as HttpResponse, Url};
 use rullst::db::{Orm, sqlx};
@@ -637,6 +638,7 @@ async fn create_stripe_checkout(
 }
 
 pub async fn pricing_view(
+    headers: HeaderMap,
     csrf: Option<Extension<rullst::security::CsrfToken>>,
     csp_nonce: Option<Extension<rullst::security::CspNonce>>,
 ) -> impl IntoResponse {
@@ -648,6 +650,7 @@ pub async fn pricing_view(
         .as_ref()
         .map(|Extension(nonce)| nonce.as_str())
         .unwrap_or_default();
+    let signed_in = authenticated_pricing_identity(&headers).await.is_some();
 
     let state = match billing_config() {
         Ok(config) => PaymentPageState {
@@ -655,15 +658,29 @@ pub async fn pricing_view(
             payment_mode: config.mode,
             expected_price: format_amount(config.expected_amount_minor, &config.expected_currency),
             setup_error: None,
+            signed_in,
         },
         Err(error) => PaymentPageState {
             selected_provider: "unavailable".to_owned(),
             payment_mode: PaymentMode::Disabled,
             expected_price: "not configured".to_owned(),
             setup_error: Some(error.to_string()),
+            signed_in,
         },
     };
     billing::pricing_page(csrf_token, nonce, &state)
+}
+
+async fn authenticated_pricing_identity(headers: &HeaderMap) -> Option<BillingIdentity> {
+    let cookie = rullst::auth::extract_session_cookie(headers)?;
+    let app_key = rullst::auth::get_app_key().ok()?;
+    let user_id = rullst::auth::decrypt_session(&cookie, &app_key).ok()?;
+    let user = User::find(user_id).await.ok()??;
+    let identity = BillingIdentity {
+        owner_id: user.id,
+        email: normalize_email(&user.email),
+    };
+    valid_identity(&identity).then_some(identity)
 }
 
 pub async fn checkout_redirect(
