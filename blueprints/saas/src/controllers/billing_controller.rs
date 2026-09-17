@@ -409,6 +409,24 @@ async fn verify_stripe_price(config: &BillingConfig) -> Result<(), BillingConfig
     Ok(())
 }
 
+fn trusted_stripe_checkout_url(body: &Value) -> Result<String, BillingConfigError> {
+    let checkout_url = body["url"]
+        .as_str()
+        .ok_or_else(|| BillingConfigError::new("Stripe did not return a Checkout URL"))?;
+    let parsed = Url::parse(checkout_url)
+        .map_err(|_| BillingConfigError::new("Stripe returned an invalid Checkout URL"))?;
+    if parsed.scheme() != "https"
+        || parsed.host_str() != Some("checkout.stripe.com")
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+    {
+        return Err(BillingConfigError::new(
+            "Stripe returned an untrusted Checkout URL",
+        ));
+    }
+    Ok(checkout_url.to_owned())
+}
+
 pub async fn account_has_stripe_report(user_id: i32) -> Result<bool, BillingConfigError> {
     sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(SELECT 1 FROM entitlements WHERE user_id = $1 AND product_sku = $2 AND status = 'active')",
@@ -418,6 +436,103 @@ pub async fn account_has_stripe_report(user_id: i32) -> Result<bool, BillingConf
     .fetch_one(Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?)
     .await
     .map_err(|_| BillingConfigError::new("entitlement lookup failed"))
+}
+
+async fn open_purchase_attempt(
+    user_id: i32,
+) -> Result<Option<PurchaseAttempt>, BillingConfigError> {
+    sqlx::query_as::<_, PurchaseAttempt>(
+        "SELECT * FROM purchase_attempts WHERE user_id = $1 AND product_sku = $2 AND status IN ('pending', 'unknown', 'checkout_created') ORDER BY id DESC LIMIT 1",
+    )
+    .bind(user_id)
+    .bind(CHECKOUT_OFFER)
+    .fetch_optional(Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?)
+    .await
+    .map_err(|_| BillingConfigError::new("open checkout lookup failed"))
+}
+
+fn attempt_matches_config(attempt: &PurchaseAttempt, config: &BillingConfig) -> bool {
+    let Ok(expected_amount_minor) = i32::try_from(config.expected_amount_minor) else {
+        return false;
+    };
+    attempt.provider == config.provider
+        && attempt.product_sku == CHECKOUT_OFFER
+        && attempt.provider_price_id == config.price_id
+        && attempt.expected_amount_minor == expected_amount_minor
+        && attempt.expected_currency == config.expected_currency
+}
+
+fn resumed_session_matches_attempt(body: &Value, attempt: &PurchaseAttempt) -> bool {
+    let attempt_id = attempt.id.to_string();
+    body["id"].as_str() == attempt.provider_session_id.as_deref()
+        && body["livemode"].as_bool() == Some(false)
+        && body["mode"].as_str() == Some("payment")
+        && body["metadata"]["purchase_attempt_id"].as_str() == Some(attempt_id.as_str())
+        && body["metadata"]["product_sku"].as_str() == Some(CHECKOUT_OFFER)
+        && body["client_reference_id"]
+            .as_str()
+            .is_some_and(|token| sha256_hex(token.as_bytes()) == attempt.checkout_token_hash)
+}
+
+async fn resume_open_checkout(
+    identity: &BillingIdentity,
+    config: &BillingConfig,
+) -> Result<Option<Response>, BillingConfigError> {
+    let Some(attempt) = open_purchase_attempt(identity.owner_id).await? else {
+        return Ok(None);
+    };
+    if !attempt_matches_config(&attempt, config) {
+        return Err(BillingConfigError::new(
+            "open checkout does not match the active server configuration",
+        ));
+    }
+    if attempt.status != "checkout_created" {
+        return Ok(Some(
+            (
+                StatusCode::CONFLICT,
+                "A previous checkout has an uncertain outcome and is being reconciled; wait before trying again",
+            )
+                .into_response(),
+        ));
+    }
+
+    let session_id = attempt
+        .provider_session_id
+        .as_deref()
+        .filter(|id| id.starts_with("cs_test_") && valid_provider_id(id))
+        .ok_or_else(|| BillingConfigError::new("open checkout has no valid provider session"))?;
+    let response = provider_http_client()?
+        .get(format!(
+            "https://api.stripe.com/v1/checkout/sessions/{session_id}"
+        ))
+        .bearer_auth(&config.api_key)
+        .send()
+        .await
+        .map_err(|_| BillingConfigError::new("Stripe Checkout recovery failed"))?;
+    let body = bounded_json(response).await?;
+    if !resumed_session_matches_attempt(&body, &attempt) {
+        return Err(BillingConfigError::new(
+            "Stripe Checkout recovery did not match the authenticated purchase attempt",
+        ));
+    }
+
+    match body["status"].as_str() {
+        Some("open") => {
+            let checkout_url = trusted_stripe_checkout_url(&body)?;
+            Ok(Some(Redirect::to(&checkout_url).into_response()))
+        }
+        Some("complete") => {
+            let processing_url = checkout_return_url(&config.redirect_url, "processing")?;
+            Ok(Some(Redirect::to(&processing_url).into_response()))
+        }
+        Some("expired") => {
+            set_attempt_status(attempt.id, "expired").await;
+            Ok(None)
+        }
+        _ => Err(BillingConfigError::new(
+            "Stripe returned an unsupported Checkout Session status",
+        )),
+    }
 }
 
 async fn create_purchase_attempt(
@@ -507,16 +622,7 @@ async fn create_stripe_checkout(
             "Stripe returned a Checkout Session for the wrong mode",
         ));
     }
-    let checkout_url = body["url"]
-        .as_str()
-        .ok_or_else(|| BillingConfigError::new("Stripe did not return a Checkout URL"))?;
-    let parsed = Url::parse(checkout_url)
-        .map_err(|_| BillingConfigError::new("Stripe returned an invalid Checkout URL"))?;
-    if parsed.scheme() != "https" || parsed.host_str() != Some("checkout.stripe.com") {
-        return Err(BillingConfigError::new(
-            "Stripe returned an untrusted Checkout URL",
-        ));
-    }
+    let checkout_url = trusted_stripe_checkout_url(&body)?;
 
     sqlx::query(
         "UPDATE purchase_attempts SET provider_session_id = $1, status = 'checkout_created', updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND status = 'pending'",
@@ -527,7 +633,7 @@ async fn create_stripe_checkout(
     .await
     .map_err(|_| BillingConfigError::new("Checkout Session could not be bound locally"))?;
 
-    Ok(checkout_url.to_owned())
+    Ok(checkout_url)
 }
 
 pub async fn pricing_view(
@@ -574,14 +680,6 @@ pub async fn checkout_redirect(
     if !valid_identity(&identity) {
         return StatusCode::UNAUTHORIZED.into_response();
     }
-    if checkout_rate_limited(identity.owner_id) {
-        return (
-            StatusCode::TOO_MANY_REQUESTS,
-            "Checkout attempt limit reached; wait before trying again",
-        )
-            .into_response();
-    }
-
     let config = match billing_config() {
         Ok(config) if config.mode.accepts_checkout() => config,
         Ok(_) => {
@@ -610,6 +708,28 @@ pub async fn checkout_redirect(
             eprintln!("Entitlement lookup failed: {error}");
             return StatusCode::SERVICE_UNAVAILABLE.into_response();
         }
+    }
+
+    match resume_open_checkout(&identity, &config).await {
+        Ok(Some(response)) => return response,
+        Ok(None) => {}
+        Err(error) => {
+            eprintln!("Open Stripe Checkout recovery failed: {error}");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
+    }
+
+    if checkout_rate_limited(identity.owner_id) {
+        let mut response = (
+            StatusCode::TOO_MANY_REQUESTS,
+            "Checkout creation limit reached; wait before creating a new session",
+        )
+            .into_response();
+        response.headers_mut().insert(
+            rullst::server::header::RETRY_AFTER,
+            rullst::server::HeaderValue::from_static("600"),
+        );
+        return response;
     }
 
     if let Err(error) = verify_stripe_price(&config).await {
@@ -960,11 +1080,81 @@ fn format_amount(amount_minor: u64, currency: &str) -> String {
 mod tests {
     use super::*;
 
+    fn sandbox_config() -> BillingConfig {
+        BillingConfig {
+            provider: "stripe".to_owned(),
+            api_key: "sk_test_example".to_owned(),
+            webhook_secret: "whsec_example_value_long_enough".to_owned(),
+            redirect_url: "https://saas-staging.rullst.win/dashboard".to_owned(),
+            price_id: "price_example".to_owned(),
+            expected_currency: "BRL".to_owned(),
+            expected_amount_minor: 100,
+            mode: PaymentMode::Test,
+        }
+    }
+
+    fn open_attempt(token: &str) -> PurchaseAttempt {
+        PurchaseAttempt {
+            id: 42,
+            user_id: 7,
+            provider: "stripe".to_owned(),
+            product_sku: CHECKOUT_OFFER.to_owned(),
+            provider_price_id: "price_example".to_owned(),
+            expected_amount_minor: 100,
+            expected_currency: "BRL".to_owned(),
+            checkout_token_hash: sha256_hex(token.as_bytes()),
+            provider_session_id: Some("cs_test_example".to_owned()),
+            provider_payment_id: None,
+            status: "checkout_created".to_owned(),
+            created_at: "2026-09-17T00:00:00Z".to_owned(),
+            updated_at: "2026-09-17T00:00:00Z".to_owned(),
+        }
+    }
+
     #[test]
     fn validates_provider_owned_ids() {
         assert!(valid_provider_id("price_123-test"));
         assert!(!valid_provider_id(""));
         assert!(!valid_provider_id("price/../../secret"));
+    }
+
+    #[test]
+    fn resumes_only_the_authenticated_matching_sandbox_session() {
+        let token = "opaque-checkout-token";
+        let attempt = open_attempt(token);
+        let session = serde_json::json!({
+            "id": "cs_test_example",
+            "livemode": false,
+            "mode": "payment",
+            "status": "open",
+            "client_reference_id": token,
+            "metadata": {
+                "purchase_attempt_id": "42",
+                "product_sku": CHECKOUT_OFFER
+            }
+        });
+        assert!(attempt_matches_config(&attempt, &sandbox_config()));
+        assert!(resumed_session_matches_attempt(&session, &attempt));
+
+        let mut wrong_session = session;
+        wrong_session["client_reference_id"] = Value::String("another-token".to_owned());
+        assert!(!resumed_session_matches_attempt(&wrong_session, &attempt));
+    }
+
+    #[test]
+    fn accepts_only_exact_stripe_checkout_urls() {
+        let trusted = serde_json::json!({
+            "url": "https://checkout.stripe.com/c/pay/cs_test_example"
+        });
+        let attacker = serde_json::json!({
+            "url": "https://checkout.stripe.com.attacker.example/cs_test_example"
+        });
+        let embedded_credentials = serde_json::json!({
+            "url": "https://user:password@checkout.stripe.com/cs_test_example"
+        });
+        assert!(trusted_stripe_checkout_url(&trusted).is_ok());
+        assert!(trusted_stripe_checkout_url(&attacker).is_err());
+        assert!(trusted_stripe_checkout_url(&embedded_credentials).is_err());
     }
 
     #[test]
