@@ -98,6 +98,7 @@ pub fn dashboard_page(
     csrf_token: &str,
     csp_nonce: &str,
     has_stripe_report: bool,
+    certificate_public_id: Option<&str>,
 ) -> Html<String> {
     let nonce = rullst::html::escape_str(csp_nonce);
     let user_name = rullst::html::escape_str(user_name);
@@ -107,6 +108,23 @@ pub fn dashboard_page(
     } else {
         "<a class=\"btn-report\" href=\"/pricing\">Open sandbox checkout</a>"
     };
+    let certificate_action = certificate_public_id.map_or_else(
+        || {
+            if has_stripe_report {
+                "<p class=\"muted small\">Certificate issuance is still being reconciled.</p>"
+                    .to_owned()
+            } else {
+                "<p class=\"muted small\">Complete the verified sandbox checkout to receive a privacy-preserving tester certificate.</p>"
+                    .to_owned()
+            }
+        },
+        |public_id| {
+            format!(
+                "<a class=\"btn-report btn-certificate\" href=\"/certificate\">View Sandbox Pioneer certificate</a><p class=\"muted small\">Public verification ID: {}</p>",
+                rullst::html::escape_str(public_id)
+            )
+        },
+    );
     Html(r#"<!DOCTYPE html><html lang="en" class="dark"><head>
          <meta charset="utf-8" />
          <link rel="icon" type="image/png" href="/static/rullst.png" />
@@ -125,6 +143,7 @@ pub fn dashboard_page(
          .logout-form { display: inline; }
          .btn-nexus { background: #1e293b; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; font-size: 0.9rem; border: 1px solid #374151; }
          .btn-report { display: inline-block; margin-top: 1rem; background: #10b981; color: #03120c; padding: 0.65rem 0.9rem; border-radius: 0.5rem; text-decoration: none; font-weight: 750; }
+         .btn-certificate { margin-left: 0.5rem; background: #f97316; color: #fff; }
          .muted { color: #9ca3af; margin-top: 0.5rem; }
          .small { font-size: 0.85rem; }
          .metric { font-size: 1.5rem; font-weight: 700; }
@@ -132,7 +151,7 @@ pub fn dashboard_page(
          .subscription { color: #10b981; }
          .performance { color: #38bdf8; }
          .security { color: #a855f7; }
-         @media (max-width: 700px) { body { padding: 1rem; } .topbar { align-items: stretch; flex-direction: column; gap: 1rem; margin-bottom: 2rem; } .topbar-actions { align-items: stretch; flex-direction: column; } .btn-nexus, .btn-logout { display: block; width: 100%; text-align: center; } .logout-form { display: block; } .card { padding: 1.25rem; } }
+         @media (max-width: 700px) { body { padding: 1rem; } .topbar { align-items: stretch; flex-direction: column; gap: 1rem; margin-bottom: 2rem; } .topbar-actions { align-items: stretch; flex-direction: column; } .btn-nexus, .btn-logout, .btn-report { display: block; width: 100%; text-align: center; } .btn-certificate { margin-left: 0; } .logout-form { display: block; } .card { padding: 1.25rem; } }
          </style></head><body>
          <div class="topbar">
            <div class="logo">⚡ Rullst SaaS Dashboard</div>
@@ -150,6 +169,7 @@ pub fn dashboard_page(
                <p class="metric">Webhook-derived access</p>
                <p class="muted small">Access is granted only after a verified, replay-protected provider event.</p>
                __RULLST_REPORT_ACTION__
+               __RULLST_CERTIFICATE_ACTION__
              </div>
              <div class="card">
                <h3 class="performance">⚡ Performance</h3>
@@ -166,5 +186,6 @@ pub fn dashboard_page(
         .replace("__RULLST_CSP_NONCE__", &nonce)
         .replace("__RULLST_CSRF_TOKEN__", &csrf_token)
         .replace("__RULLST_REPORT_ACTION__", report_action)
+        .replace("__RULLST_CERTIFICATE_ACTION__", &certificate_action)
         .replace("__RULLST_USER_NAME__", &user_name))
 }

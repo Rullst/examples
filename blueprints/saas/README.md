@@ -62,7 +62,15 @@ amount and currency, fetches that Price immediately before checkout, and
 requires an exact active one-time sandbox match. A return-page redirect never
 grants access. The signed webhook is replay-protected in PostgreSQL, the paid
 Checkout Session and line item are re-read from Stripe, and only then is a
-versioned report entitlement created.
+versioned report entitlement created. The same database transaction issues one
+`Rullst Sandbox Pioneer` certificate for that entitlement. The certificate is
+explicitly labelled as test mode and never represents a real-money purchase.
+
+The authenticated certificate page may show the account holder's name and can
+be printed or saved as PDF. Its public `/verify/{public_id}` page uses a random
+122-bit identifier and shows only badge type, issue date, environment and
+validity. It omits the holder's name, email and all provider/payment IDs. The
+identifier is not listed publicly; the holder decides whether to share it.
 
 ## Persistent database
 
@@ -146,6 +154,9 @@ BILLING_REDIRECT_URL=https://saas-staging.rullst.win/dashboard
    container.
 7. Use only Stripe's documented test cards. Do **not** enter a real card in
    live mode to test the integration.
+8. After the reconciled webhook completes, open the dashboard to view the
+   private Sandbox Pioneer certificate and its privacy-preserving verification
+   link. A Checkout success redirect by itself cannot issue the certificate.
 
 ## Manual Azure staging workflow
 
@@ -201,3 +212,8 @@ production database plan. Rullst
 12.0.0 still lacks a typed one-time Capital contract, so this first integration
 is intentionally application-owned; see the framework report before claiming
 general framework readiness.
+
+A future production `Founding Customer` certificate is a different credential.
+It must have a published finite cohort rule (for example, the first 100 valid
+live purchases), refund/revocation handling and an auditable issuance date.
+Sandbox certificates are never upgraded or relabelled as customer purchases.

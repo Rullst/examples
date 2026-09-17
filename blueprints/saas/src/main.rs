@@ -49,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .register::<models::user::User>()
         .register::<models::purchase_attempt::PurchaseAttempt>()
         .register::<models::entitlement::Entitlement>()
+        .register::<models::tester_certificate::TesterCertificate>()
         .try_build()?;
 
     let router = routes![
@@ -59,6 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         post("/login" => controllers::auth_controller::login_submit),
         get("/register" => controllers::auth_controller::register_view),
         post("/register" => controllers::auth_controller::register_submit),
+        get("/verify/{public_id}" => controllers::certificate_controller::verify_certificate),
         post("/logout" => controllers::auth_controller::logout),
     ];
 
@@ -72,6 +74,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route(
             "/billing/checkout",
             rullst::routing::post(controllers::billing_controller::checkout_redirect).layer(
+                rullst::server::from_fn(middlewares::auth_middleware::auth_middleware),
+            ),
+        )
+        .route(
+            "/certificate",
+            rullst::routing::get(controllers::certificate_controller::owner_certificate).layer(
                 rullst::server::from_fn(middlewares::auth_middleware::auth_middleware),
             ),
         )

@@ -266,6 +266,13 @@ fn sha256_hex(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
 }
 
+fn new_sandbox_certificate_id() -> String {
+    format!(
+        "RST-SBX-{}",
+        Uuid::new_v4().simple().to_string().to_ascii_uppercase()
+    )
+}
+
 fn verify_stripe_signature_at(
     payload: &[u8],
     signature_header: &str,
@@ -777,21 +784,30 @@ async fn persist_successful_checkout(
     .await
     .map_err(|_| BillingConfigError::new("purchase attempt could not be completed"))?;
 
-    let entitlement_insert = sqlx::query(
-        "INSERT INTO entitlements (user_id, product_sku, provider, provider_payment_id, artifact_version, status) VALUES ($1, $2, 'stripe', $3, $4, 'active') ON CONFLICT (user_id, product_sku) DO NOTHING",
+    let entitlement_id = sqlx::query_scalar::<_, i32>(
+        "INSERT INTO entitlements (user_id, product_sku, provider, provider_payment_id, artifact_version, status) VALUES ($1, $2, 'stripe', $3, $4, 'active') ON CONFLICT (user_id, product_sku) DO UPDATE SET updated_at = entitlements.updated_at RETURNING id",
     )
     .bind(attempt.user_id)
     .bind(CHECKOUT_OFFER)
     .bind(&checkout.payment_intent_id)
     .bind(ARTIFACT_VERSION)
-    .execute(&mut *transaction)
+    .fetch_one(&mut *transaction)
     .await
     .map_err(|_| BillingConfigError::new("entitlement could not be created"))?;
-    if entitlement_insert.rows_affected() == 0 {
-        eprintln!(
-            "A paid Stripe session matched an account that already owns this report; manual reconciliation is required"
-        );
+
+    if config.mode != PaymentMode::Test {
+        return Err(BillingConfigError::new(
+            "tester certificates can only be issued from the reviewed sandbox flow",
+        ));
     }
+    sqlx::query(
+        "INSERT INTO tester_certificates (entitlement_id, public_id, badge_kind, environment, status) VALUES ($1, $2, 'sandbox_pioneer', 'test', 'active') ON CONFLICT (entitlement_id) DO NOTHING",
+    )
+    .bind(entitlement_id)
+    .bind(new_sandbox_certificate_id())
+    .execute(&mut *transaction)
+    .await
+    .map_err(|_| BillingConfigError::new("sandbox certificate could not be issued"))?;
 
     transaction
         .commit()
@@ -955,6 +971,15 @@ mod tests {
     fn formats_low_value_amounts_without_floats() {
         assert_eq!(format_amount(100, "BRL"), "BRL 1.00");
         assert_eq!(format_amount(50, "BRL"), "BRL 0.50");
+    }
+
+    #[test]
+    fn sandbox_certificate_ids_are_random_opaque_identifiers() {
+        let first = new_sandbox_certificate_id();
+        let second = new_sandbox_certificate_id();
+        assert!(crate::controllers::certificate_controller::valid_public_certificate_id(&first));
+        assert!(crate::controllers::certificate_controller::valid_public_certificate_id(&second));
+        assert_ne!(first, second);
     }
 
     #[test]

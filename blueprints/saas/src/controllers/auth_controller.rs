@@ -268,11 +268,24 @@ pub async fn dashboard(
                         false
                     }
                 };
+            let certificate_public_id =
+                match crate::controllers::certificate_controller::account_certificate_public_id(
+                    user.id,
+                )
+                .await
+                {
+                    Ok(value) => value,
+                    Err(error) => {
+                        eprintln!("Dashboard certificate lookup failed: {error}");
+                        None
+                    }
+                };
             auth::dashboard_page(
                 &user.name,
                 csrf_token,
                 get_csp_nonce(&csp_nonce),
                 has_stripe_report,
+                certificate_public_id.as_deref(),
             )
             .into_response()
         }

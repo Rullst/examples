@@ -82,11 +82,16 @@ Container Apps Contributor role only on this staging app and has no stored
 Azure client secret. The Stripe sandbox Price and signed webhook destination
 are also configured.
 
-This infrastructure state does not mean the SaaS image is deployed or payment
-acceptance is validated. The repository still needs to publish the reviewed
-image, run PostgreSQL migrations, start with `PAYMENTS_MODE=disabled`, verify
-health and authentication, and only then run the workflow again with
-`PAYMENTS_MODE=test` for sandbox acceptance.
+On 2026-09-17, the reviewed immutable image was deployed with
+`PAYMENTS_MODE=disabled`; PostgreSQL migrations and `/healthz` completed, the
+public root returned HTTP 200, and Nexus returned the expected HTTP 401 Basic
+Auth challenge through the reviewed Azure TLS boundary. The successful GitHub
+Actions evidence is
+[`35264511389`](https://github.com/Rullst/examples/actions/runs/35264511389).
+
+Payment acceptance is not yet validated. After the certificate migration is
+deployed, run the workflow with `PAYMENTS_MODE=test` and complete the sandbox
+acceptance cases. Test-mode readiness is not live-money readiness.
 
 ## Payment validation policy
 
@@ -114,6 +119,12 @@ embedded in a publicly downloadable container layer. Before live sales, store
 the versioned bytes in private application storage and stream them only after
 an authenticated entitlement check. Persist a SHA-256 digest with the artifact
 and keep the public repository copy to a non-exclusive summary.
+
+The precise production acceptance checklist is maintained in
+[`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md). A sandbox purchase may
+issue a clearly labelled `Rullst Sandbox Pioneer` certificate, but it must not
+be described as a real customer purchase. `Founding Customer` remains reserved
+for a finite, published live-production cohort.
 
 ## Private configuration still required
 
