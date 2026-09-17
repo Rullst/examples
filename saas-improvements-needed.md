@@ -327,6 +327,23 @@ SHA-256 digest and version, and stream the bytes only after authenticated
 entitlement verification. Do not place purchaser data in the artifact and do
 not expose a permanent public object URL.
 
+### APP-SAAS-002 — Azure Nexus mount omitted the trusted TLS capability
+
+The first release deployment mounted the v12 Nexus Basic Auth router behind
+Azure Container Apps TLS ingress but did not insert `NexusVerifiedTls`. Nexus
+correctly failed closed: `GET /nexus` returned HTTP 426 instead of accepting or
+challenging for Basic credentials. Adding `X-Forwarded-Proto` would not be a
+valid correction because an arbitrary forwarding header is not transport
+evidence.
+
+**Correction implemented here:** the application inserts
+`NexusVerifiedTls::from_trusted_tls_termination()` only when the server-owned
+`NEXUS_TRUSTED_TLS_TERMINATION` value exactly identifies the reviewed Azure
+Container Apps boundary. The staging workflow supplies that non-secret value.
+A direct local HTTP release deployment leaves it unset and continues to fail
+closed. This was an application integration omission, not a framework defect;
+the v12 Nexus source and README explicitly require the capability.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance
