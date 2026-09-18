@@ -11,6 +11,14 @@ on:
         description: 'Full Git commit SHA of the image currently accepted in SaaS staging'
         required: true
         type: string
+      password_reset_mode:
+        description: 'Enable only after the production Resend domain and protected key are ready'
+        required: true
+        default: disabled
+        type: choice
+        options:
+          - disabled
+          - resend
 
 concurrency:
   group: saas-production
@@ -42,6 +50,8 @@ jobs:
           NEXUS_USERNAME: ${{ secrets.SAAS_PRODUCTION_NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.SAAS_PRODUCTION_NEXUS_PASSWORD }}
           STAGING_COMMIT: ${{ inputs.staging_commit }}
+          PASSWORD_RESET_MODE: ${{ inputs.password_reset_mode }}
+          RESEND_API_KEY: ${{ secrets.SAAS_PRODUCTION_RESEND_API_KEY }}
         run: |
           [[ "$STAGING_COMMIT" =~ ^[0-9a-f]{40}$ ]]
           test "${DATABASE_URL#postgres}" != "$DATABASE_URL"
@@ -49,6 +59,9 @@ jobs:
           test "${#APP_KEY}" -ge 32
           test -n "$NEXUS_USERNAME"
           test "${#NEXUS_PASSWORD}" -ge 16
+          if [ "$PASSWORD_RESET_MODE" = 'resend' ]; then
+            test "${RESEND_API_KEY#re_}" != "$RESEND_API_KEY"
+          fi
 
       - name: Log in to Azure with a short-lived production OIDC token
         uses: azure/login@v3
@@ -116,6 +129,9 @@ jobs:
               DEPLOYMENT_TIER=production \
               NEXUS_TRUSTED_TLS_TERMINATION=azure-container-apps \
               MIGRATE_ON_STARTUP=true \
+              PASSWORD_RESET_MODE=disabled \
+              ACCOUNT_PUBLIC_BASE_URL=https://saas.rullst.win \
+              ACCOUNT_MAIL_FROM=security@mail.rullst.win \
               PAYMENTS_MODE=disabled \
               BILLING_PROVIDER=stripe \
               BILLING_EXPECTED_CURRENCY=BRL \
@@ -130,6 +146,21 @@ jobs:
           az containerapp ingress update --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
             --target-port 3000 \
             --transport auto \
+            --only-show-errors --output none
+
+      - name: Enable production password recovery
+        if: ${{ inputs.password_reset_mode == 'resend' }}
+        shell: bash
+        env:
+          RESEND_API_KEY: ${{ secrets.SAAS_PRODUCTION_RESEND_API_KEY }}
+        run: |
+          az containerapp secret set --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --secrets resend-api-key="$RESEND_API_KEY" \
+            --only-show-errors --output none
+          az containerapp update --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --set-env-vars \
+              PASSWORD_RESET_MODE=resend \
+              RESEND_API_KEY=secretref:resend-api-key \
             --only-show-errors --output none
 
       - name: Verify the immutable revision and production database

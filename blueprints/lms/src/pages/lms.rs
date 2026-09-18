@@ -4,6 +4,20 @@ use crate::models::category::Category;
 use crate::models::course::Course;
 use crate::models::lesson::Lesson;
 
+fn render_community_footer() -> String {
+    html! {
+        <footer class="community-footer">
+            <div class="community-footer-mark" aria-hidden="true">"R"</div>
+            <div class="community-footer-copy">
+                <p class="community-footer-eyebrow">"Learn, build, contribute"</p>
+                <h2>"Join our community on Discord"</h2>
+                <p>"Meet Rullst builders, share what you are learning, and help shape the framework."</p>
+            </div>
+            <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join the Rullst Discord"</a>
+        </footer>
+    }
+}
+
 pub fn index_page(
     categories: Vec<Category>,
     courses: Vec<Course>,
@@ -102,7 +116,15 @@ pub fn index_page(
                     .card h2 { margin: 0 0 .75rem; font-size: 1.35rem; }
                     .card p { flex: 1; margin: 0 0 1.25rem; color: #cbd5e1; line-height: 1.6; }
                     .empty { grid-column: 1 / -1; border: 1px dashed #64748b; border-radius: 1rem; padding: 2rem; text-align: center; }
-                    @media (max-width: 48rem) { header { flex-direction: column; } .search { grid-template-columns: 1fr; } }
+                    .community-footer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1.25rem; max-width: 70rem; margin: 3rem auto 0; padding: 1.35rem 1.5rem; border: 1px solid rgba(88, 101, 242, .5); border-radius: 1.25rem; background: linear-gradient(135deg, rgba(88, 101, 242, .2), rgba(15, 23, 42, .96) 58%, rgba(52, 211, 153, .13)); box-shadow: 0 18px 50px rgba(0, 0, 0, .28); }
+                    .community-footer-mark { display: grid; width: 3.25rem; height: 3.25rem; place-items: center; border-radius: 1rem; background: linear-gradient(145deg, #5865f2, #34d399); color: #fff; font-size: 1.4rem; font-weight: 900; box-shadow: 0 10px 28px rgba(88, 101, 242, .35); }
+                    .community-footer h2, .community-footer p { margin: 0; }
+                    .community-footer h2 { margin: .1rem 0 .25rem; font-size: clamp(1.2rem, 3vw, 1.55rem); }
+                    .community-footer-copy > p:not(.community-footer-eyebrow) { color: #cbd5e1; line-height: 1.55; }
+                    .community-footer-eyebrow { color: #a5b4fc; font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+                    .community-footer a { padding: .8rem 1rem; border: 1px solid rgba(255, 255, 255, .16); border-radius: .8rem; background: #5865f2; color: #fff; font-weight: 800; text-align: center; text-decoration: none; transition: transform 160ms ease, background 160ms ease; }
+                    .community-footer a:hover { background: #4752c4; transform: translateY(-2px); }
+                    @media (max-width: 48rem) { header { flex-direction: column; } .search { grid-template-columns: 1fr; } .community-footer { grid-template-columns: auto minmax(0, 1fr); padding: 1.15rem; } .community-footer a { grid-column: 1 / -1; width: 100%; } }
                     @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
                     "
                 </style>
@@ -143,6 +165,7 @@ pub fn index_page(
                         </div>
                     </main>
                 </div>
+                {rullst::html::RawHtml(render_community_footer())}
                 {rullst::html::RawHtml(render_lms_ai_widget(csrf_token))}
                 <script nonce={csp_nonce}>
                     "if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(console.error)); }"
@@ -918,3 +941,15 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
     "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
 }
 
+#[cfg(test)]
+mod community_footer_tests {
+    use super::render_community_footer;
+
+    #[test]
+    fn footer_links_to_discord_safely() {
+        let footer = render_community_footer();
+        assert!(footer.contains("Join our community on Discord"));
+        assert!(footer.contains("https://discord.gg/2ntKFtsSjw"));
+        assert!(footer.contains("rel=\"noopener noreferrer\""));
+    }
+}

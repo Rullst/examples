@@ -4,5 +4,6 @@ pub mod billing_controller;
 pub mod certificate_controller;
 pub mod gateway_catalog;
 pub mod legal_controller;
+pub mod password_reset_controller;
 pub mod privacy_controller;
 pub mod refund_controller;

@@ -70,7 +70,6 @@ struct BillingConfig {
     price_id: String,
     expected_currency: String,
     expected_amount_minor: u64,
-    founding_customer_limit: u32,
     reconciliation_token: String,
     mode: PaymentMode,
 }
@@ -213,10 +212,6 @@ fn billing_config() -> Result<BillingConfig, BillingConfigError> {
         price_id: env_trimmed("BILLING_PRICE_ID"),
         expected_currency,
         expected_amount_minor,
-        founding_customer_limit: std::env::var("FOUNDING_CUSTOMER_LIMIT")
-            .unwrap_or_else(|_| "100".to_owned())
-            .parse::<u32>()
-            .map_err(|_| BillingConfigError::new("FOUNDING_CUSTOMER_LIMIT must be an integer"))?,
         reconciliation_token: env_trimmed("RECONCILIATION_TOKEN"),
         mode,
     };
@@ -255,11 +250,6 @@ fn billing_config() -> Result<BillingConfig, BillingConfigError> {
             if env_trimmed("LIVE_PAYMENTS_ACKNOWLEDGEMENT") != "accept-real-money" {
                 return Err(BillingConfigError::new(
                     "live checkout requires LIVE_PAYMENTS_ACKNOWLEDGEMENT=accept-real-money",
-                ));
-            }
-            if config.founding_customer_limit == 0 || config.founding_customer_limit > 10_000 {
-                return Err(BillingConfigError::new(
-                    "FOUNDING_CUSTOMER_LIMIT must be between 1 and 10000",
                 ));
             }
             if config.reconciliation_token.len() < 32 || config.reconciliation_token.len() > 200 {
@@ -318,6 +308,14 @@ fn new_certificate_id(mode: PaymentMode) -> String {
         "RST-{environment}-{}",
         Uuid::new_v4().simple().to_string().to_ascii_uppercase()
     )
+}
+
+fn certificate_definition(mode: PaymentMode) -> (&'static str, &'static str) {
+    if mode == PaymentMode::Live {
+        ("founding_customer", "live")
+    } else {
+        ("sandbox_pioneer", "test")
+    }
 }
 
 fn artifact_version(mode: PaymentMode) -> &'static str {
@@ -744,6 +742,12 @@ async fn authenticated_pricing_identity(headers: &HeaderMap) -> Option<BillingId
     let cookie = rullst::auth::extract_session_cookie(headers)?;
     let app_key = rullst::auth::get_app_key().ok()?;
     let user_id = rullst::auth::decrypt_session(&cookie, &app_key).ok()?;
+    if !crate::models::auth_session::is_active(user_id, &cookie)
+        .await
+        .ok()?
+    {
+        return None;
+    }
     let user = User::find(user_id).await.ok()??;
     let identity = BillingIdentity {
         owner_id: user.id,
@@ -1015,37 +1019,17 @@ async fn persist_successful_checkout(
     .await
     .map_err(|_| BillingConfigError::new("entitlement could not be created"))?;
 
-    if config.mode == PaymentMode::Live {
-        sqlx::query("SELECT pg_advisory_xact_lock(731_225_991)")
-            .execute(&mut *transaction)
-            .await
-            .map_err(|_| BillingConfigError::new("certificate cohort lock failed"))?;
-        let issued = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM tester_certificates WHERE badge_kind = 'founding_customer' AND environment = 'live'",
-        )
-        .fetch_one(&mut *transaction)
-        .await
-        .map_err(|_| BillingConfigError::new("certificate cohort could not be counted"))?;
-        if issued < i64::from(config.founding_customer_limit) {
-            sqlx::query(
-                "INSERT INTO tester_certificates (entitlement_id, public_id, badge_kind, environment, status) VALUES ($1, $2, 'founding_customer', 'live', 'active') ON CONFLICT (entitlement_id) DO UPDATE SET badge_kind = 'founding_customer', environment = 'live', status = 'active', updated_at = CURRENT_TIMESTAMP",
-            )
-            .bind(entitlement_id)
-            .bind(new_certificate_id(config.mode))
-            .execute(&mut *transaction)
-            .await
-            .map_err(|_| BillingConfigError::new("founding customer certificate could not be issued"))?;
-        }
-    } else {
-        sqlx::query(
-            "INSERT INTO tester_certificates (entitlement_id, public_id, badge_kind, environment, status) VALUES ($1, $2, 'sandbox_pioneer', 'test', 'active') ON CONFLICT (entitlement_id) DO UPDATE SET status = 'active', updated_at = CURRENT_TIMESTAMP",
-        )
-        .bind(entitlement_id)
-        .bind(new_certificate_id(config.mode))
-        .execute(&mut *transaction)
-        .await
-        .map_err(|_| BillingConfigError::new("sandbox certificate could not be issued"))?;
-    }
+    let (badge_kind, environment) = certificate_definition(config.mode);
+    sqlx::query(
+        "INSERT INTO tester_certificates (entitlement_id, public_id, badge_kind, environment, status) VALUES ($1, $2, $3, $4, 'active') ON CONFLICT (entitlement_id) DO UPDATE SET badge_kind = EXCLUDED.badge_kind, environment = EXCLUDED.environment, status = 'active', updated_at = CURRENT_TIMESTAMP",
+    )
+    .bind(entitlement_id)
+    .bind(new_certificate_id(config.mode))
+    .bind(badge_kind)
+    .bind(environment)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|_| BillingConfigError::new("customer certificate could not be issued"))?;
 
     transaction
         .commit()
@@ -1552,7 +1536,6 @@ mod tests {
             price_id: "price_example".to_owned(),
             expected_currency: "BRL".to_owned(),
             expected_amount_minor: 100,
-            founding_customer_limit: 100,
             reconciliation_token: String::new(),
             mode: PaymentMode::Test,
         }
@@ -1602,6 +1585,18 @@ mod tests {
             "cs_test_example",
             PaymentMode::Live
         ));
+    }
+
+    #[test]
+    fn certificate_kind_is_environment_bound_and_unlimited() {
+        assert_eq!(
+            certificate_definition(PaymentMode::Live),
+            ("founding_customer", "live")
+        );
+        assert_eq!(
+            certificate_definition(PaymentMode::Test),
+            ("sandbox_pioneer", "test")
+        );
     }
 
     #[test]

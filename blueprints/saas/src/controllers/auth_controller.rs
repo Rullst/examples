@@ -20,11 +20,11 @@ pub struct LoginDto {
     pub password: String,
 }
 
-fn normalize_email(email: &str) -> String {
+pub(crate) fn normalize_email(email: &str) -> String {
     email.trim().to_ascii_lowercase()
 }
 
-fn valid_email(email: &str) -> bool {
+pub(crate) fn valid_email(email: &str) -> bool {
     !email.is_empty()
         && email.len() <= 254
         && !email.contains(['\r', '\n'])
@@ -37,7 +37,7 @@ fn valid_name(name: &str) -> bool {
     !name.is_empty() && name.len() <= 120 && !name.contains(['\r', '\n'])
 }
 
-fn get_csrf_token(headers: &HeaderMap) -> String {
+pub(crate) fn get_csrf_token(headers: &HeaderMap) -> String {
     headers
         .get(rullst::server::header::COOKIE)
         .and_then(|value| value.to_str().ok())
@@ -52,7 +52,7 @@ fn get_csrf_token(headers: &HeaderMap) -> String {
         .unwrap_or_default()
 }
 
-fn get_csp_nonce(nonce: &Option<Extension<rullst::security::CspNonce>>) -> &str {
+pub(crate) fn get_csp_nonce(nonce: &Option<Extension<rullst::security::CspNonce>>) -> &str {
     nonce
         .as_ref()
         .map(|Extension(nonce)| nonce.as_str())
@@ -117,7 +117,13 @@ pub async fn login_submit(
     };
 
     match rullst_auth::make_login_cookie(user.id) {
-        Ok(cookie) => redirect_with_cookie("/dashboard", &cookie),
+        Ok(cookie) => match crate::models::auth_session::register_cookie(user.id, &cookie).await {
+            Ok(()) => redirect_with_cookie("/dashboard", &cookie),
+            Err(error) => {
+                eprintln!("Session registry insert failed: {error}");
+                auth::login_page(&token, Some("Error starting session"), nonce).into_response()
+            }
+        },
         Err(error) => {
             eprintln!("Session creation failed: {error}");
             auth::login_page(&token, Some("Error starting session"), nonce).into_response()
@@ -235,7 +241,13 @@ pub async fn register_submit(
     }
 
     match rullst_auth::make_login_cookie(user.id) {
-        Ok(cookie) => redirect_with_cookie("/dashboard", &cookie),
+        Ok(cookie) => match crate::models::auth_session::register_cookie(user.id, &cookie).await {
+            Ok(()) => redirect_with_cookie("/dashboard", &cookie),
+            Err(error) => {
+                eprintln!("Session registry insert failed: {error}");
+                Redirect::to("/login").into_response()
+            }
+        },
         Err(error) => {
             eprintln!("Session creation failed: {error}");
             Redirect::to("/login").into_response()
@@ -243,7 +255,12 @@ pub async fn register_submit(
     }
 }
 
-pub async fn logout() -> Response {
+pub async fn logout(headers: HeaderMap) -> Response {
+    if let Some(token) = rullst_auth::extract_session_cookie(&headers)
+        && let Err(error) = crate::models::auth_session::revoke(&token).await
+    {
+        eprintln!("Session revocation failed during logout: {error}");
+    }
     redirect_with_cookie("/login", &rullst_auth::make_logout_cookie())
 }
 

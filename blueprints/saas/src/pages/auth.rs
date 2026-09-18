@@ -46,7 +46,7 @@ pub fn login_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Htm
          <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
          <button type=\"submit\" class=\"btn-primary\">Sign In</button>\
          </form>\
-         <div class=\"links\">Don't have an account? <a href=\"/register\">Register</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">__RULLST_TERMS_LABEL__</a></div>\
+         <div class=\"links\"><a href=\"/forgot-password\">Forgot your password?</a><br />Don't have an account? <a href=\"/register\">Register</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">__RULLST_TERMS_LABEL__</a></div>\
          </div></body></html>",
         rullst::html::escape_str(csp_nonce),
         error_html,
@@ -122,6 +122,96 @@ pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> 
         document
             .replace("__RULLST_TERMS_LABEL__", terms_label)
             .replace("__RULLST_ACCOUNT_LABEL__", account_label),
+    )
+}
+
+pub fn forgot_password_page(
+    csrf_token: &str,
+    message: Option<&str>,
+    available: bool,
+    csp_nonce: &str,
+) -> Html<String> {
+    let status = message.map_or_else(String::new, |message| {
+        format!(
+            "<div class=\"notice\" role=\"status\">{}</div>",
+            rullst::html::escape_str(message)
+        )
+    });
+    let form = if available {
+        format!(
+            r#"<form method="post" action="/forgot-password">
+            <input type="hidden" name="_token" value="{}" />
+            <label for="recovery-email">Account email</label>
+            <input id="recovery-email" type="email" name="email" autocomplete="email" maxlength="254" required />
+            <button type="submit">Send reset link</button>
+            </form>"#,
+            rullst::html::escape_str(csrf_token)
+        )
+    } else {
+        "<div class=\"error\" role=\"alert\">Password recovery is not enabled for this deployment yet. Contact support without sending your password.</div>".to_owned()
+    };
+    Html(
+        r#"<!DOCTYPE html><html lang="en"><head>
+        <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="referrer" content="no-referrer" /><meta name="robots" content="noindex,nofollow,noarchive" />
+        <title>Forgot password — Rullst SaaS</title>
+        <style nonce="__NONCE__">*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:1rem;background:#0b0f19;color:#f3f4f6;font-family:system-ui,sans-serif}.card{width:min(100%,440px);padding:clamp(1.25rem,6vw,2.5rem);border:1px solid rgba(255,255,255,.1);border-radius:1.25rem;background:#0f172a}h1{margin:0 0 .75rem}p{color:#cbd5e1;line-height:1.55}label{display:block;margin:1.25rem 0 .4rem;color:#cbd5e1}input{width:100%;padding:.8rem;border:1px solid #475569;border-radius:.5rem;background:#020617;color:#fff;font:inherit}button{width:100%;margin-top:1rem;padding:.85rem;border:0;border-radius:.5rem;background:#10b981;color:#02120c;font:inherit;font-weight:800;cursor:pointer}.notice,.error{margin:1rem 0;padding:.8rem;border-radius:.5rem;line-height:1.45}.notice{border:1px solid #047857;background:#052e2b;color:#a7f3d0}.error{border:1px solid #991b1b;background:#450a0a;color:#fecaca}.links{margin-top:1.25rem;font-size:.9rem}.links a{color:#6ee7b7}</style>
+        </head><body><main class="card"><h1>Reset your password</h1><p>Enter the email used for this account. For privacy, the response is the same whether an eligible account exists or not.</p>__STATUS____FORM__<p class="links"><a href="/login">Back to sign in</a> · <a href="/privacy">Privacy</a></p></main></body></html>"#
+            .replace("__NONCE__", &rullst::html::escape_str(csp_nonce))
+            .replace("__STATUS__", &status)
+            .replace("__FORM__", &form),
+    )
+}
+
+pub fn reset_password_page(
+    csrf_token: &str,
+    error: Option<&str>,
+    success: bool,
+    initial_code: Option<&str>,
+    csp_nonce: &str,
+) -> Html<String> {
+    let error_html = error.map_or_else(String::new, |message| {
+        format!(
+            "<div id=\"reset-status\" class=\"error\" role=\"alert\">{}</div>",
+            rullst::html::escape_str(message)
+        )
+    });
+    let body = if success {
+        "<div class=\"notice\" role=\"status\">Your password was changed and all previous sessions were revoked.</div><a class=\"button-link\" href=\"/login\">Sign in with the new password</a>".to_owned()
+    } else {
+        format!(
+            r#"{error_html}<div id="client-error" class="error" role="alert" hidden>This reset link is missing or invalid. Request a new one.</div>
+            <form id="reset-form" method="post" action="/reset-password">
+            <input type="hidden" name="_token" value="{}" />
+            <input id="reset-code" type="hidden" name="code" value="{}" />
+            <label for="new-password">New password</label>
+            <input id="new-password" type="password" name="password" autocomplete="new-password" minlength="12" maxlength="72" required />
+            <label for="password-confirmation">Confirm new password</label>
+            <input id="password-confirmation" type="password" name="password_confirmation" autocomplete="new-password" minlength="12" maxlength="72" required />
+            <button id="reset-submit" type="submit" disabled>Change password</button>
+            </form>"#,
+            rullst::html::escape_str(csrf_token),
+            rullst::html::escape_str(initial_code.unwrap_or_default())
+        )
+    };
+    let script = if success {
+        String::new()
+    } else {
+        format!(
+            r#"<script nonce="{}">(()=>{{const codeInput=document.getElementById('reset-code');const submit=document.getElementById('reset-submit');const clientError=document.getElementById('client-error');const fragment=new URLSearchParams(window.location.hash.slice(1));const fragmentCode=fragment.get('code');if(fragmentCode){{codeInput.value=fragmentCode;history.replaceState(null,'','/reset-password');}}const valid=/^[0-9a-f]{{64}}\.[0-9a-f]{{64}}$/.test(codeInput.value);submit.disabled=!valid;clientError.hidden=valid;}})();</script>"#,
+            rullst::html::escape_str(csp_nonce)
+        )
+    };
+    Html(
+        r#"<!DOCTYPE html><html lang="en"><head>
+        <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="referrer" content="no-referrer" /><meta name="robots" content="noindex,nofollow,noarchive" />
+        <title>Reset password — Rullst SaaS</title>
+        <style nonce="__NONCE__">*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:1rem;background:#0b0f19;color:#f3f4f6;font-family:system-ui,sans-serif}.card{width:min(100%,440px);padding:clamp(1.25rem,6vw,2.5rem);border:1px solid rgba(255,255,255,.1);border-radius:1.25rem;background:#0f172a}h1{margin:0 0 .75rem}p{color:#cbd5e1;line-height:1.55}label{display:block;margin:1rem 0 .4rem;color:#cbd5e1}input{width:100%;padding:.8rem;border:1px solid #475569;border-radius:.5rem;background:#020617;color:#fff;font:inherit}button,.button-link{display:block;width:100%;margin-top:1rem;padding:.85rem;border:0;border-radius:.5rem;background:#10b981;color:#02120c;font:inherit;font-weight:800;text-align:center;text-decoration:none;cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}.notice,.error{margin:1rem 0;padding:.8rem;border-radius:.5rem;line-height:1.45}.notice{border:1px solid #047857;background:#052e2b;color:#a7f3d0}.error{border:1px solid #991b1b;background:#450a0a;color:#fecaca}.links{margin-top:1.25rem;font-size:.9rem}.links a{color:#6ee7b7}</style>
+        </head><body><main class="card"><h1>Choose a new password</h1><p>The link expires after 15 minutes, works once and never reveals whether another account exists.</p>__BODY__<p class="links"><a href="/forgot-password">Request a new link</a> · <a href="/privacy">Privacy</a></p></main>__SCRIPT__</body></html>"#
+            .replace("__NONCE__", &rullst::html::escape_str(csp_nonce))
+            .replace("__BODY__", &body)
+            .replace("__SCRIPT__", &script),
     )
 }
 

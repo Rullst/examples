@@ -75,6 +75,19 @@ removing it would force future upgrades to be tried against production. A
 release is promoted by immutable image digest only after staging acceptance;
 databases and secrets are never promoted between environments.
 
+## Deliverable contract by environment
+
+| Environment | What is granted after provider reconciliation | Certificate boundary |
+| --- | --- | --- |
+| `saas-staging.rullst.win` | Bundled downloadable Stripe sandbox field-report summary | Every reconciled sandbox entitlement receives a test-only `Rullst Sandbox Pioneer`; it is not evidence of a sale. |
+| `saas.rullst.win` | Private, versioned Markdown guide containing the Stripe field report and sanitized implementation tutorial | Every reconciled live purchase receives an unlimited `Rullst Founding Customer` certificate. |
+
+Neither environment grants access from a browser success redirect. The signed
+Stripe event is independently re-read and reconciled before the entitlement is
+created. Confirmed refunds and disputes revoke artifact and certificate access.
+The production offer page and purchase terms must display this distinction
+before the customer opens Stripe Checkout.
+
 ## Current deployment status
 
 The Azure Container App, scale-to-zero limit, GitHub environment secrets,
@@ -95,7 +108,7 @@ customer or payment details are retained in this public evidence.
 
 The sandbox happy path is therefore validated. The application now implements
 full-refund/dispute revocation, an operator refund queue, private tutorial
-delivery, scheduled provider reconciliation, a finite Founding Customer cohort
+delivery, scheduled provider reconciliation, unlimited Founding Customer certificates
 and daily logical backup automation. Provisioning the separate production
 resources, testing a restore, configuring alerts and reviewing public seller
 details remain operator acceptance tasks. Test-mode readiness is not
@@ -135,7 +148,7 @@ The precise production acceptance checklist is maintained in
 [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md). A sandbox purchase may
 issue a clearly labelled `Rullst Sandbox Pioneer` certificate, but it must not
 be described as a real customer purchase. `Founding Customer` remains reserved
-for a finite, published live-production cohort.
+for reconciled live-production purchases, with no quantity cap.
 
 ## Production storage prepared on 2026-09-17
 

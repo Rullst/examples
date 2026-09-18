@@ -173,7 +173,6 @@ jobs:
               MERCHANT_COUNTRY=BR \
               SUPPORT_EMAIL=officialrullst@gmail.com \
               REFUND_WINDOW_DAYS=14 \
-              FOUNDING_CUSTOMER_LIMIT=100 \
             --only-show-errors --output none
 
       - name: Verify live revision health without creating a payment

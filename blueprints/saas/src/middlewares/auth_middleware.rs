@@ -13,6 +13,14 @@ pub async fn auth_middleware(mut req: Request, next: Next) -> Response {
             }
         };
         if let Ok(user_id) = rullst::auth::decrypt_session(&cookie, &app_key) {
+            match crate::models::auth_session::is_active(user_id, &cookie).await {
+                Ok(true) => {}
+                Ok(false) => return Redirect::to("/login").into_response(),
+                Err(error) => {
+                    eprintln!("Authentication session registry query failed: {error}");
+                    return StatusCode::SERVICE_UNAVAILABLE.into_response();
+                }
+            }
             match User::find(user_id).await {
                 Ok(Some(user)) => {
                     req.extensions_mut().insert(user_id);

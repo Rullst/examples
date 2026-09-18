@@ -37,7 +37,7 @@ public summary and must not be described as exclusive paid content.
 
 | Provider | Product SKU | Private badge | v12 real-payment status |
 | --- | --- | --- | --- |
-| Stripe | `gateway-report-stripe` | `stripe-field-tester` | Application-owned one-time sandbox path implemented because v12 hard-codes subscription mode; live remains gated. |
+| Stripe | `gateway-report-stripe` | `Rullst Sandbox Pioneer` / `Rullst Founding Customer` | Application-owned one-time sandbox and live paths implemented because v12 hard-codes subscription mode. |
 | Razorpay | `gateway-report-razorpay` | `razorpay-field-tester` | Subscription path exists; one-time/account eligibility needs separate provider review. |
 | Lemon Squeezy | `gateway-report-lemonsqueezy` | `lemonsqueezy-field-tester` | Blocked by hard-coded store ID until framework correction. |
 | Paddle | `gateway-report-paddle` | `paddle-field-tester` | Blocked by stale transaction contract. |
@@ -60,23 +60,21 @@ badge type, issue date, `test` environment and current validity; it contains no
 name, email, provider identifier or financial data. A return-page redirect
 cannot issue it.
 
-`Founding Customer` is reserved for a later live-production cohort. Before
-using that label, publish a finite eligibility rule, implement refund/dispute
-revocation and retain auditable evidence that each certificate came from a
-legitimate live customer purchase. Test-mode certificates must never imply
-that real money moved.
+`Founding Customer` is reserved for live production, but it is not
+quantity-limited. The same database transaction that grants the live guide
+entitlement issues the certificate for every reconciled live purchase. Refunds
+and disputes revoke its validity. Test-mode certificates never imply that real
+money moved.
 
 ## Rollout order
 
-1. The current sandbox milestone implements purchase attempts, provider-event
-   replay protection and report entitlements. Move the complete report and
-   tutorial bytes to private storage before any live sale.
-2. Complete Stripe sandbox acceptance, then add signed refund/dispute handling,
-   scheduled reconciliation and the remaining privacy lifecycle controls. The
-   Sandbox Pioneer certificate is implemented, but its end-to-end issuance
-   still requires a completed sandbox Checkout acceptance run.
-3. Complete one provider-approved live launch with a genuine product purchase;
-   never use a real card as integration test data.
+1. Keep Stripe sandbox as the permanent release-acceptance boundary for
+   purchase attempts, provider-event replay protection, report entitlement,
+   certificate issuance, refunds and reconciliation.
+2. Keep the complete production report/tutorial bytes in private Azure storage
+   with the configured immutable digest and authenticated entitlement check.
+3. Treat every live Checkout as a genuine customer sale; never use real card
+   details as integration test data.
 4. Fix or replace each blocked adapter one at a time. Retain protocol fixtures
    and sandbox evidence before exposing its button.
 5. Expose a provider only when the merchant account is approved for the

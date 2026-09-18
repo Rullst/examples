@@ -16,6 +16,7 @@ sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio",
 rullst-auth = { version = "12.0.0" }
 rullst-capital = { version = "12.0.0" }
 rullst-security = { version = "12.0.0" }
+rullst-mail = { version = "12.0.0" }
 reqwest = { version = "0.13", features = ["form", "json", "query", "rustls"] }
 hex = "0.4"
 ring = "0.17"

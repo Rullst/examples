@@ -29,10 +29,14 @@ example is also governed by the engineering
 
 Welcome to the official showcase and blueprints repository for the **Rullst Framework (`12.0.0`)**. This repository demonstrates how to architect, build, and deploy production-grade, sovereign web applications in pure Rust without JavaScript framework lock-in.
 
-This monorepository contains three live cloud applications:
+This monorepository contains four live cloud applications, with the SaaS
+blueprint deliberately split into staging and production deployments:
 1. **🌐 Rullst Showcase App:** Demonstrates the **5 Frontend Paradigms**, Active Record ORM, WAF security layers, Prompt Injection Shield, and Omni cross-platform capabilities.
 2. **🎓 Rullst Academy (LMS Blueprint):** A full-featured, real-world educational platform with 13 SQLite migrations, course catalog, Argon2 authentication, monotonic lesson progress tracking, quizzes, certifications, and integrated **Nexus Admin CMS** + **Studio Dev Cockpit**.
 3. **💼 Rullst Portfolio Blueprint:** An ultra-fast, modern developer portfolio featuring dark glassmorphic UI, HTMX SSR, project showcase, experience timeline, skills matrix, and **Nexus Admin CMS**.
+4. **Rullst SaaS Blueprint:** An audited one-time Stripe checkout with separate
+   sandbox and live databases, provider objects, secrets, entitlements,
+   downloadable artifacts, certificates, refunds and reconciliation.
 
 ---
 
@@ -53,6 +57,8 @@ All applications run in **Microsoft Azure Container Apps** on the **Azure for St
 | **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>**Public demo login:** `rullst_demo`<br>**Password:** `RullstDemoAccess2026!`<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |
 | **🎓 LMS Academy** | [lms.rullst.win](https://lms.rullst.win) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
 | **💼 Portfolio** | [portfolio.rullst.win](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>**Public demo login:** `rullst_demo`<br>**Password:** `RullstDemoAccess2026!`<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
+| **SaaS Staging** | [saas-staging.rullst.win](https://saas-staging.rullst.win) | Permanent Stripe sandbox, test report and Sandbox Pioneer certificate; no real charge | Private Nexus credentials; no production Studio process |
+| **SaaS Production** | [saas.rullst.win](https://saas.rullst.win) | Real one-time Stripe checkout, private guide, unlimited Founding Customer certificates, refunds and reconciliation | Private Nexus credentials; no production Studio process |
 
 ---
 
@@ -112,6 +118,13 @@ production uses separate live credentials and can create a real charge. The two
 deployments also use separate persistent PostgreSQL databases, webhook secrets,
 Price IDs, application keys and private administration credentials. No private
 credential is included in this repository.
+
+The sandbox flow grants a downloadable test report and a clearly test-only
+`Rullst Sandbox Pioneer` certificate. Every reconciled production purchase
+grants the private Stripe implementation guide and a `Rullst Founding Customer`
+certificate; the certificate has no quantity limit.
+Refunds and disputes revoke the corresponding access after provider
+confirmation.
 
 See the [SaaS blueprint guide](blueprints/saas/README.md) for setup and the
 [framework improvement report](saas-improvements-needed.md) for the full

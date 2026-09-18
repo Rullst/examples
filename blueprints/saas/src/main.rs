@@ -6,6 +6,7 @@ pub mod middlewares;
 pub mod migrations;
 pub mod models;
 pub mod pages;
+pub mod services;
 
 fn trusts_nexus_tls_termination(value: Option<&str>) -> bool {
     value.is_some_and(|value| value.trim().eq_ignore_ascii_case("azure-container-apps"))
@@ -41,6 +42,8 @@ async fn staging_headers(request: Request, next: Next) -> Response {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::artisan!(crate::migrations::get_migrations());
     controllers::billing_controller::initialize_billing_provider()?;
+    services::account_mail::initialize()?;
+    services::account_mail::spawn_worker();
 
     let nexus_auth = rullst::nexus::NexusAuthPolicy::local_development_or_basic_from_env()?;
     let nexus = rullst::nexus::Nexus::new()
@@ -61,6 +64,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         get("/terms" => controllers::legal_controller::sandbox_terms),
         get("/login" => controllers::auth_controller::login_view),
         post("/login" => controllers::auth_controller::login_submit),
+        get("/forgot-password" => controllers::password_reset_controller::forgot_password_view),
+        post("/forgot-password" => controllers::password_reset_controller::forgot_password_submit),
+        get("/reset-password" => controllers::password_reset_controller::reset_password_view),
+        post("/reset-password" => controllers::password_reset_controller::reset_password_submit),
         get("/register" => controllers::auth_controller::register_view),
         post("/register" => controllers::auth_controller::register_submit),
         get("/verify/{public_id}" => controllers::certificate_controller::verify_certificate),

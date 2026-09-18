@@ -22,6 +22,10 @@ strictly separate.
   certificate revocation, refund-request queue and scheduled reconciliation.
 - Verify the authenticated JSON data export and document the monitored
   operator process for correction, closure/deletion and retention exceptions.
+- Verify the production Resend sending domain, use a separate domain-scoped
+  sending key, and complete password-recovery acceptance in staging first.
+  Confirm generic unknown-account responses, 15-minute expiry, one use,
+  durable delivery retries and rejection of every pre-reset session.
 - Publish reviewed merchant identity, privacy, terms, refund, support,
   accessibility and cookie notices for the actual launch jurisdictions.
 - Define monitoring and alerts, incident response and log retention. Run the
@@ -166,8 +170,8 @@ window.
    drill.
 5. Treat the first payment as a genuine customer sale. Never use the operator's
    real card as integration test data.
-6. Issue a `Founding Customer` certificate only under a published finite cohort
-   rule. Keep it distinct from the test-only `Rullst Sandbox Pioneer` badge.
+6. Issue a `Founding Customer` certificate for every reconciled live purchase.
+   Keep it distinct from the test-only `Rullst Sandbox Pioneer` badge.
 
 The application accepts `PAYMENTS_MODE=live` only when every fail-closed live
 control is configured. A healthy deployment proves configuration consistency;

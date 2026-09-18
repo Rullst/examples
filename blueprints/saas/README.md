@@ -13,6 +13,15 @@ live mode. Both use persistent PostgreSQL, private Nexus credentials and no
 production Studio process. Live mode is fail-closed unless every required
 credential, legal field, private artifact and reconciliation control is valid.
 
+After a signed Stripe event is reconciled, staging grants the bundled
+downloadable sandbox field-report summary and a test-only `Rullst Sandbox
+Pioneer` certificate. Production grants the private, versioned Stripe field
+report plus sanitized implementation tutorial stored in Azure Blob; every
+reconciled live purchase also receives a `Rullst Founding Customer`
+certificate. There is no quantity limit for that certificate. Refunds and
+disputes revoke both artifact and certificate access after provider
+confirmation.
+
 ## Published environments
 
 | Environment | Public URL | Payment boundary | Data boundary |
@@ -83,8 +92,8 @@ requires an exact active one-time Price match. A return-page redirect never
 grants access. The signed webhook is replay-protected in PostgreSQL, the paid
 Checkout Session and line item are re-read from Stripe, and only then is a
 versioned report entitlement created. The same database transaction issues a
-test-only `Rullst Sandbox Pioneer` certificate or, for the first finite live
-cohort, a `Rullst Founding Customer` certificate. Full refunds and disputes
+test-only `Rullst Sandbox Pioneer` certificate or, for every reconciled live
+purchase, a `Rullst Founding Customer` certificate. Full refunds and disputes
 revoke the entitlement and certificate after provider verification.
 
 The authenticated certificate page may show the account holder's name and can
@@ -135,6 +144,42 @@ The repository compensates with a daily logical dump to a private Azure Blob
 container, but a dump is useful only after a restore drill. Upgrade the
 database/storage plan before offering contractual availability or serving a
 material sales volume.
+
+## Password recovery
+
+Account recovery is implemented as an application-owned integration between
+Rullst Auth, Rullst Mail and PostgreSQL. It is disabled by default and never
+pretends that a message was sent when no provider is configured.
+
+The flow returns the same public response for existing and unknown addresses,
+uses keyed address fingerprints for request throttling, stores only a hash of
+the one-time reset code, expires it after 15 minutes and atomically revokes all
+account sessions after a successful password change. A PostgreSQL outbox keeps
+delivery retryable without storing the complete code. The browser receives the
+code in a URL fragment, removes it from history and submits it only in the
+CSRF-protected reset form. This is also the v12 workaround for the confirmed
+Rullst Mail `token=` sanitizer defect documented as `RULLST-005`.
+
+To enable Resend for one environment:
+
+1. Verify an environment-specific sending domain in Resend. Keep staging and
+   production API keys separate and restrict each key to sending from its own
+   domain when the provider account supports that restriction.
+2. Store the key in the protected GitHub environment as
+   `SAAS_STAGING_RESEND_API_KEY` or `SAAS_PRODUCTION_RESEND_API_KEY`.
+3. Set `PASSWORD_RESET_MODE=resend`, the exact public origin in
+   `ACCOUNT_PUBLIC_BASE_URL`, and a verified bare sender address in
+   `ACCOUNT_MAIL_FROM`. Do not put a display name in that variable.
+4. Deploy the migration before testing. Existing encrypted cookies predate the
+   new PostgreSQL session registry and will require one fresh login after this
+   release; that one-time logout is intentional.
+5. Test the complete request, delivered link, one-use behavior, expiration and
+   old-session rejection in staging before enabling production recovery.
+
+The deployment workflows keep recovery disabled unless their explicit
+`password_reset_mode` input is set to `resend`. The provider receives the
+recipient address and deterministic security-message content; no marketing
+tracking is added. The privacy notice describes this processor boundary.
 
 ## Local setup
 
@@ -234,7 +279,9 @@ after configuring these secrets:
 - `SAAS_STAGING_APP_KEY` (at least 32 random characters);
 - `SAAS_STAGING_NEXUS_USERNAME` and `SAAS_STAGING_NEXUS_PASSWORD`;
 - `STRIPE_TEST_SECRET_KEY`; and
-- `STRIPE_TEST_WEBHOOK_SECRET`.
+- `STRIPE_TEST_WEBHOOK_SECRET`; and
+- `SAAS_STAGING_RESEND_API_KEY` only when the workflow's
+  `password_reset_mode` is `resend`.
 
 The target Container App `rullst-saas-staging` must already exist in
 `rullst-rg`. The staging workflow constrains it to one replica, runs migrations
@@ -255,8 +302,8 @@ labels the destination as Stripe Test Mode with no real charge.
 
 ## Paid tutorial boundary
 
-The downloadable product may include a detailed, sanitized implementation
-tutorial in addition to the gateway field report. The complete paid bytes must
+The production downloadable product includes a detailed, sanitized
+implementation tutorial in addition to the gateway field report. The complete paid bytes must
 live in private application storage and be streamed only after authentication
 and entitlement checks. Committing those bytes to this public repository, or
 embedding them in a public GHCR image, would make the route paywall cosmetic.
@@ -278,6 +325,6 @@ lacks a typed one-time Capital contract, so this Stripe integration remains
 application-owned and must not be presented as proof that every exported
 gateway is live-ready.
 
-The live `Founding Customer` cohort is capped by
-`FOUNDING_CUSTOMER_LIMIT` (100 by default). Sandbox certificates are never
-upgraded or relabelled as customer purchases.
+The live `Rullst Founding Customer` certificate is issued to every reconciled
+live purchase without a quantity cap. Sandbox certificates are never upgraded
+or relabelled as customer purchases.

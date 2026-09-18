@@ -145,6 +145,11 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
             }
         })
         .unwrap_or_default();
+    let deliverables = if state.payment_mode == PaymentMode::Live {
+        "<div class=\"deliverables\"><h3>What this purchase includes</h3><ul><li>A private, versioned Markdown guide containing the Stripe gateway field report and a sanitized implementation tutorial for Stripe, PostgreSQL, GitHub OIDC, Azure Container Apps, DNS/TLS, webhooks and production promotion.</li><li>A Rullst Founding Customer certificate for every reconciled live purchase. There is no certificate quota or expiration based on purchase order.</li></ul></div>".to_owned()
+    } else {
+        "<div class=\"deliverables\"><h3>What this sandbox flow includes</h3><ul><li>A downloadable Stripe sandbox field-report summary.</li><li>A test-only Rullst Sandbox Pioneer certificate after the signed test payment is reconciled. It is not proof of a real purchase.</li></ul></div>".to_owned()
+    };
 
     html! {
         <section class="pricing-card pricing-card--featured">
@@ -155,6 +160,7 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
                 <span class="price-label">{state.expected_price.as_str()}</span>
                 <span class="period">"one-time purchase"</span>
             </div>
+            { rullst::html::RawHtml(deliverables) }
             <ul class="features-list">
                 <li>"Authenticated local customer binding"</li>
                 <li>"Provider price verified before redirect"</li>
@@ -318,6 +324,15 @@ window.addEventListener('pageshow', reset);
                     </div>
                     { rullst::html::RawHtml(gateway_matrix()) }
                 </main>
+                <footer class="community-footer">
+                    <div class="community-footer__mark" aria-hidden="true">"R"</div>
+                    <div>
+                        <p class="community-footer__eyebrow">"Build with us"</p>
+                        <h2>"Join our community on Discord"</h2>
+                        <p>"Meet Rullst builders, exchange ideas, and help shape what comes next."</p>
+                    </div>
+                    <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join the Rullst Discord"</a>
+                </footer>
                 { rullst::html::RawHtml(checkout_script) }
             </body>
         </html>
@@ -378,6 +393,18 @@ mod tests {
         assert!(page.contains("Purchase terms"));
         assert!(page.contains("529.982.247-25"));
         assert!(page.contains("Read the purchase and refund terms before paying."));
+        assert!(page.contains("What this purchase includes"));
+        assert!(page.contains("every reconciled live purchase"));
+        assert!(!page.contains("first 100"));
+        assert!(page.contains("sanitized implementation tutorial"));
+    }
+
+    #[test]
+    fn pricing_page_links_to_the_discord_community() {
+        let page = pricing_page("csrf-token", "csp-nonce", &state(false)).0;
+        assert!(page.contains("Join our community on Discord"));
+        assert!(page.contains("https://discord.gg/2ntKFtsSjw"));
+        assert!(page.contains("rel=\"noopener noreferrer\""));
     }
 
     #[test]

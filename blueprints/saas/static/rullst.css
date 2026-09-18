@@ -578,6 +578,80 @@ tbody tr:last-child td {
     color: #7dd3fc;
 }
 
+.community-footer {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1.25rem;
+    width: min(calc(100% - 2rem), 72rem);
+    margin: 1rem auto 2.5rem;
+    padding: 1.35rem 1.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(88, 101, 242, 0.45);
+    border-radius: 1.25rem;
+    background: linear-gradient(135deg, rgba(88, 101, 242, 0.18), rgba(15, 23, 42, 0.92) 58%, rgba(34, 211, 238, 0.12));
+    box-shadow: 0 18px 50px rgba(2, 6, 23, 0.34);
+}
+
+.community-footer__mark {
+    display: grid;
+    width: 3.25rem;
+    height: 3.25rem;
+    place-items: center;
+    border-radius: 1rem;
+    background: linear-gradient(145deg, #5865f2, #22d3ee);
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 900;
+    box-shadow: 0 10px 28px rgba(88, 101, 242, 0.38);
+}
+
+.community-footer h2,
+.community-footer p {
+    margin: 0;
+}
+
+.community-footer h2 {
+    margin: 0.1rem 0 0.25rem;
+    font-size: clamp(1.2rem, 3vw, 1.55rem);
+}
+
+.community-footer p {
+    color: #aebbd0;
+    line-height: 1.55;
+}
+
+.community-footer .community-footer__eyebrow {
+    color: #818cf8;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.community-footer a {
+    padding: 0.8rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 0.8rem;
+    background: #5865f2;
+    color: #fff;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+    transition: transform 160ms ease, background 160ms ease;
+}
+
+.community-footer a:hover {
+    background: #4752c4;
+    transform: translateY(-2px);
+}
+
+.community-footer a:focus-visible {
+    outline: 3px solid #67e8f9;
+    outline-offset: 3px;
+}
+
 @keyframes fade-in {
     from {
         opacity: 0;
@@ -636,12 +710,24 @@ tbody tr:last-child td {
     .subtitle {
         font-size: 1rem;
     }
+
+    .community-footer {
+        grid-template-columns: auto minmax(0, 1fr);
+        margin-bottom: 1.5rem;
+        padding: 1.15rem;
+    }
+
+    .community-footer a {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .pricing-card,
     .pricing-nav__link,
-    .setup-banner {
+    .setup-banner,
+    .community-footer a {
         animation: none;
         transition: none;
     }

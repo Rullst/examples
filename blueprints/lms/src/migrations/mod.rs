@@ -3024,7 +3024,11 @@ mod tests {
         assert!(rendered_catalog.contains("nonce=\"catalog-csp-nonce\""));
         assert!(rendered_catalog.contains("&lt;script&gt;"));
         assert!(!rendered_catalog.contains("<script>alert(1)</script>"));
-        assert!(!rendered_catalog.contains("https://"));
+        assert!(!rendered_catalog.contains("src=\"https://"));
+        assert!(!rendered_catalog.contains("rel=\"stylesheet\" href=\"https://"));
+        assert!(rendered_catalog.contains(
+            "href=\"https://discord.gg/2ntKFtsSjw\" target=\"_blank\" rel=\"noopener noreferrer\""
+        ));
 
         let rendered_video = crate::pages::lms::lesson_player_page(
             "Memory safety <essentials>",
