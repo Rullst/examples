@@ -484,6 +484,21 @@ fail before upload when the dump or `pg_restore --list` validation fails, and
 upgrade the client before any future database-major upgrade. This is an
 application operations configuration defect, not a Rullst framework defect.
 
+### APP-SAAS-011 — Backup readiness did not include a restore or lifecycle policy
+
+The initial backup job verified only that `pg_restore` could list the custom
+archive. That catches malformed archives but does not prove that schema and data
+can be restored. The private storage account also had blob/container soft
+delete, but no lifecycle rule, so daily dumps would accumulate indefinitely.
+
+**Correction implemented here and in infrastructure:** restore each new dump
+into an isolated PostgreSQL 18 container on the ephemeral GitHub runner,
+require restored public tables, destroy the temporary database and upload only
+after success. A storage lifecycle rule is limited to
+`database-backups/saas-production-` and deletes matching base blobs after 35
+days; Azure's existing 30-day soft-delete protection remains separate. This is
+an application operations/readiness gap, not a Rullst framework defect.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance

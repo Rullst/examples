@@ -143,8 +143,12 @@ activation.
 The backup container image must provide a `pg_dump` client from the same or a
 newer PostgreSQL major version than the Neon server. The reviewed production
 database is PostgreSQL 18, so the workflow uses the PostgreSQL 18 client and
-validates every custom-format archive with the matching `pg_restore` before
-upload.
+validates every custom-format archive with the matching `pg_restore`. It then
+restores the dump into an isolated PostgreSQL 18 container, requires at least
+one public application table and destroys the temporary database before
+upload. Azure lifecycle deletes matching daily backup blobs after 35 days;
+Blob soft delete and container soft delete provide a separate 30-day recovery
+window.
 
 ## Launch sequence
 
