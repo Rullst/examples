@@ -131,7 +131,12 @@ The webhook endpoint must subscribe to all six events:
 - `charge.dispute.created`.
 
 `.github/workflows/reconcile-saas-production.yml` calls the bearer-protected
-reconciliation endpoint every six hours. `.github/workflows/backup-saas-production.yml`
+reconciliation endpoint every six hours. Because Rullst v12 has no general
+exact-route CSRF exception for authenticated machine-to-machine endpoints, the
+application lists this route in `csrf_signed_webhook_paths`; the route does not
+use cookie authentication and independently requires a 32-200 character secret
+Bearer token with constant-time comparison. This framework API gap is tracked
+in the repository's framework-error report. `.github/workflows/backup-saas-production.yml`
 creates a validated custom-format PostgreSQL dump every day and uploads it to a
 pre-created private Azure Blob container. Configure the non-secret environment
 variables `SAAS_BACKUP_STORAGE_ACCOUNT`, `SAAS_BACKUP_CONTAINER`,

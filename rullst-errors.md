@@ -193,6 +193,71 @@ The SaaS deployment probe now sends the explicit
 verification without disabling Shield, but it does not fix the overly broad
 framework default or turn `User-Agent` matching into an authentication control.
 
+## RULLST-004 — No CSRF exception contract for authenticated machine endpoints
+
+**Classification:** security API gap / machine-to-machine availability.
+**Affected package:** `rullst-core` 12.0.0.
+**Evidence status:** confirmed by source integration and an HTTPS reproduction
+against the deployed SaaS production application on 2026-09-18.
+
+### Cause and evidence
+
+Rullst v12 exposes `security.csrf_signed_webhook_paths` as the application
+configuration mechanism for exact POST paths that cannot present a browser
+double-submit CSRF token. It does not expose a semantically general exception
+for non-cookie machine-to-machine routes that authenticate with another strong
+request-bound credential, such as an authorization Bearer token or an mTLS
+identity.
+
+The SaaS production reconciliation route accepts no cookie-based authority and
+requires an independent 32-200 character random Bearer token using a
+constant-time comparison. A scheduled GitHub Actions POST with the exact token
+was nevertheless rejected by the framework with HTTP 403 before the route
+handler ran. The signed Stripe webhook path, which was listed in
+`csrf_signed_webhook_paths`, reached its handler and returned the expected HTTP
+401 when tested without a signature. Adding same-origin `Origin` and
+`Sec-Fetch-Site` headers did not allow the reconciliation request through.
+
+### Reproduction
+
+1. Create a POST route protected exclusively by an exact Bearer token and do
+   not grant it any cookie-authenticated capability.
+2. Call it from a scheduled server-side client with the correct token.
+3. Observe HTTP 403 before the route handler executes.
+4. Add the route to `csrf_signed_webhook_paths` and observe that the request can
+   reach its own authentication boundary.
+
+**Expected behavior:** applications should be able to declare an exact path and
+HTTP method as a non-browser, non-cookie endpoint while retaining all other WAF,
+body-limit, authorization and rate-limit controls. The API should describe the
+required compensating authentication instead of misclassifying every exception
+as a signed webhook.
+
+### Suggested framework correction
+
+Add a typed, exact-method CSRF policy for machine endpoints, for example an
+explicit router layer or configuration entries that distinguish signed
+webhooks, Bearer-authenticated jobs and mTLS callbacks. Reject wildcard paths,
+require applications to attach their authentication middleware, and keep the
+current fail-closed default for ordinary form and cookie-authenticated routes.
+
+Suggested regression coverage:
+
+- an unlisted machine POST remains blocked without a valid CSRF token;
+- an exact Bearer-authenticated POST can reach its handler when explicitly
+  declared and still rejects missing or incorrect credentials;
+- an exception for one method or path does not exempt siblings;
+- signed webhooks continue to require their provider signature; and
+- browser form routes retain double-submit and Fetch Metadata enforcement.
+
+### Application workaround implemented here
+
+The SaaS blueprint lists the exact `/billing/reconcile` path alongside the
+Stripe webhook in `csrf_signed_webhook_paths`. The reconciliation handler does
+not use cookies and still requires the independent high-entropy Bearer token in
+constant time. This is a narrowly scoped v12 workaround, not a claim that the
+framework API gap is fixed.
+
 ## RULLST-002 — SaaS/Capital live-payment contract defects
 
 The v12.0.0 SaaS generator and Capital adapters have confirmed payment defects

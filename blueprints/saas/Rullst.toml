@@ -4,8 +4,11 @@
 url = "postgres://postgres:postgres@localhost:5432/rullst_saas"
 
 [security]
-# This exact path must also remain wrapped by rullst-capital signature verification.
-csrf_signed_webhook_paths = ["/billing/webhook"]
+# Rullst v12 exposes only this exact-path CSRF exception list for non-browser
+# POST endpoints. The webhook still verifies Stripe's signature. The scheduled
+# reconciliation route never uses cookie authentication and separately requires
+# an exact high-entropy Bearer token, compared in constant time.
+csrf_signed_webhook_paths = ["/billing/webhook", "/billing/reconcile"]
 # The strict framework default permits forms only on this origin. Chrome also
 # applies form-action to the 303 that hands a local POST to hosted Checkout, so
 # allow only Stripe's already server-validated HTTPS Checkout host.
