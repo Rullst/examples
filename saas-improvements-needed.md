@@ -366,6 +366,25 @@ and HTTP 429 now includes `Retry-After: 600`.
 This is an application checkout-orchestration defect in this repository, not a
 defect in the Rullst framework rate limiter.
 
+### APP-SAAS-004 — Strict CSP blocks the hosted Checkout handoff in Chromium
+
+The SaaS staging application used the framework's secure default
+`form-action 'self'` policy. The local checkout POST correctly returned HTTP
+303 with an exact, server-validated `https://checkout.stripe.com` location,
+but Chromium applies `form-action` to redirects that follow a form submission.
+The browser therefore remained on the pricing page while command-line HTTP
+checks appeared successful because they do not enforce CSP.
+
+**Correction implemented here:** the SaaS application's CSP now adds only
+`https://checkout.stripe.com` to `form-action`. The server continues to reject
+any returned Checkout URL whose scheme, host or embedded credentials differ
+from that exact destination. The pricing page also preserves visible signed-in
+state and gives immediate progress feedback after a valid submission.
+
+This is a blueprint/application policy-integration omission, not a defect in
+Rullst's strict CSP default. Payment blueprints should require an explicit,
+provider-specific `form-action` allowlist and a real-browser redirect test.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance

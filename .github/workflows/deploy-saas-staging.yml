@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'blueprints/saas/**'
+      - 'scripts/browser-saas-checkout-smoke.mjs'
       - '.github/workflows/deploy-saas-staging.yml'
   workflow_dispatch:
     inputs:
@@ -51,6 +52,7 @@ jobs:
           cargo fmt --manifest-path blueprints/saas/Cargo.toml --all -- --check
           cargo test --manifest-path blueprints/saas/Cargo.toml --locked --all-targets
           cargo clippy --manifest-path blueprints/saas/Cargo.toml --locked --all-targets -- -D warnings
+          node --check scripts/browser-saas-checkout-smoke.mjs
 
   build-and-push:
     needs: verify
@@ -90,6 +92,8 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@v4
+
       - name: Reject missing or malformed protected configuration
         shell: bash
         env:
@@ -183,3 +187,7 @@ jobs:
           done
           echo '::error::SaaS staging did not become ready; no secret or response body was logged.'
           exit 1
+
+      - name: Verify authenticated Checkout handoff in Chromium
+        if: ${{ inputs.payments_mode == 'test' }}
+        run: node scripts/browser-saas-checkout-smoke.mjs https://saas-staging.rullst.win

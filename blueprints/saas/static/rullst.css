@@ -78,6 +78,22 @@ body {
     transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
+.pricing-nav__form {
+    margin: 0;
+}
+
+.pricing-nav__button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.pricing-nav__status {
+    align-self: center;
+    color: #6ee7b7;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
 .pricing-nav__link--solid {
     border-color: #374151;
     background: #1e293b;
@@ -382,6 +398,7 @@ h1 {
     background: #1f2937;
     color: #9ca3af;
     cursor: not-allowed;
+    opacity: 0.82;
 }
 
 .purchase-authority {
@@ -401,6 +418,18 @@ h1 {
     height: 1.15rem;
     margin-top: 0.1rem;
     accent-color: #38bdf8;
+}
+
+.checkout-status {
+    margin: 0.9rem 0 0;
+    color: #bae6fd;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    text-align: center;
+}
+
+.checkout-status--visible {
+    display: block;
 }
 
 .fine-print {
@@ -539,8 +568,13 @@ tbody tr:last-child td {
         align-items: stretch;
     }
 
-    .pricing-nav__link {
+    .pricing-nav__link,
+    .pricing-nav__status {
         text-align: center;
+    }
+
+    .pricing-nav__button {
+        width: 100%;
     }
 
     .setup-banner {
