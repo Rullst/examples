@@ -424,6 +424,53 @@ out of Git and logs, although the law requires their intentional public display
 to customers. This is a production application compliance omission, not a
 Rullst framework defect.
 
+### APP-SAAS-007 — Production OIDC trust did not match GitHub's immutable subject controls
+
+The production Entra application initially trusted only the mutable
+`repo:owner/repository:environment:...` subject. GitHub emitted the repository's
+enabled immutable subject containing numeric owner and repository IDs, so Azure
+rejected the token before any deployment mutation. Adding a second ordinary
+subject credential with the visible immutable `sub` still did not authenticate
+in the observed environment.
+
+**Correction implemented in infrastructure:** add a Microsoft Entra flexible
+federated identity credential that matches the exact immutable environment
+`sub` and separately requires both GitHub's `repository_id` and
+`repository_owner_id` claims. The production workflow then authenticated with
+a short-lived OIDC token. The mutable credential must be retired after the
+immutable path is fully validated. This is cloud trust configuration, not a
+Rullst framework defect.
+
+### APP-SAAS-008 — Production promotion lacked linked-resource permissions
+
+The production identity had `Container Apps Contributor` only on the
+production Container App. The promotion gate could not read the staging app to
+prove the selected image, and a later secret update could not perform
+`Microsoft.App/managedEnvironments/join/action` on the linked Container Apps
+environment. Both failures occurred before live payments could be enabled.
+
+**Correction implemented in infrastructure:** grant `Reader` only on the
+staging Container App and `Container Apps Operator` only on the linked managed
+environment. Keep `Container Apps Contributor` scoped to the production app.
+The resulting identity can verify staging, join the existing environment and
+update production without receiving resource-group-wide ownership. This is an
+Azure deployment integration requirement, not a Rullst framework defect.
+
+### APP-SAAS-009 — Disabled production was presented as the Stripe sandbox
+
+The payment page selected all environment language from `PAYMENTS_MODE` alone.
+The required fail-closed production deployment uses
+`PAYMENTS_MODE=disabled`, so `saas.rullst.win` incorrectly described itself as
+the published staging environment, linked to “Sandbox terms” and stated that
+it stayed in Stripe Test Mode.
+
+**Correction implemented here:** treat `DEPLOYMENT_TIER` and payment mode as
+separate state. Disabled production now presents a production pre-launch
+status, pre-launch privacy/terms and an explicit no-payment boundary, while
+staging continues to describe Stripe sandbox behavior. Live wording still
+requires the separate protected activation workflow. This is an application
+presentation/configuration defect, not a Rullst framework defect.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance

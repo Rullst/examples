@@ -151,6 +151,11 @@ pub fn live_mode() -> bool {
     std::env::var("PAYMENTS_MODE").is_ok_and(|value| value.trim().eq_ignore_ascii_case("live"))
 }
 
+pub fn production_deployment() -> bool {
+    std::env::var("DEPLOYMENT_TIER")
+        .is_ok_and(|value| value.trim().eq_ignore_ascii_case("production"))
+}
+
 pub fn refund_window_days() -> u16 {
     live_merchant_notice()
         .map(|merchant| merchant.refund_window_days)
@@ -172,6 +177,8 @@ pub async fn privacy_notice(
             Ok(merchant) => legal::production_privacy_notice_page(&merchant, nonce(&csp_nonce)),
             Err(_) => legal::configuration_unavailable_page(nonce(&csp_nonce)),
         }
+    } else if production_deployment() {
+        legal::prelaunch_privacy_notice_page(nonce(&csp_nonce))
     } else {
         legal::privacy_notice_page(nonce(&csp_nonce))
     }
@@ -185,6 +192,8 @@ pub async fn sandbox_terms(
             Ok(merchant) => legal::production_terms_page(&merchant, nonce(&csp_nonce)),
             Err(_) => legal::configuration_unavailable_page(nonce(&csp_nonce)),
         }
+    } else if production_deployment() {
+        legal::prelaunch_terms_page(nonce(&csp_nonce))
     } else {
         legal::sandbox_terms_page(nonce(&csp_nonce))
     }

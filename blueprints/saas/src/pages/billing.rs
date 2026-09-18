@@ -7,13 +7,19 @@ use rullst::response::Html;
 pub struct PaymentPageState {
     pub selected_provider: String,
     pub payment_mode: PaymentMode,
+    pub production_deployment: bool,
     pub expected_price: String,
     pub setup_error: Option<String>,
     pub signed_in: bool,
     pub merchant_notice: Option<MerchantNotice>,
 }
 
-fn pricing_navbar(csrf_token: &str, signed_in: bool, live: bool) -> String {
+fn pricing_navbar(
+    csrf_token: &str,
+    signed_in: bool,
+    live: bool,
+    production_deployment: bool,
+) -> String {
     let account_actions = if signed_in {
         format!(
             "<span class=\"pricing-nav__status\">Signed in</span><a href=\"/dashboard\" class=\"pricing-nav__link\">Dashboard</a><form method=\"post\" action=\"/logout\" class=\"pricing-nav__form\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><button type=\"submit\" class=\"pricing-nav__link pricing-nav__button\">Sign out</button></form>",
@@ -24,6 +30,8 @@ fn pricing_navbar(csrf_token: &str, signed_in: bool, live: bool) -> String {
     };
     let terms_label = if live {
         "Purchase terms"
+    } else if production_deployment {
+        "Pre-launch terms"
     } else {
         "Sandbox terms"
     };
@@ -58,7 +66,11 @@ fn setup_banner(state: &PaymentPageState) -> String {
             ),
             PaymentMode::Disabled => (
                 "Payment checkout is disabled",
-                "This is the fail-closed default. Configure a provider-owned test price, test credentials and a signed webhook before enabling test mode.",
+                if state.production_deployment {
+                    "The production site is online, but real-money Checkout remains locked. Complete the merchant, Stripe, private-artifact, backup and launch gates before enabling it."
+                } else {
+                    "This is the fail-closed default. Configure a provider-owned test price, test credentials and a signed webhook before enabling test mode."
+                },
                 "setup-banner",
             ),
         }
@@ -239,28 +251,39 @@ window.addEventListener('pageshow', reset);
         String::new()
     };
     let live = state.payment_mode == PaymentMode::Live;
+    let production_prelaunch = state.production_deployment && !live;
     let subtitle = if live {
         "A real one-time purchase of the private Rullst and Stripe implementation guide. Stripe hosts payment collection; access is granted only after provider reconciliation."
+    } else if production_prelaunch {
+        "Production infrastructure is online while real-money Checkout remains deliberately locked. No payment can be initiated until every launch gate is completed."
     } else {
         "A deliberately constrained one-time Checkout harness. The published staging environment uses Stripe sandbox data and creates no real charge."
     };
     let checklist_title = if live {
         "Live purchase safeguards"
+    } else if production_prelaunch {
+        "Production launch checklist"
     } else {
         "Test-mode checklist"
     };
     let checklist_items = if live {
         "<li>The exact live one-time Price is verified by the server before redirect.</li><li>Live keys and webhook secrets remain in Azure Container Apps secrets.</li><li>Stripe Checkout collects payment details; this application never receives complete card data.</li><li>Signed webhooks reconcile payment, refund and dispute state.</li><li>The private guide is downloaded only after entitlement and SHA-256 verification.</li>"
+    } else if production_prelaunch {
+        "<li>Publish the required seller identity and reviewed purchase terms.</li><li>Configure the private artifact, exact live Stripe Price and signed webhook.</li><li>Complete backup and restore validation before accepting money.</li><li>Enable live mode only through the protected production workflow.</li><li>Treat the first payment as a genuine independent customer sale, never as test data.</li>"
     } else {
         "<li>Create the exact one-time sandbox Price in the provider dashboard.</li><li>Store test keys only in Azure Container Apps secrets.</li><li>Use the provider's documented test card or payment method.</li><li>Reconcile the signed webhook and persistent local state.</li><li>Test duplicate events, failed payments, expiration and refunds before any live rollout.</li>"
     };
     let heading = if live {
         "A real purchase with explicit boundaries"
+    } else if production_prelaunch {
+        "Production checkout is safely locked"
     } else {
         "Payment testing without hidden assumptions"
     };
     let final_note = if live {
         "This is a real purchase, not an integration test. Use the sandbox environment for test cards. Refunds are requested from the authenticated dashboard and processed through Stripe."
+    } else if production_prelaunch {
+        "No payment can be initiated while Checkout is disabled. Use the separate staging site for Stripe test cards."
     } else {
         "Never use a real card to test Stripe live mode. This environment stays in Stripe Test Mode and creates no real charge."
     };
@@ -277,7 +300,7 @@ window.addEventListener('pageshow', reset);
                 <div class="glow-bg"></div>
                 <div class="glow-bg-right"></div>
                 <main class="container">
-                    { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in, live)) }
+                    { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in, live, state.production_deployment)) }
                     <header class="header">
                         <span class="badge">"Rullst SaaS Blueprint"</span>
                         <h1>{heading}</h1>
@@ -310,6 +333,7 @@ mod tests {
         PaymentPageState {
             selected_provider: "stripe".to_owned(),
             payment_mode: PaymentMode::Test,
+            production_deployment: false,
             expected_price: "BRL 1.00".to_owned(),
             setup_error: None,
             signed_in,
@@ -354,5 +378,19 @@ mod tests {
         assert!(page.contains("Purchase terms"));
         assert!(page.contains("529.982.247-25"));
         assert!(page.contains("Read the purchase and refund terms before paying."));
+    }
+
+    #[test]
+    fn disabled_production_is_not_described_as_staging_or_sandbox() {
+        let mut state = state(false);
+        state.payment_mode = PaymentMode::Disabled;
+        state.production_deployment = true;
+        let page = pricing_page("csrf-token", "csp-nonce", &state).0;
+
+        assert!(page.contains("Production checkout is safely locked"));
+        assert!(page.contains("Pre-launch terms"));
+        assert!(page.contains("No payment can be initiated"));
+        assert!(!page.contains("published staging environment"));
+        assert!(!page.contains("This environment stays in Stripe Test Mode"));
     }
 }

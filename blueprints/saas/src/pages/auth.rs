@@ -10,7 +10,15 @@ pub fn login_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Htm
         String::new()
     };
 
-    Html(format!(
+    let live_mode = crate::controllers::legal_controller::live_mode();
+    let terms_label = if live_mode {
+        "Purchase terms"
+    } else if crate::controllers::legal_controller::production_deployment() {
+        "Pre-launch terms"
+    } else {
+        "Sandbox terms"
+    };
+    let document = format!(
         "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head>\
          <meta charset=\"utf-8\" />\
          <link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\" />\
@@ -38,12 +46,13 @@ pub fn login_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Htm
          <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
          <button type=\"submit\" class=\"btn-primary\">Sign In</button>\
          </form>\
-         <div class=\"links\">Don't have an account? <a href=\"/register\">Register</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">Sandbox terms</a></div>\
+         <div class=\"links\">Don't have an account? <a href=\"/register\">Register</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">__RULLST_TERMS_LABEL__</a></div>\
          </div></body></html>",
         rullst::html::escape_str(csp_nonce),
         error_html,
         rullst::html::escape_str(csrf_token)
-    ))
+    );
+    Html(document.replace("__RULLST_TERMS_LABEL__", terms_label))
 }
 
 pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Html<String> {
@@ -56,7 +65,24 @@ pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> 
         String::new()
     };
 
-    Html(format!(
+    let live_mode = crate::controllers::legal_controller::live_mode();
+    let production_prelaunch =
+        !live_mode && crate::controllers::legal_controller::production_deployment();
+    let terms_label = if live_mode {
+        "Purchase terms"
+    } else if production_prelaunch {
+        "Pre-launch terms"
+    } else {
+        "Sandbox terms"
+    };
+    let account_label = if live_mode {
+        "production account"
+    } else if production_prelaunch {
+        "production pre-launch account"
+    } else {
+        "sandbox account"
+    };
+    let document = format!(
         "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head>\
          <meta charset=\"utf-8\" />\
          <link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\" />\
@@ -83,15 +109,20 @@ pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> 
          <div class=\"form-group\"><label>Name</label><input type=\"text\" name=\"name\" placeholder=\"John Doe\" required /></div>\
          <div class=\"form-group\"><label>Email</label><input type=\"email\" name=\"email\" placeholder=\"you@example.com\" required /></div>\
          <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
-         <p class=\"links\">By creating this sandbox account, you acknowledge the <a href=\"/privacy\">Privacy notice</a> and <a href=\"/terms\">Sandbox terms</a>. This is not optional marketing consent.</p>\
+         <p class=\"links\">By creating this __RULLST_ACCOUNT_LABEL__, you acknowledge the <a href=\"/privacy\">Privacy notice</a> and <a href=\"/terms\">__RULLST_TERMS_LABEL__</a>. This is not optional marketing consent.</p>\
          <button type=\"submit\" class=\"btn-primary\">Register</button>\
          </form>\
-         <div class=\"links\">Already have an account? <a href=\"/login\">Sign In</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">Sandbox terms</a></div>\
+         <div class=\"links\">Already have an account? <a href=\"/login\">Sign In</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">__RULLST_TERMS_LABEL__</a></div>\
          </div></body></html>",
         rullst::html::escape_str(csp_nonce),
         error_html,
         rullst::html::escape_str(csrf_token)
-    ))
+    );
+    Html(
+        document
+            .replace("__RULLST_TERMS_LABEL__", terms_label)
+            .replace("__RULLST_ACCOUNT_LABEL__", account_label),
+    )
 }
 
 pub fn dashboard_page(
@@ -103,6 +134,8 @@ pub fn dashboard_page(
     live_mode: bool,
     refund_status: Option<&str>,
 ) -> Html<String> {
+    let production_prelaunch =
+        !live_mode && crate::controllers::legal_controller::production_deployment();
     let nonce = rullst::html::escape_str(csp_nonce);
     let user_name = rullst::html::escape_str(user_name);
     let csrf_token = rullst::html::escape_str(csrf_token);
@@ -112,17 +145,20 @@ pub fn dashboard_page(
         } else {
             "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download Stripe report</a>"
         }
+    } else if live_mode {
+        "<a class=\"btn-report\" href=\"/pricing\">Open one-time checkout</a>"
+    } else if production_prelaunch {
+        "<a class=\"btn-report\" href=\"/pricing\">View production launch status</a>"
     } else {
-        if live_mode {
-            "<a class=\"btn-report\" href=\"/pricing\">Open one-time checkout</a>"
-        } else {
-            "<a class=\"btn-report\" href=\"/pricing\">Open sandbox checkout</a>"
-        }
+        "<a class=\"btn-report\" href=\"/pricing\">Open sandbox checkout</a>"
     };
     let certificate_action = certificate_public_id.map_or_else(
         || {
             if has_stripe_report {
                 "<p class=\"muted small\">Certificate issuance is still being reconciled.</p>"
+                    .to_owned()
+            } else if production_prelaunch {
+                "<p class=\"muted small\">Production Checkout is disabled; no purchase certificate can be issued yet.</p>"
                     .to_owned()
             } else {
                 "<p class=\"muted small\">Complete the verified sandbox checkout to receive a privacy-preserving tester certificate.</p>"
@@ -155,11 +191,15 @@ pub fn dashboard_page(
     };
     let terms_label = if live_mode {
         "Purchase terms"
+    } else if production_prelaunch {
+        "Pre-launch terms"
     } else {
         "Sandbox terms"
     };
     let entitlement_description = if live_mode {
         "Access is granted only after a verified live Stripe event. Refunds and disputes revoke access after provider confirmation."
+    } else if production_prelaunch {
+        "Real-money Checkout is disabled during production readiness validation."
     } else {
         "Access is granted only after a verified, replay-protected provider test event."
     };

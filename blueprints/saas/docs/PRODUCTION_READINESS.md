@@ -57,6 +57,21 @@ secrets:
 - production-scoped `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and
   `AZURE_SUBSCRIPTION_ID` OIDC values.
 
+The GitHub repository uses immutable OIDC subjects. The Microsoft Entra app
+must therefore trust the exact immutable repository/environment subject and,
+for the reviewed deployment, uses a flexible federated identity credential
+that also requires the matching `repository_id` and `repository_owner_id`.
+Do not fall back to a mutable name-only subject after enabling immutable
+subjects.
+
+Keep Azure RBAC scoped to the individual resources used by the workflow. The
+production OIDC service principal needs `Container Apps Contributor` on the
+`rullst-saas` app, `Reader` on `rullst-saas-staging` to prove the accepted
+image, and `Container Apps Operator` on the linked managed environment so an
+app update can perform `managedEnvironments/join/action` without granting
+environment write access. Private artifact and backup storage roles remain
+scoped to their respective blob containers.
+
 Stripe live credentials are deliberately absent from this preparation
 workflow. They must be introduced only by the separately reviewed live-launch
 change after the acceptance gate passes.

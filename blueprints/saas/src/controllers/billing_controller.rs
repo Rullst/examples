@@ -717,6 +717,7 @@ pub async fn pricing_view(
         Ok(config) => PaymentPageState {
             selected_provider: config.provider,
             payment_mode: config.mode,
+            production_deployment: crate::controllers::legal_controller::production_deployment(),
             expected_price: format_amount(config.expected_amount_minor, &config.expected_currency),
             setup_error: None,
             signed_in,
@@ -729,6 +730,7 @@ pub async fn pricing_view(
         Err(error) => PaymentPageState {
             selected_provider: "unavailable".to_owned(),
             payment_mode: PaymentMode::Disabled,
+            production_deployment: crate::controllers::legal_controller::production_deployment(),
             expected_price: "not configured".to_owned(),
             setup_error: Some(error.to_string()),
             signed_in,

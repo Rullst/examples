@@ -52,6 +52,48 @@ pub fn sandbox_terms_page(csp_nonce: &str) -> Html<String> {
     )
 }
 
+fn prelaunch_page(title: &str, subtitle: &str, content: &str, csp_nonce: &str) -> Html<String> {
+    Html(format!(
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex,nofollow,noarchive\"><title>{}</title><link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\"><style nonce=\"{}\">{}</style></head><body><main><nav><a href=\"/\">SaaS blueprint</a><a href=\"/privacy\">Privacy notice</a><a href=\"/terms\">Pre-launch terms</a></nav><header><p class=\"eyebrow\">Rullst SaaS production pre-launch</p><h1>{}</h1><p class=\"subtitle\">{}</p><p class=\"version\">Effective {} &middot; Version {}</p></header>{}<footer><p>Privacy and support contact: <a href=\"mailto:officialrullst@gmail.com\">officialrullst@gmail.com</a></p><p>Real-money Checkout is disabled. These pre-launch notices do not replace the seller disclosure and purchase terms required before launch.</p></footer></main></body></html>",
+        rullst::html::escape_str(title),
+        rullst::html::escape_str(csp_nonce),
+        LEGAL_CSS,
+        rullst::html::escape_str(title),
+        rullst::html::escape_str(subtitle),
+        EFFECTIVE_DATE,
+        VERSION,
+        content,
+    ))
+}
+
+pub fn prelaunch_privacy_notice_page(csp_nonce: &str) -> Html<String> {
+    prelaunch_page(
+        "Pre-launch privacy notice",
+        "What the production pre-launch site processes while real-money Checkout remains disabled.",
+        r#"
+        <section><h2>Scope and contact</h2><p>This notice covers the Rullst SaaS production infrastructure before payment launch. Real-money Checkout is disabled. Privacy requests are handled at <a href="mailto:officialrullst@gmail.com">officialrullst@gmail.com</a>. Do not send passwords, card data or government identifiers by email.</p></section>
+        <section><h2>Account data</h2><p>If you create an account before launch, the application stores the supplied name, normalized email, an Argon2id password hash and bounded authentication/security metadata. Essential encrypted-session and CSRF cookies are used. Advertising, analytics and personalization cookies are not enabled.</p></section>
+        <section><h2>No payment processing</h2><p>The application cannot initiate a Stripe Checkout while the production payment gate is disabled. Do not enter real payment information anywhere on this site. Use the separate staging environment only with Stripe's documented test methods.</p></section>
+        <section><h2>Infrastructure and rights</h2><p>The application runs in Microsoft Azure and stores application records in Neon PostgreSQL hosted in an AWS US region. You may request access, correction, export, restriction or closure through the contact above. Identity is verified before account information is disclosed or changed.</p></section>
+        "#,
+        csp_nonce,
+    )
+}
+
+pub fn prelaunch_terms_page(csp_nonce: &str) -> Html<String> {
+    prelaunch_page(
+        "Production pre-launch terms",
+        "Conditions for using the production site before real-money Checkout is enabled.",
+        r#"
+        <section><h2>No offer or charge yet</h2><p>The production application is online for readiness validation, but Checkout is disabled. No button on this site can currently create a real payment, purchase entitlement or Founding Customer certificate.</p></section>
+        <section><h2>Account use</h2><p>You must control the email address used for an account and must not probe other users, bypass authorization, automate abuse, overload the service or submit secrets or real financial information. Creating an account records no optional marketing consent.</p></section>
+        <section><h2>Launch boundary</h2><p>A real offer will appear only after the seller identity, exact price, refund terms, private deliverable, signed Stripe webhook, reconciliation and backup controls are configured. The page will then state clearly that Checkout creates a real charge and will publish the applicable purchase terms before payment.</p></section>
+        <section><h2>Availability</h2><p>This low-cost serverless showcase can scale to zero, start slowly or be temporarily unavailable. No uptime commitment is made during pre-launch.</p></section>
+        "#,
+        csp_nonce,
+    )
+}
+
 fn production_page(
     title: &str,
     subtitle: &str,
@@ -137,7 +179,9 @@ const LEGAL_CSS: &str = r#"
 
 #[cfg(test)]
 mod tests {
-    use super::{privacy_notice_page, production_terms_page, sandbox_terms_page};
+    use super::{
+        prelaunch_terms_page, privacy_notice_page, production_terms_page, sandbox_terms_page,
+    };
     use crate::controllers::legal_controller::MerchantNotice;
 
     #[test]
@@ -169,5 +213,13 @@ mod tests {
         assert!(page.contains("Seller &amp; Owner"));
         assert!(page.contains("529.982.247-25"));
         assert!(page.contains("123 Public Street, Brazil"));
+    }
+
+    #[test]
+    fn prelaunch_terms_do_not_claim_staging_or_real_checkout() {
+        let page = prelaunch_terms_page("nonce").0;
+        assert!(page.contains("production application is online"));
+        assert!(page.contains("Checkout is disabled"));
+        assert!(!page.contains("Rullst SaaS staging"));
     }
 }
