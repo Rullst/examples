@@ -258,6 +258,60 @@ not use cookies and still requires the independent high-entropy Bearer token in
 constant time. This is a narrowly scoped v12 workaround, not a claim that the
 framework API gap is fixed.
 
+## RULLST-005 — Mail sanitizer corrupts password-reset action URLs
+
+**Classification:** functional security defect / account-recovery blocker.
+**Affected package:** `rullst-mail` 12.0.0.
+**Evidence status:** confirmed by source inspection and pipeline reproduction.
+
+### Cause and evidence
+
+`rullst-mail/src/pipeline.rs::DeliveryPipeline::prepare()` passes every message
+through `Message::sanitize_secrets()`. The redactor in
+`rullst-mail/src/security.rs` replaces text following markers that include
+`token=`. This runs on the subject, HTML body and text body, so an intentional
+password-reset link such as `/reset?token=abc123` becomes
+`/reset?token=[REDACTED]` before the provider receives it.
+
+The package's own `MailFactory::fake_password_reset()` test uses
+`https://app.com/reset?token=123`, but verifies only factory output and never
+runs that output through the mandatory delivery pipeline. The two individually
+passing behaviors are therefore incompatible in a real delivery.
+
+### Reproduction
+
+1. Build a message with `MailFactory::fake_password_reset()` and a URL that
+   contains `?token=abc123`.
+2. Pass the message to `DeliveryPipeline::prepare()`.
+3. Inspect the prepared HTML or text body.
+4. Observe that the action URL now contains `token=[REDACTED]` and cannot be
+   used to recover the account.
+
+**Expected behavior:** an explicitly typed password-reset action URL must reach
+the recipient intact, while accidental credentials in arbitrary content and
+provider errors remain redacted.
+
+### Suggested framework correction
+
+Use a typed action-link field or context-aware structured sanitizer instead of
+matching every `token=` substring in the complete rendered body. Keep the
+fail-closed secret scanner for untrusted free-form fields. Add a regression test
+that routes `MailFactory::fake_password_reset()` through
+`DeliveryPipeline::prepare()`, verifies the exact usable link and separately
+proves that unrelated API keys and passwords are still redacted.
+
+### Application workaround planned here
+
+The SaaS recovery flow will use a high-entropy `#code=...` URL fragment, remove
+it from browser history immediately and submit it only in the protected reset
+form. This avoids the broken marker and keeps the code out of ordinary HTTP URL
+logs. It does not repair the framework and must be removed or reevaluated once
+the upstream pipeline has a typed action-link contract.
+
+The complete Rullst Mail improvement proposal and acceptance criteria are in
+[`saas-improvements-needed.md`](saas-improvements-needed.md), section
+**Rullst Mail and account-lifecycle improvements**.
+
 ## RULLST-002 — SaaS/Capital live-payment contract defects
 
 The v12.0.0 SaaS generator and Capital adapters have confirmed payment defects

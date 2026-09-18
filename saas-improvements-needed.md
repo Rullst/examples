@@ -499,6 +499,154 @@ after success. A storage lifecycle rule is limited to
 days; Azure's existing 30-day soft-delete protection remains separate. This is
 an application operations/readiness gap, not a Rullst framework defect.
 
+## Rullst Mail and account-lifecycle improvements
+
+Rullst Mail should remain the framework's transactional-message SDK and
+orchestration boundary. It should compose, validate, queue, inspect and deliver
+messages through replaceable providers; it should not try to become a global
+mail-transfer network inside the framework crate. Applications still need a
+separate provider such as Resend, Postmark, SendGrid, Amazon SES, SMTP or a
+future Azure Communication Services driver. A hosted `Rullst Mail Cloud` could
+exist later as a separate service, because operating an actual sender requires
+IP/domain reputation, reverse DNS, SPF, DKIM, DMARC, provider feedback loops,
+bounce and complaint handling, abuse controls, rate limits and IP warm-up.
+
+### MAIL-001 — Mandatory sanitization breaks normal password-reset links
+
+**Classification:** confirmed v12 framework defect / account-recovery blocker.
+**Affected package:** `rullst-mail` 12.0.0.
+
+`DeliveryPipeline::prepare()` clones every message and calls
+`Message::sanitize_secrets()`. The redactor treats every value following the
+literal marker `token=` as an accidental secret and replaces it with
+`[REDACTED]`, including values inside intended message links. At the same time,
+the package's own `MailFactory::fake_password_reset()` example is tested with
+`https://app.com/reset?token=123`, but that factory test does not pass the
+message through the mandatory delivery pipeline. A normal reset link therefore
+looks valid in a factory test and is broken when actually prepared for
+delivery.
+
+The correction must not simply disable secret scanning. Introduce a typed,
+explicit action-link field or a context-aware sanitizer that preserves approved
+opaque reset URLs while continuing to redact accidental credentials from
+subjects, arbitrary HTML/text and provider errors. Add an end-to-end regression
+test that sends the password-reset factory output through
+`DeliveryPipeline::prepare()` and proves both that the link remains usable and
+that unrelated secrets are still removed. Applications on v12 can temporarily
+avoid the exact marker, for example with a `#code=...` fragment that is removed
+from browser history immediately, but that is an application workaround rather
+than a framework fix. This defect is also tracked as **RULLST-005** in
+[`rullst-errors.md`](rullst-errors.md).
+
+### Recommended package boundary
+
+Add a small `rullst-auth-mail` integration layer instead of coupling the core
+authentication algorithms directly to one email provider. `rullst-auth` should
+continue to own password hashing, identity and authentication policy;
+`rullst-mail` should own message policy and delivery; and the application or an
+auth integration crate should own the account-recovery transaction.
+
+The integration API should expose typed account-lifecycle events rather than
+arbitrary templates:
+
+- password reset requested and password changed;
+- email verification requested and email verified;
+- welcome/account created;
+- login from a new device and security alert;
+- email-address change requested and completed; and
+- account closure/export completed.
+
+Each event must carry the minimum data necessary for its purpose. Raw
+passwords, full session cookies, provider secrets and complete reset tokens
+must never enter logs, telemetry, Studio inspection or generic event payloads.
+
+### Secure token and session contract
+
+Provide a storage trait with maintained PostgreSQL, SQLite and Redis adapters
+for opaque action tokens. Password-reset and email-verification tokens must be
+cryptographically random, stored only as a keyed digest or one-way hash, bound
+to one account and one purpose, short-lived, single-use and atomically consumed.
+Creating a newer reset request should revoke older unused reset tokens. Apply
+per-account, privacy-preserving request limits and a global abuse ceiling while
+returning the same public response whether an account exists or not.
+
+A successful password change must revoke every active session for that account
+and invalidate all outstanding reset links in the same database transaction.
+The current encrypted-cookie-only helper cannot provide this guarantee by
+itself because its cookie remains valid until expiry. Rullst Auth therefore
+needs a durable session-version/session-registry contract that works with the
+framework's PostgreSQL deployments, not only a process-local or SQLite store.
+
+### Durable delivery and provider feedback
+
+Add a transactional outbox that can be written in the same database
+transaction as an account event. Workers should claim jobs with bounded
+retries, exponential backoff, stable idempotency keys and redacted failure
+classes. The durable record should contain no recoverable password and should
+minimize or encrypt message data; an action token should be reconstructible
+only with an application secret or stored solely as a digest. Process crashes
+must not silently lose a reset request.
+
+Add signed webhook ingestion for provider delivery, bounce, block and complaint
+events. Maintain a suppression list and prevent automatic retries to addresses
+that permanently bounced or complained. Provider request/response bodies and
+recipient addresses must not be copied into unrestricted logs. Include a
+native Azure Communication Services driver with Managed Identity support so an
+Azure deployment does not need to store a long-lived provider key; retain the
+existing replaceable-provider contract.
+
+### Purpose policy, consent and internationalization
+
+Introduce an explicit message purpose such as `Security`, `AccountLifecycle`,
+`Billing` or `Marketing`. Security messages should disable open/click tracking
+and must never depend on marketing consent. Marketing messages require a
+separate lawful basis/consent record, unsubscribe handling and suppression
+enforcement. Billing messages must not disclose unnecessary transaction data.
+
+Templates should select a supported locale from the user's recorded preference
+with a deterministic fallback, rather than inferring language from an email
+address or an AI response. Security-critical wording and links must remain
+deterministic, reviewable and testable; generative AI must not rewrite action
+URLs, expiration times or legal/security instructions.
+
+### Privacy-safe Studio and Nexus operations
+
+Add a restricted Mail operations panel that shows aggregate delivery state,
+provider, template/version, timestamps, redacted failure class and correlation
+ID. It must never display reset codes, full action URLs, provider API keys or
+raw message bodies. A “resend password reset” action must invalidate the old
+token and create a new one; it must not reveal or replay the previous token.
+Access requires explicit authorization and an audit trail.
+
+### Recommended implementation order
+
+1. Fix **MAIL-001** and add mandatory-pipeline regression coverage.
+2. Add the auth/mail integration contract, hashed one-time token store and
+   PostgreSQL session revocation.
+3. Add the transactional outbox, retry/idempotency behavior and provider
+   feedback/suppression webhooks.
+4. Add purpose policies, deterministic locale templates and privacy-safe
+   Studio/Nexus operations.
+5. Add Azure Communication Services and any other provider drivers.
+6. Consider AI-assisted copy, AMP email or advanced engagement analytics only
+   after the security and delivery foundations above are complete.
+
+### Acceptance criteria for password recovery
+
+- The request response and observable timing do not disclose account existence.
+- A token has at least 128 bits of entropy, is never stored in plaintext,
+  expires in 15–30 minutes, works once and is purpose/account bound.
+- Request and consume endpoints have independent abuse controls; no password,
+  token, session cookie or provider secret reaches logs or telemetry.
+- Reset links survive the real mandatory mail pipeline unchanged and use HTTPS
+  outside local development.
+- Password replacement, token consumption, sibling-token invalidation and
+  session revocation are atomic.
+- Delivery is durable, retryable and observable without exposing message
+  secrets; permanent bounces and complaints are suppressed.
+- Tests cover unknown accounts, expired/used/replaced tokens, concurrent
+  consumption, provider failure, process retry and session invalidation.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance

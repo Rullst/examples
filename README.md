@@ -96,25 +96,26 @@ The **LMS Blueprint** is a full production-grade application generated via `carg
 
 ## 💳 The SaaS Payment Blueprint (`blueprints/saas`)
 
-The audited SaaS example contains a deliberately constrained provider test-mode
-harness. Rullst Capital 12.0.0 exports **10 incoming billing adapters and 1
+The audited SaaS example is published in two deliberately isolated
+environments: [permanent Stripe sandbox](https://saas-staging.rullst.win) and
+[customer-facing production](https://saas.rullst.win). Rullst Capital 12.0.0
+exports **10 incoming billing adapters and 1
 outgoing payout adapter**, but adapter presence is not the same as a usable
 live checkout. This example currently enables only an application-owned Stripe
-one-time sandbox path after a server-side Price check; Razorpay and the other
-providers remain report/roadmap entries until each has an audited one-time
-contract. Known Capital defects and v12 capability boundaries are shown
-directly in its UI.
+one-time path after a server-side Price check; Razorpay and the other providers
+remain report/roadmap entries until each has an audited one-time contract.
+Known Capital defects and v12 capability boundaries are shown directly in its
+UI.
 
-Payments are disabled by default. The planned first published environment uses
-the Stripe sandbox plus persistent PostgreSQL; it requires sandbox credentials
-from a secret manager, an HTTPS return URL, a provider-owned one-time Price and
-an exact server-owned amount/currency. Live mode remains blocked until sandbox,
-refund, monitoring and legal acceptance evidence exists. No credentials are
-included in this repository.
+Payments remain disabled by default in source. Staging uses Stripe test data;
+production uses separate live credentials and can create a real charge. The two
+deployments also use separate persistent PostgreSQL databases, webhook secrets,
+Price IDs, application keys and private administration credentials. No private
+credential is included in this repository.
 
 See the [SaaS blueprint guide](blueprints/saas/README.md) for setup and the
 [framework improvement report](saas-improvements-needed.md) for the full
-provider-by-provider audit.
+provider-by-provider and Rullst Mail account-lifecycle audit.
 
 ---
 

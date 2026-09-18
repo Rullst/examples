@@ -13,6 +13,23 @@ live mode. Both use persistent PostgreSQL, private Nexus credentials and no
 production Studio process. Live mode is fail-closed unless every required
 credential, legal field, private artifact and reconciliation control is valid.
 
+## Published environments
+
+| Environment | Public URL | Payment boundary | Data boundary |
+| --- | --- | --- | --- |
+| Staging | `https://saas-staging.rullst.win` | Permanent Stripe sandbox; test payment methods only; no real charge | Separate Neon PostgreSQL project, Stripe sandbox objects, webhook secret and private Nexus credentials |
+| Production | `https://saas.rullst.win` | Customer-facing Stripe live checkout; a click can create a real charge | Separate Neon PostgreSQL project, Stripe live objects, webhook secret, merchant disclosure and private Nexus credentials |
+
+Both deployments are intentionally retained. Staging is where checkout,
+webhook, refund and deployment changes are verified without moving money;
+production is never a substitute for provider sandbox testing. They must not
+share databases, Stripe keys, Price IDs, webhook secrets, application keys or
+administrator credentials. The authoritative environment rationale and current
+operational status are maintained in
+[`docs/DEPLOYMENT_PROFILE.md`](docs/DEPLOYMENT_PROFILE.md); the live launch gate
+is maintained in
+[`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md).
+
 ## Adapter inventory
 
 Rullst Capital 12.0.0 exports 10 incoming billing adapters and one outgoing
