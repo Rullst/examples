@@ -395,6 +395,35 @@ This is a blueprint/application policy-integration omission, not a defect in
 Rullst's strict CSP default. Payment blueprints should require an explicit,
 provider-specific `form-action` allowlist and a real-browser redirect test.
 
+### APP-SAAS-005 — Pre-provisioned production ingress retained the placeholder port
+
+The production Azure Container App was safely pre-provisioned with a neutral
+Microsoft image listening on port 80. The accepted SaaS image listens on port
+3000, but the initial production promotion workflow updated only the image and
+environment variables. The custom domain would therefore remain routed to the
+wrong target port after promotion and its health check would fail.
+
+**Correction implemented here:** the fail-closed production promotion now
+updates the existing ingress target to port 3000 before verifying application
+and database readiness. This was a deployment-integration defect, not a Rullst
+framework defect.
+
+### APP-SAAS-006 — Live offer omitted required Brazilian seller disclosure
+
+The initial production notice showed a legal seller name, country and support
+email but omitted the seller's CPF/CNPJ and physical address. Brazilian
+e-commerce rules require supplier registration and physical/electronic address
+to be readily visible before the contract is concluded.
+
+**Correction implemented here:** live mode now requires a checksum-valid CPF or
+CNPJ and a bounded public physical address supplied only through protected
+deployment secrets. Both are HTML-escaped and displayed with the legal seller
+name and support email on the offer and legal notices. The application refuses
+to start live Checkout when the disclosure is incomplete. The values remain
+out of Git and logs, although the law requires their intentional public display
+to customers. This is a production application compliance omission, not a
+Rullst framework defect.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance

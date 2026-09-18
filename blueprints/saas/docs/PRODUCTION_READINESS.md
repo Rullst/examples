@@ -67,8 +67,22 @@ The protected live-launch workflow is
 
 - `STRIPE_LIVE_SECRET_KEY` and `STRIPE_LIVE_WEBHOOK_SECRET`;
 - `SAAS_PRODUCTION_RECONCILIATION_TOKEN` (32-200 random characters);
-- `SAAS_PRODUCTION_MERCHANT_LEGAL_NAME` (the reviewed public seller name, not a
-  CPF or private residential address).
+- `SAAS_PRODUCTION_MERCHANT_LEGAL_NAME` (the reviewed public legal seller
+  name);
+- `SAAS_PRODUCTION_MERCHANT_TAX_ID` (the CPF or CNPJ that will be published to
+  customers); and
+- `SAAS_PRODUCTION_MERCHANT_PHYSICAL_ADDRESS` (a legally valid physical or
+  correspondence address that will be published to customers).
+
+Do not put those values in Git, workflow inputs, issue text or chat. Add them
+directly as GitHub environment secrets. The application validates Brazilian
+CPF/CNPJ check digits and refuses to start live mode when the required public
+seller disclosure is absent. Individual sellers should obtain qualified advice
+before publishing a residential address or choosing an alternative business
+correspondence address. This gate implements the disclosure baseline in
+[Brazilian Decree 7,962/2013, article 2](https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2013/decreto/d7962.htm)
+and [Decree 10,271/2020](https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2020/decreto/d10271.htm);
+it is an engineering safeguard, not a substitute for legal or tax advice.
 
 The live workflow also requires the non-secret environment variables
 `SAAS_PAID_ARTIFACT_STORAGE_ACCOUNT`, `SAAS_PAID_ARTIFACT_CONTAINER`,
@@ -81,6 +95,16 @@ It accepts the active live `price_...` ID and an exact amount choice. Use `100`
 for the initial BRL 1.00 launch. Raising the price to BRL 10.00 requires a new
 one-time Stripe Price and one workflow run selecting `1000`, so Price ID and
 server-enforced amount change together.
+
+The audited initial offer is deliberately fixed to BRL. Checkout leaves
+eligible payment-method selection to the Stripe Dashboard but explicitly
+disables Adaptive Pricing for this offer, because entitlement reconciliation
+requires the session currency and amount to remain exactly equal to the
+server-owned BRL Price. International cards can be eligible, but availability
+depends on Stripe, the issuing bank, sanctions and the configured payment
+methods; an issuer can convert BRL and add foreign-exchange or international
+fees. Supporting local-currency prices later requires a separately tested
+reconciliation contract rather than merely enabling a Dashboard switch.
 
 The webhook endpoint must subscribe to all six events:
 

@@ -644,6 +644,7 @@ async fn create_stripe_checkout(
     let idempotency_key = format!("rullst-checkout-{}", attempt.id);
     let form = [
         ("mode", "payment".to_owned()),
+        ("adaptive_pricing[enabled]", "false".to_owned()),
         ("success_url", success_url),
         ("cancel_url", cancel_url),
         ("customer_email", normalize_email(&identity.email)),
@@ -719,6 +720,11 @@ pub async fn pricing_view(
             expected_price: format_amount(config.expected_amount_minor, &config.expected_currency),
             setup_error: None,
             signed_in,
+            merchant_notice: (config.mode == PaymentMode::Live)
+                .then(crate::controllers::legal_controller::live_merchant_notice)
+                .transpose()
+                .ok()
+                .flatten(),
         },
         Err(error) => PaymentPageState {
             selected_provider: "unavailable".to_owned(),
@@ -726,6 +732,7 @@ pub async fn pricing_view(
             expected_price: "not configured".to_owned(),
             setup_error: Some(error.to_string()),
             signed_in,
+            merchant_notice: None,
         },
     };
     billing::pricing_page(csrf_token, nonce, &state)

@@ -51,6 +51,8 @@ jobs:
           PAID_ARTIFACT_BLOB: ${{ vars.SAAS_PAID_ARTIFACT_BLOB }}
           PAID_ARTIFACT_SHA256: ${{ vars.SAAS_PAID_ARTIFACT_SHA256 }}
           MERCHANT_LEGAL_NAME: ${{ secrets.SAAS_PRODUCTION_MERCHANT_LEGAL_NAME }}
+          MERCHANT_TAX_ID: ${{ secrets.SAAS_PRODUCTION_MERCHANT_TAX_ID }}
+          MERCHANT_PHYSICAL_ADDRESS: ${{ secrets.SAAS_PRODUCTION_MERCHANT_PHYSICAL_ADDRESS }}
         run: |
           [[ "$PRICE_ID" =~ ^price_[A-Za-z0-9_-]+$ ]]
           [[ "$AMOUNT_MINOR" = '100' || "$AMOUNT_MINOR" = '1000' ]]
@@ -63,6 +65,8 @@ jobs:
           [[ "$PAID_ARTIFACT_BLOB" =~ ^[A-Za-z0-9._-]+\.md$ ]]
           [[ "$PAID_ARTIFACT_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]
           test -n "$MERCHANT_LEGAL_NAME"
+          test -n "$MERCHANT_TAX_ID"
+          test -n "$MERCHANT_PHYSICAL_ADDRESS"
 
       - name: Verify the exact live one-time Stripe Price
         shell: bash
@@ -124,12 +128,16 @@ jobs:
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_LIVE_WEBHOOK_SECRET }}
           RECONCILIATION_TOKEN: ${{ secrets.SAAS_PRODUCTION_RECONCILIATION_TOKEN }}
           MERCHANT_LEGAL_NAME: ${{ secrets.SAAS_PRODUCTION_MERCHANT_LEGAL_NAME }}
+          MERCHANT_TAX_ID: ${{ secrets.SAAS_PRODUCTION_MERCHANT_TAX_ID }}
+          MERCHANT_PHYSICAL_ADDRESS: ${{ secrets.SAAS_PRODUCTION_MERCHANT_PHYSICAL_ADDRESS }}
         run: |
           az containerapp secret set --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --secrets \
             stripe-live-key="$STRIPE_KEY" \
             stripe-live-webhook-secret="$STRIPE_WEBHOOK_SECRET" \
             reconciliation-token="$RECONCILIATION_TOKEN" \
             merchant-legal-name="$MERCHANT_LEGAL_NAME" \
+            merchant-tax-id="$MERCHANT_TAX_ID" \
+            merchant-physical-address="$MERCHANT_PHYSICAL_ADDRESS" \
             --only-show-errors --output none
 
       - name: Atomically activate the exact live offer
@@ -160,6 +168,8 @@ jobs:
               PAID_ARTIFACT_SHA256="$PAID_ARTIFACT_SHA256" \
               PAID_ARTIFACT_FILENAME=rullst-stripe-production-guide-v1.md \
               MERCHANT_LEGAL_NAME=secretref:merchant-legal-name \
+              MERCHANT_TAX_ID=secretref:merchant-tax-id \
+              MERCHANT_PHYSICAL_ADDRESS=secretref:merchant-physical-address \
               MERCHANT_COUNTRY=BR \
               SUPPORT_EMAIL=officialrullst@gmail.com \
               REFUND_WINDOW_DAYS=14 \

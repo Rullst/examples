@@ -127,6 +127,11 @@ jobs:
               NEXUS_ADMIN_PASSWORD=secretref:nexus-password \
             --only-show-errors --output none
 
+          az containerapp ingress update --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --target-port 3000 \
+            --transport auto \
+            --only-show-errors --output none
+
       - name: Verify the immutable revision and production database
         shell: bash
         env:

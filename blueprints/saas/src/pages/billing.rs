@@ -1,5 +1,6 @@
 use crate::controllers::billing_controller::PaymentMode;
 use crate::controllers::gateway_catalog::{GATEWAYS, GatewayKind, LiveCheckoutStatus};
+use crate::controllers::legal_controller::MerchantNotice;
 use rullst::html;
 use rullst::response::Html;
 
@@ -9,9 +10,10 @@ pub struct PaymentPageState {
     pub expected_price: String,
     pub setup_error: Option<String>,
     pub signed_in: bool,
+    pub merchant_notice: Option<MerchantNotice>,
 }
 
-fn pricing_navbar(csrf_token: &str, signed_in: bool) -> String {
+fn pricing_navbar(csrf_token: &str, signed_in: bool, live: bool) -> String {
     let account_actions = if signed_in {
         format!(
             "<span class=\"pricing-nav__status\">Signed in</span><a href=\"/dashboard\" class=\"pricing-nav__link\">Dashboard</a><form method=\"post\" action=\"/logout\" class=\"pricing-nav__form\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><button type=\"submit\" class=\"pricing-nav__link pricing-nav__button\">Sign out</button></form>",
@@ -20,10 +22,15 @@ fn pricing_navbar(csrf_token: &str, signed_in: bool) -> String {
     } else {
         "<a href=\"/login\" class=\"pricing-nav__link\">Sign in</a><a href=\"/register\" class=\"pricing-nav__link\">Create account</a>".to_owned()
     };
+    let terms_label = if live {
+        "Purchase terms"
+    } else {
+        "Sandbox terms"
+    };
     html! {
         <nav class="pricing-nav" aria-label="Application links">
             <a href="/privacy" class="pricing-nav__link">"Privacy"</a>
-            <a href="/terms" class="pricing-nav__link">"Sandbox terms"</a>
+            <a href="/terms" class="pricing-nav__link">{terms_label}</a>
             { rullst::html::RawHtml(account_actions) }
             <a href="/nexus" class="pricing-nav__link pricing-nav__link--solid">"Nexus CMS"</a>
         </nav>
@@ -109,6 +116,23 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
         "<button type=\"button\" class=\"btn-checkout\" disabled>Payment checkout is disabled</button>"
             .to_owned()
     };
+    let seller_disclosure = state
+        .merchant_notice
+        .as_ref()
+        .map(|merchant| {
+            let mailto = format!("mailto:{}", merchant.support_email);
+            html! {
+                <aside class="seller-disclosure" aria-label="Seller identification">
+                    <h3>"Seller identification"</h3>
+                    <p><strong>{merchant.legal_name.as_str()}</strong>" (Rullst)"</p>
+                    <p>"Brazilian tax registration: "<strong>{merchant.tax_id.as_str()}</strong></p>
+                    <address>{merchant.physical_address.as_str()}</address>
+                    <p><a href={mailto.as_str()}>{merchant.support_email.as_str()}</a></p>
+                    <p><a href="/terms">"Read the purchase and refund terms before paying."</a></p>
+                </aside>
+            }
+        })
+        .unwrap_or_default();
 
     html! {
         <section class="pricing-card pricing-card--featured">
@@ -126,6 +150,7 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
                 <li>"Paid session reconciled with Stripe before access"</li>
                 <li>"HTTP 303 checkout handoff"</li>
             </ul>
+            { rullst::html::RawHtml(seller_disclosure) }
             { rullst::html::RawHtml(action) }
             <p class="fine-print">"A successful redirect never grants access. Application state changes only after verified provider evidence. The provider dashboard remains authoritative for charges, cancellations and refunds."</p>
         </section>
@@ -252,7 +277,7 @@ window.addEventListener('pageshow', reset);
                 <div class="glow-bg"></div>
                 <div class="glow-bg-right"></div>
                 <main class="container">
-                    { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in)) }
+                    { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in, live)) }
                     <header class="header">
                         <span class="badge">"Rullst SaaS Blueprint"</span>
                         <h1>{heading}</h1>
@@ -288,6 +313,7 @@ mod tests {
             expected_price: "BRL 1.00".to_owned(),
             setup_error: None,
             signed_in,
+            merchant_notice: None,
         }
     }
 
@@ -309,5 +335,24 @@ mod tests {
         assert!(page.contains("Sign in to open sandbox checkout"));
         assert!(page.contains("href=\"/login\" class=\"pricing-nav__link\""));
         assert!(!page.contains("id=\"checkout-form\""));
+    }
+
+    #[test]
+    fn live_offer_places_required_seller_identity_before_checkout() {
+        let mut state = state(true);
+        state.payment_mode = PaymentMode::Live;
+        state.merchant_notice = Some(MerchantNotice {
+            legal_name: "Public Seller".to_owned(),
+            tax_id: "529.982.247-25".to_owned(),
+            physical_address: "123 Public Street, Brazil".to_owned(),
+            country: "BR".to_owned(),
+            support_email: "support@example.com".to_owned(),
+            refund_window_days: 14,
+        });
+        let page = pricing_page("csrf-token", "csp-nonce", &state).0;
+        assert!(page.contains("Seller identification"));
+        assert!(page.contains("Purchase terms"));
+        assert!(page.contains("529.982.247-25"));
+        assert!(page.contains("Read the purchase and refund terms before paying."));
     }
 }

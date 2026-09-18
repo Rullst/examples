@@ -350,6 +350,42 @@ h1 {
     font-weight: 800;
 }
 
+.seller-disclosure {
+    margin: 0 0 1.25rem;
+    padding: 1rem;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 0.9rem;
+    background: rgba(14, 116, 144, 0.12);
+    overflow-wrap: anywhere;
+}
+
+.seller-disclosure h3,
+.seller-disclosure p,
+.seller-disclosure address {
+    margin: 0;
+}
+
+.seller-disclosure h3 {
+    margin-bottom: 0.65rem;
+    color: #e0f2fe;
+    font-size: 1rem;
+}
+
+.seller-disclosure p + p,
+.seller-disclosure address + p {
+    margin-top: 0.45rem;
+}
+
+.seller-disclosure address {
+    margin-top: 0.45rem;
+    color: #cbd5e1;
+    font-style: normal;
+}
+
+.seller-disclosure a {
+    color: #7dd3fc;
+}
+
 .features-list svg {
     width: 20px;
     height: 20px;
