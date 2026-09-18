@@ -471,6 +471,19 @@ staging continues to describe Stripe sandbox behavior. Live wording still
 requires the separate protected activation workflow. This is an application
 presentation/configuration defect, not a Rullst framework defect.
 
+### APP-SAAS-010 — Production backup used an older PostgreSQL client
+
+The first manual production backup selected `postgres:17-bookworm`, while the
+Neon production server reported PostgreSQL 18.6. PostgreSQL 17 `pg_dump`
+correctly refused to dump the newer server, so no archive reached Azure Blob
+Storage.
+
+**Correction implemented here:** run both `pg_dump` and archive validation
+with the PostgreSQL 18 Bookworm image, matching the server major. Continue to
+fail before upload when the dump or `pg_restore --list` validation fails, and
+upgrade the client before any future database-major upgrade. This is an
+application operations configuration defect, not a Rullst framework defect.
+
 ## Required SaaS blueprint updates
 
 ### P0 — Required before any real-money acceptance

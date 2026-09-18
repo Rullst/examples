@@ -43,11 +43,11 @@ jobs:
             --env DATABASE_URL \
             --env BACKUP_NAME \
             --volume "$PWD:/backup" \
-            postgres:17-bookworm \
+            postgres:18-bookworm \
             sh -c 'pg_dump --format=custom --no-owner --no-acl --file="/backup/${BACKUP_NAME}" "$DATABASE_URL"'
           docker run --rm \
             --volume "$PWD:/backup" \
-            postgres:17-bookworm \
+            postgres:18-bookworm \
             pg_restore --list "/backup/${BACKUP_NAME}" > /dev/null
           echo "BACKUP_NAME=$BACKUP_NAME" >> "$GITHUB_ENV"
 

@@ -140,6 +140,12 @@ variables `SAAS_BACKUP_STORAGE_ACCOUNT`, `SAAS_BACKUP_CONTAINER`,
 set a retention/lifecycle rule and perform a restore drill before live
 activation.
 
+The backup container image must provide a `pg_dump` client from the same or a
+newer PostgreSQL major version than the Neon server. The reviewed production
+database is PostgreSQL 18, so the workflow uses the PostgreSQL 18 client and
+validates every custom-format archive with the matching `pg_restore` before
+upload.
+
 ## Launch sequence
 
 1. Keep production checkout fail-closed while deploying and migrating.
