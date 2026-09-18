@@ -46,8 +46,10 @@ jobs:
           STRIPE_KEY: ${{ secrets.STRIPE_LIVE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_LIVE_WEBHOOK_SECRET }}
           RECONCILIATION_TOKEN: ${{ secrets.SAAS_PRODUCTION_RECONCILIATION_TOKEN }}
-          PAID_ARTIFACT_URL: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_URL }}
-          PAID_ARTIFACT_SHA256: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_SHA256 }}
+          PAID_ARTIFACT_STORAGE_ACCOUNT: ${{ vars.SAAS_PAID_ARTIFACT_STORAGE_ACCOUNT }}
+          PAID_ARTIFACT_CONTAINER: ${{ vars.SAAS_PAID_ARTIFACT_CONTAINER }}
+          PAID_ARTIFACT_BLOB: ${{ vars.SAAS_PAID_ARTIFACT_BLOB }}
+          PAID_ARTIFACT_SHA256: ${{ vars.SAAS_PAID_ARTIFACT_SHA256 }}
           MERCHANT_LEGAL_NAME: ${{ secrets.SAAS_PRODUCTION_MERCHANT_LEGAL_NAME }}
         run: |
           [[ "$PRICE_ID" =~ ^price_[A-Za-z0-9_-]+$ ]]
@@ -56,7 +58,9 @@ jobs:
           test "${STRIPE_WEBHOOK_SECRET#whsec_}" != "$STRIPE_WEBHOOK_SECRET"
           test "${#RECONCILIATION_TOKEN}" -ge 32
           test "${#RECONCILIATION_TOKEN}" -le 200
-          [[ "$PAID_ARTIFACT_URL" =~ ^https://[^/]+\.blob\.core\.windows\.net/.+\?.+$ ]]
+          [[ "$PAID_ARTIFACT_STORAGE_ACCOUNT" =~ ^[a-z0-9]{3,24}$ ]]
+          [[ "$PAID_ARTIFACT_CONTAINER" =~ ^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$ ]]
+          [[ "$PAID_ARTIFACT_BLOB" =~ ^[A-Za-z0-9._-]+\.md$ ]]
           [[ "$PAID_ARTIFACT_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]
           test -n "$MERCHANT_LEGAL_NAME"
 
@@ -76,28 +80,35 @@ jobs:
             '.id == $price_id and .active == true and .livemode == true and .type == "one_time" and .currency == "brl" and .unit_amount == $amount_minor' \
             <<< "$PRICE_JSON" > /dev/null
 
-      - name: Verify the private paid artifact bytes
-        shell: bash
-        env:
-          PAID_ARTIFACT_URL: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_URL }}
-          PAID_ARTIFACT_SHA256: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_SHA256 }}
-        run: |
-          curl --fail --silent --show-error --max-time 30 --max-filesize 2097152 \
-            --proto '=https' \
-            --output paid-artifact.md \
-            "$PAID_ARTIFACT_URL"
-          test -s paid-artifact.md
-          iconv --from-code UTF-8 --to-code UTF-8 paid-artifact.md > /dev/null
-          ACTUAL_SHA256="$(sha256sum paid-artifact.md | cut -d ' ' -f 1)"
-          test "$ACTUAL_SHA256" = "${PAID_ARTIFACT_SHA256,,}"
-          rm paid-artifact.md
-
       - name: Log in to Azure with a short-lived production OIDC token
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify the private paid artifact through Azure RBAC
+        shell: bash
+        env:
+          PAID_ARTIFACT_STORAGE_ACCOUNT: ${{ vars.SAAS_PAID_ARTIFACT_STORAGE_ACCOUNT }}
+          PAID_ARTIFACT_CONTAINER: ${{ vars.SAAS_PAID_ARTIFACT_CONTAINER }}
+          PAID_ARTIFACT_BLOB: ${{ vars.SAAS_PAID_ARTIFACT_BLOB }}
+          PAID_ARTIFACT_SHA256: ${{ vars.SAAS_PAID_ARTIFACT_SHA256 }}
+        run: |
+          az storage blob download \
+            --account-name "$PAID_ARTIFACT_STORAGE_ACCOUNT" \
+            --container-name "$PAID_ARTIFACT_CONTAINER" \
+            --name "$PAID_ARTIFACT_BLOB" \
+            --file paid-artifact.md \
+            --auth-mode login \
+            --only-show-errors \
+            --output none
+          test -s paid-artifact.md
+          test "$(wc -c < paid-artifact.md)" -le 2097152
+          iconv --from-code UTF-8 --to-code UTF-8 paid-artifact.md > /dev/null
+          ACTUAL_SHA256="$(sha256sum paid-artifact.md | cut -d ' ' -f 1)"
+          test "$ACTUAL_SHA256" = "${PAID_ARTIFACT_SHA256,,}"
+          rm paid-artifact.md
 
       - name: Require the reviewed production deployment
         shell: bash
@@ -112,16 +123,12 @@ jobs:
           STRIPE_KEY: ${{ secrets.STRIPE_LIVE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_LIVE_WEBHOOK_SECRET }}
           RECONCILIATION_TOKEN: ${{ secrets.SAAS_PRODUCTION_RECONCILIATION_TOKEN }}
-          PAID_ARTIFACT_URL: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_URL }}
-          PAID_ARTIFACT_SHA256: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_SHA256 }}
           MERCHANT_LEGAL_NAME: ${{ secrets.SAAS_PRODUCTION_MERCHANT_LEGAL_NAME }}
         run: |
           az containerapp secret set --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --secrets \
             stripe-live-key="$STRIPE_KEY" \
             stripe-live-webhook-secret="$STRIPE_WEBHOOK_SECRET" \
             reconciliation-token="$RECONCILIATION_TOKEN" \
-            paid-artifact-url="$PAID_ARTIFACT_URL" \
-            paid-artifact-sha256="$PAID_ARTIFACT_SHA256" \
             merchant-legal-name="$MERCHANT_LEGAL_NAME" \
             --only-show-errors --output none
 
@@ -130,7 +137,12 @@ jobs:
         env:
           PRICE_ID: ${{ inputs.price_id }}
           AMOUNT_MINOR: ${{ inputs.amount_minor }}
+          PAID_ARTIFACT_STORAGE_ACCOUNT: ${{ vars.SAAS_PAID_ARTIFACT_STORAGE_ACCOUNT }}
+          PAID_ARTIFACT_CONTAINER: ${{ vars.SAAS_PAID_ARTIFACT_CONTAINER }}
+          PAID_ARTIFACT_BLOB: ${{ vars.SAAS_PAID_ARTIFACT_BLOB }}
+          PAID_ARTIFACT_SHA256: ${{ vars.SAAS_PAID_ARTIFACT_SHA256 }}
         run: |
+          PAID_ARTIFACT_URL="https://${PAID_ARTIFACT_STORAGE_ACCOUNT}.blob.core.windows.net/${PAID_ARTIFACT_CONTAINER}/${PAID_ARTIFACT_BLOB}"
           az containerapp update --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
             --set-env-vars \
               PAYMENTS_MODE=live \
@@ -143,8 +155,9 @@ jobs:
               STRIPE_SECRET_KEY=secretref:stripe-live-key \
               STRIPE_WEBHOOK_SECRET=secretref:stripe-live-webhook-secret \
               RECONCILIATION_TOKEN=secretref:reconciliation-token \
-              PAID_ARTIFACT_URL=secretref:paid-artifact-url \
-              PAID_ARTIFACT_SHA256=secretref:paid-artifact-sha256 \
+              PAID_ARTIFACT_URL="$PAID_ARTIFACT_URL" \
+              PAID_ARTIFACT_STORAGE_ACCOUNT="$PAID_ARTIFACT_STORAGE_ACCOUNT" \
+              PAID_ARTIFACT_SHA256="$PAID_ARTIFACT_SHA256" \
               PAID_ARTIFACT_FILENAME=rullst-stripe-production-guide-v1.md \
               MERCHANT_LEGAL_NAME=secretref:merchant-legal-name \
               MERCHANT_COUNTRY=BR \

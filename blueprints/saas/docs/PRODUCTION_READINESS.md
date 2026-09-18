@@ -67,10 +67,15 @@ The protected live-launch workflow is
 
 - `STRIPE_LIVE_SECRET_KEY` and `STRIPE_LIVE_WEBHOOK_SECRET`;
 - `SAAS_PRODUCTION_RECONCILIATION_TOKEN` (32-200 random characters);
-- `SAAS_PRODUCTION_PAID_ARTIFACT_URL` (private read-only Azure Blob SAS URL);
-- `SAAS_PRODUCTION_PAID_ARTIFACT_SHA256`; and
 - `SAAS_PRODUCTION_MERCHANT_LEGAL_NAME` (the reviewed public seller name, not a
   CPF or private residential address).
+
+The live workflow also requires the non-secret environment variables
+`SAAS_PAID_ARTIFACT_STORAGE_ACCOUNT`, `SAAS_PAID_ARTIFACT_CONTAINER`,
+`SAAS_PAID_ARTIFACT_BLOB` and `SAAS_PAID_ARTIFACT_SHA256`. The production
+Container App must have a managed identity with `Storage Blob Data Reader`
+limited to that private container; no public URL, account key or expiring SAS
+is used by the application.
 
 It accepts the active live `price_...` ID and an exact amount choice. Use `100`
 for the initial BRL 1.00 launch. Raising the price to BRL 10.00 requires a new

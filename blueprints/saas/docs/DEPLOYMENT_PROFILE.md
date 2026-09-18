@@ -125,7 +125,9 @@ subscription IDs, database URL or webhook payloads.
 The complete paid tutorial must not be committed to this public repository or
 embedded in a publicly downloadable container layer. Before live sales, store
 the versioned bytes in a private Azure Blob container and supply the application
-with a read-only SAS URL plus immutable SHA-256 digest. The authenticated route
+with a query-free Blob URL plus immutable SHA-256 digest. Give the Container App
+managed identity read access only to that container. The authenticated route
+obtains a short-lived Azure token from the trusted local identity endpoint,
 downloads at most 2 MiB, refuses redirects and untrusted hosts, verifies the
 digest and streams the bytes only after an active entitlement check.
 
@@ -143,13 +145,13 @@ shared-key authorization disabled. Private containers `paid-artifacts` and
 `database-backups` were created. Blob and container soft delete are enabled for
 30 days.
 
-The 10,265-byte private artifact
+The 10,470-byte private artifact
 `rullst-stripe-production-guide-v1.md` was uploaded with version metadata and
 SHA-256
-`fa9fe932cd47bb7bbee23e73acb08401e9dc4da4195cbe702d58f38e6503707e`.
-No public URL was enabled. A read-only user-delegation SAS must be generated
-and stored directly as the protected deployment secret; it must never be
-committed or pasted into chat.
+`a6e2bd03e59597838741fa723f10755a190004c0f012cf9b8e88bcff498b066f`.
+No public URL was enabled. Production access uses Azure managed identity, not
+an account key or expiring SAS. Recalculate and update the recorded digest if
+the private guide changes.
 
 [`azure-storage-lifecycle.json`](azure-storage-lifecycle.json) is a reviewed
 template for deleting database backups after 90 days. It has not been applied:

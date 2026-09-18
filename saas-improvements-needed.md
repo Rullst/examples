@@ -329,11 +329,13 @@ not expose a permanent public object URL.
 
 **Correction implemented in the application:** staging retains the explicitly
 public field report as a sandbox teaching artifact. Live mode instead requires
-a separate private Azure Blob SAS URL and pinned SHA-256 digest at startup. The
-authenticated delivery path refuses redirects, limits the object to 2 MiB,
-accepts only Azure Blob HTTPS hosts, verifies the digest and sends the bytes
-with private/no-store response headers. The paid live guide itself remains an
-operator-supplied private artifact and is not committed to this repository.
+a private Azure Blob URL, Container App managed identity and pinned SHA-256
+digest at startup. The authenticated delivery path obtains a short-lived token
+only from the trusted local Azure identity endpoint, refuses redirects, limits
+the object to 2 MiB, accepts only the configured Azure Storage HTTPS host,
+verifies the digest and sends the bytes with private/no-store response headers.
+The paid live guide itself remains an operator-supplied private artifact and is
+not committed to this repository.
 
 ### APP-SAAS-002 — Azure Nexus mount omitted the trusted TLS capability
 

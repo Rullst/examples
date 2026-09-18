@@ -188,8 +188,9 @@ simulate a customer.
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
    `checkout.session.async_payment_failed`, `checkout.session.expired`,
    `charge.refunded` and `charge.dispute.created`.
-4. Upload the paid Markdown guide to a private Azure Blob container. Generate
-   a read-only, time-bounded SAS URL and calculate the exact file SHA-256.
+4. Upload the paid Markdown guide to a private Azure Blob container. Assign the
+   Container App managed identity `Storage Blob Data Reader` on that container,
+   configure the query-free Blob URL and calculate the exact file SHA-256.
 5. Run `Prepare SaaS Production (Checkout Disabled)` with the full staging
    commit SHA. Verify TLS, private Nexus, backup and restore while checkout is
    still disabled.

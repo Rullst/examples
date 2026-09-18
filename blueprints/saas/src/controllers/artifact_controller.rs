@@ -2,9 +2,11 @@ use crate::controllers::billing_controller::{BillingConfigError, account_has_str
 use reqwest::{Client, Url};
 use rullst::server::{IntoResponse, Response, StatusCode};
 use sha2::{Digest, Sha256};
+use std::net::IpAddr;
 use std::time::Duration;
 
 const MAX_PRIVATE_ARTIFACT_BYTES: usize = 2 * 1024 * 1024;
+const MAX_IDENTITY_RESPONSE_BYTES: usize = 32 * 1024;
 const SANDBOX_REPORT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/reports/stripe-gateway-field-report-v1.md"
@@ -23,17 +25,30 @@ fn live_artifact_config() -> Result<ArtifactConfig, BillingConfigError> {
         .to_owned();
     let url = Url::parse(&raw_url)
         .map_err(|_| BillingConfigError::new("PAID_ARTIFACT_URL is invalid"))?;
-    let trusted_host = url
-        .host_str()
-        .is_some_and(|host| host.ends_with(".blob.core.windows.net"));
-    if url.scheme() != "https"
-        || !trusted_host
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_none()
+    let storage_account = std::env::var("PAID_ARTIFACT_STORAGE_ACCOUNT")
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+    if storage_account.len() < 3
+        || storage_account.len() > 24
+        || !storage_account
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
     {
         return Err(BillingConfigError::new(
-            "PAID_ARTIFACT_URL must be a private HTTPS Azure Blob SAS URL",
+            "PAID_ARTIFACT_STORAGE_ACCOUNT must be a valid Azure Storage account name",
+        ));
+    }
+    let trusted_host = format!("{storage_account}.blob.core.windows.net");
+    if url.scheme() != "https"
+        || url.host_str() != Some(trusted_host.as_str())
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return Err(BillingConfigError::new(
+            "PAID_ARTIFACT_URL must be a query-free private HTTPS URL in the configured Azure Storage account",
         ));
     }
     let sha256 = std::env::var("PAID_ARTIFACT_SHA256")
@@ -67,7 +82,105 @@ fn live_artifact_config() -> Result<ArtifactConfig, BillingConfigError> {
 }
 
 pub fn validate_live_artifact_configuration() -> Result<(), BillingConfigError> {
-    live_artifact_config().map(|_| ())
+    live_artifact_config()?;
+    managed_identity_configuration().map(|_| ())
+}
+
+fn trusted_identity_endpoint(url: &Url) -> bool {
+    if url.scheme() != "http"
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.fragment().is_some()
+    {
+        return false;
+    }
+    match url.host_str() {
+        Some("localhost") => true,
+        Some(host) => host.parse::<IpAddr>().is_ok_and(|address| match address {
+            IpAddr::V4(address) => {
+                address.is_loopback() || address.octets().starts_with(&[169, 254])
+            }
+            IpAddr::V6(address) => address.is_loopback(),
+        }),
+        None => false,
+    }
+}
+
+fn managed_identity_configuration() -> Result<(Url, String), BillingConfigError> {
+    let endpoint = std::env::var("IDENTITY_ENDPOINT")
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    let endpoint = Url::parse(&endpoint)
+        .map_err(|_| BillingConfigError::new("Azure managed identity endpoint is unavailable"))?;
+    if !trusted_identity_endpoint(&endpoint) {
+        return Err(BillingConfigError::new(
+            "Azure managed identity endpoint is not a trusted local endpoint",
+        ));
+    }
+    let identity_header = std::env::var("IDENTITY_HEADER")
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    if identity_header.len() < 16
+        || identity_header.len() > 4096
+        || identity_header.contains(['\r', '\n'])
+    {
+        return Err(BillingConfigError::new(
+            "Azure managed identity header is unavailable",
+        ));
+    }
+    Ok((endpoint, identity_header))
+}
+
+async fn managed_identity_token() -> Result<String, BillingConfigError> {
+    let (mut endpoint, identity_header) = managed_identity_configuration()?;
+    endpoint.query_pairs_mut().clear().extend_pairs([
+        ("resource", "https://storage.azure.com/"),
+        ("api-version", "2019-08-01"),
+    ]);
+    let client = Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(2))
+        .timeout(Duration::from_secs(5))
+        .no_proxy()
+        .build()
+        .map_err(|_| BillingConfigError::new("managed identity client could not be built"))?;
+    let response = client
+        .get(endpoint)
+        .header("X-IDENTITY-HEADER", identity_header)
+        .send()
+        .await
+        .map_err(|_| BillingConfigError::new("managed identity token is unavailable"))?;
+    if !response.status().is_success()
+        || response
+            .content_length()
+            .is_some_and(|length| length > MAX_IDENTITY_RESPONSE_BYTES as u64)
+    {
+        return Err(BillingConfigError::new(
+            "managed identity token is unavailable",
+        ));
+    }
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|_| BillingConfigError::new("managed identity response could not be read"))?;
+    if bytes.len() > MAX_IDENTITY_RESPONSE_BYTES {
+        return Err(BillingConfigError::new(
+            "managed identity response is too large",
+        ));
+    }
+    let body: serde_json::Value = serde_json::from_slice(&bytes)
+        .map_err(|_| BillingConfigError::new("managed identity response is invalid"))?;
+    let token = body["access_token"]
+        .as_str()
+        .filter(|token| {
+            token.len() >= 32
+                && token.len() <= 16 * 1024
+                && !token.bytes().any(|byte| byte.is_ascii_control())
+        })
+        .ok_or_else(|| BillingConfigError::new("managed identity response has no access token"))?;
+    Ok(token.to_owned())
 }
 
 fn attachment_response(body: String, filename: &str) -> Response {
@@ -92,6 +205,7 @@ fn attachment_response(body: String, filename: &str) -> Response {
 
 async fn retrieve_live_artifact() -> Result<(String, String), BillingConfigError> {
     let config = live_artifact_config()?;
+    let access_token = managed_identity_token().await?;
     let client = Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(5))
@@ -102,6 +216,7 @@ async fn retrieve_live_artifact() -> Result<(String, String), BillingConfigError
         .map_err(|_| BillingConfigError::new("private artifact client could not be built"))?;
     let mut response = client
         .get(config.url)
+        .bearer_auth(access_token)
         .send()
         .await
         .map_err(|_| BillingConfigError::new("private artifact is unavailable"))?;
@@ -164,10 +279,24 @@ pub async fn download_paid_artifact(user_id: i32) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use super::MAX_PRIVATE_ARTIFACT_BYTES;
+    use super::{MAX_PRIVATE_ARTIFACT_BYTES, trusted_identity_endpoint};
+    use reqwest::Url;
 
     #[test]
     fn private_artifact_is_deliberately_bounded() {
         assert_eq!(MAX_PRIVATE_ARTIFACT_BYTES, 2 * 1024 * 1024);
+    }
+
+    #[test]
+    fn managed_identity_endpoint_must_be_local_or_link_local() {
+        assert!(trusted_identity_endpoint(
+            &Url::parse("http://127.0.0.1:42356/msi/token").unwrap()
+        ));
+        assert!(trusted_identity_endpoint(
+            &Url::parse("http://169.254.129.6:42356/msi/token").unwrap()
+        ));
+        assert!(!trusted_identity_endpoint(
+            &Url::parse("https://attacker.example/token").unwrap()
+        ));
     }
 }
