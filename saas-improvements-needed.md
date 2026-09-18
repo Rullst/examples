@@ -327,6 +327,14 @@ SHA-256 digest and version, and stream the bytes only after authenticated
 entitlement verification. Do not place purchaser data in the artifact and do
 not expose a permanent public object URL.
 
+**Correction implemented in the application:** staging retains the explicitly
+public field report as a sandbox teaching artifact. Live mode instead requires
+a separate private Azure Blob SAS URL and pinned SHA-256 digest at startup. The
+authenticated delivery path refuses redirects, limits the object to 2 MiB,
+accepts only Azure Blob HTTPS hosts, verifies the digest and sends the bytes
+with private/no-store response headers. The paid live guide itself remains an
+operator-supplied private artifact and is not committed to this repository.
+
 ### APP-SAAS-002 — Azure Nexus mount omitted the trusted TLS capability
 
 The first release deployment mounted the v12 Nexus Basic Auth router behind

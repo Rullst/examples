@@ -62,11 +62,13 @@ Checkout redirects, webhook retries, duplicate events, declines, refunds and
 authorization changes are exercised before a release can affect money or
 production records.
 
-`saas.rullst.win` is the future customer-facing production boundary. It must
-use a separate paid PostgreSQL database, live Stripe account objects, live
-webhook signing secret, application key, operational alerts, backup policy and
-legal notices. Test users, test entitlements and sandbox provider identifiers
-must never be copied into it.
+`saas.rullst.win` is the customer-facing production showcase boundary. It must
+use a separate PostgreSQL database, live Stripe account objects, live webhook
+signing secret, application key, operational alerts, backup policy and legal
+notices. A separate Neon Free project is acceptable for the initial low-volume
+showcase only when its no-SLA limitation and scale-to-zero startup delay are
+accepted and independent private Azure backups are enabled. Test users, test
+entitlements and sandbox provider identifiers must never be copied into it.
 
 Both environments should remain. Scale-to-zero keeps staging inexpensive, but
 removing it would force future upgrades to be tried against production. A
@@ -82,16 +84,22 @@ Container Apps Contributor role only on this staging app and has no stored
 Azure client secret. The Stripe sandbox Price and signed webhook destination
 are also configured.
 
-On 2026-09-17, the reviewed immutable image was deployed with
-`PAYMENTS_MODE=disabled`; PostgreSQL migrations and `/healthz` completed, the
-public root returned HTTP 200, and Nexus returned the expected HTTP 401 Basic
-Auth challenge through the reviewed Azure TLS boundary. The successful GitHub
-Actions evidence is
+On 2026-09-17, the reviewed immutable image was deployed with PostgreSQL
+migrations, `/healthz`, the public route and the protected Nexus boundary
+working. The initial fail-closed deployment evidence is
 [`35264511389`](https://github.com/Rullst/examples/actions/runs/35264511389).
+The subsequent test-mode deployment and automated Chromium Checkout handoff
+also passed, and the operator confirmed a completed Stripe sandbox Checkout,
+the resulting private certificate and the matching Stripe test record. No
+customer or payment details are retained in this public evidence.
 
-Payment acceptance is not yet validated. After the certificate migration is
-deployed, run the workflow with `PAYMENTS_MODE=test` and complete the sandbox
-acceptance cases. Test-mode readiness is not live-money readiness.
+The sandbox happy path is therefore validated. The application now implements
+full-refund/dispute revocation, an operator refund queue, private tutorial
+delivery, scheduled provider reconciliation, a finite Founding Customer cohort
+and daily logical backup automation. Provisioning the separate production
+resources, testing a restore, configuring alerts and reviewing public seller
+details remain operator acceptance tasks. Test-mode readiness is not
+live-money readiness.
 
 ## Payment validation policy
 
@@ -116,15 +124,37 @@ subscription IDs, database URL or webhook payloads.
 
 The complete paid tutorial must not be committed to this public repository or
 embedded in a publicly downloadable container layer. Before live sales, store
-the versioned bytes in private application storage and stream them only after
-an authenticated entitlement check. Persist a SHA-256 digest with the artifact
-and keep the public repository copy to a non-exclusive summary.
+the versioned bytes in a private Azure Blob container and supply the application
+with a read-only SAS URL plus immutable SHA-256 digest. The authenticated route
+downloads at most 2 MiB, refuses redirects and untrusted hosts, verifies the
+digest and streams the bytes only after an active entitlement check.
 
 The precise production acceptance checklist is maintained in
 [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md). A sandbox purchase may
 issue a clearly labelled `Rullst Sandbox Pioneer` certificate, but it must not
 be described as a real customer purchase. `Founding Customer` remains reserved
 for a finite, published live-production cohort.
+
+## Production storage prepared on 2026-09-17
+
+Azure Storage account `rullstsaasprod` was created in East US as Standard LRS
+with HTTPS-only transport, TLS 1.2 minimum, anonymous blob access disabled and
+shared-key authorization disabled. Private containers `paid-artifacts` and
+`database-backups` were created. Blob and container soft delete are enabled for
+30 days.
+
+The 10,265-byte private artifact
+`rullst-stripe-production-guide-v1.md` was uploaded with version metadata and
+SHA-256
+`fa9fe932cd47bb7bbee23e73acb08401e9dc4da4195cbe702d58f38e6503707e`.
+No public URL was enabled. A read-only user-delegation SAS must be generated
+and stored directly as the protected deployment secret; it must never be
+committed or pasted into chat.
+
+[`azure-storage-lifecycle.json`](azure-storage-lifecycle.json) is a reviewed
+template for deleting database backups after 90 days. It has not been applied:
+automatic backup deletion requires explicit operator approval after the restore
+and retention policy is accepted.
 
 ## Private configuration still required
 

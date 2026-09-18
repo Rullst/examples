@@ -9,15 +9,18 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 const CHECKOUT_OFFER: &str = "gateway-report-stripe";
-const ARTIFACT_VERSION: &str = "stripe-gateway-field-report-v1";
-const MAX_SMOKE_TEST_AMOUNT_MINOR: u64 = 500;
+const SANDBOX_ARTIFACT_VERSION: &str = "stripe-gateway-field-report-v1";
+const LIVE_ARTIFACT_VERSION: &str = "stripe-rullst-production-guide-v1";
+const MAX_LOW_VALUE_AMOUNT_MINOR: u64 = 1_000;
 const MAX_PROVIDER_RESPONSE_BYTES: usize = 64 * 1024;
 const MAX_WEBHOOK_BYTES: usize = 64 * 1024;
 const STRIPE_WEBHOOK_TOLERANCE_SECONDS: u64 = 5 * 60;
+static RECONCILIATION_RUNNING: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone)]
 pub struct BillingIdentity {
@@ -50,7 +53,7 @@ impl PaymentMode {
     }
 
     fn accepts_checkout(self) -> bool {
-        self == Self::Test
+        matches!(self, Self::Test | Self::Live)
     }
 
     fn expects_live_object(self) -> bool {
@@ -67,6 +70,8 @@ struct BillingConfig {
     price_id: String,
     expected_currency: String,
     expected_amount_minor: u64,
+    founding_customer_limit: u32,
+    reconciliation_token: String,
     mode: PaymentMode,
 }
 
@@ -74,7 +79,7 @@ struct BillingConfig {
 pub struct BillingConfigError(String);
 
 impl BillingConfigError {
-    fn new(message: impl Into<String>) -> Self {
+    pub(crate) fn new(message: impl Into<String>) -> Self {
         Self(message.into())
     }
 }
@@ -117,6 +122,15 @@ fn valid_provider_id(value: &str) -> bool {
 
 fn valid_currency(value: &str) -> bool {
     value.len() == 3 && value.bytes().all(|byte| byte.is_ascii_uppercase())
+}
+
+fn valid_checkout_session_id(value: &str, mode: PaymentMode) -> bool {
+    let prefix = if mode == PaymentMode::Live {
+        "cs_live_"
+    } else {
+        "cs_test_"
+    };
+    value.starts_with(prefix) && valid_provider_id(value)
 }
 
 fn valid_redirect_url(value: &str, mode: PaymentMode) -> bool {
@@ -181,9 +195,9 @@ fn billing_config() -> Result<BillingConfig, BillingConfigError> {
         .unwrap_or_else(|_| "100".to_owned())
         .parse::<u64>()
         .map_err(|_| BillingConfigError::new("BILLING_EXPECTED_AMOUNT_MINOR must be an integer"))?;
-    if !(1..=MAX_SMOKE_TEST_AMOUNT_MINOR).contains(&expected_amount_minor) {
+    if !(1..=MAX_LOW_VALUE_AMOUNT_MINOR).contains(&expected_amount_minor) {
         return Err(BillingConfigError::new(format!(
-            "BILLING_EXPECTED_AMOUNT_MINOR must be between 1 and {MAX_SMOKE_TEST_AMOUNT_MINOR}"
+            "BILLING_EXPECTED_AMOUNT_MINOR must be between 1 and {MAX_LOW_VALUE_AMOUNT_MINOR}"
         )));
     }
 
@@ -199,14 +213,13 @@ fn billing_config() -> Result<BillingConfig, BillingConfigError> {
         price_id: env_trimmed("BILLING_PRICE_ID"),
         expected_currency,
         expected_amount_minor,
+        founding_customer_limit: std::env::var("FOUNDING_CUSTOMER_LIMIT")
+            .unwrap_or_else(|_| "100".to_owned())
+            .parse::<u32>()
+            .map_err(|_| BillingConfigError::new("FOUNDING_CUSTOMER_LIMIT must be an integer"))?,
+        reconciliation_token: env_trimmed("RECONCILIATION_TOKEN"),
         mode,
     };
-
-    if mode == PaymentMode::Live {
-        return Err(BillingConfigError::new(
-            "live checkout remains blocked until sandbox evidence, refunds, monitoring and the production legal notices pass review",
-        ));
-    }
 
     if config.mode.accepts_checkout() {
         if !config.price_id.starts_with("price_") || !valid_provider_id(&config.price_id) {
@@ -219,15 +232,43 @@ fn billing_config() -> Result<BillingConfig, BillingConfigError> {
                 "BILLING_REDIRECT_URL must use HTTPS (HTTP is allowed only for local test mode)",
             ));
         }
-        if !config.api_key.starts_with("sk_test_") || is_mock_credential(&config.api_key) {
+        let expected_key_prefix = if config.mode == PaymentMode::Live {
+            "sk_live_"
+        } else {
+            "sk_test_"
+        };
+        if !config.api_key.starts_with(expected_key_prefix) || is_mock_credential(&config.api_key) {
             return Err(BillingConfigError::new(
-                "Stripe sandbox mode requires an sk_test_ secret key",
+                if config.mode == PaymentMode::Live {
+                    "Stripe live mode requires an sk_live_ secret key"
+                } else {
+                    "Stripe sandbox mode requires an sk_test_ secret key"
+                },
             ));
         }
         if !strong_webhook_secret(&config.webhook_secret) {
             return Err(BillingConfigError::new(
-                "Stripe sandbox mode requires a non-placeholder whsec_ webhook secret",
+                "Stripe checkout requires a non-placeholder whsec_ webhook secret",
             ));
+        }
+        if config.mode == PaymentMode::Live {
+            if env_trimmed("LIVE_PAYMENTS_ACKNOWLEDGEMENT") != "accept-real-money" {
+                return Err(BillingConfigError::new(
+                    "live checkout requires LIVE_PAYMENTS_ACKNOWLEDGEMENT=accept-real-money",
+                ));
+            }
+            if config.founding_customer_limit == 0 || config.founding_customer_limit > 10_000 {
+                return Err(BillingConfigError::new(
+                    "FOUNDING_CUSTOMER_LIMIT must be between 1 and 10000",
+                ));
+            }
+            if config.reconciliation_token.len() < 32 || config.reconciliation_token.len() > 200 {
+                return Err(BillingConfigError::new(
+                    "RECONCILIATION_TOKEN must contain between 32 and 200 characters",
+                ));
+            }
+            crate::controllers::artifact_controller::validate_live_artifact_configuration()?;
+            crate::controllers::legal_controller::validate_live_merchant_configuration()?;
         }
     }
 
@@ -267,11 +308,24 @@ fn sha256_hex(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
 }
 
-fn new_sandbox_certificate_id() -> String {
+fn new_certificate_id(mode: PaymentMode) -> String {
+    let environment = if mode == PaymentMode::Live {
+        "LIVE"
+    } else {
+        "SBX"
+    };
     format!(
-        "RST-SBX-{}",
+        "RST-{environment}-{}",
         Uuid::new_v4().simple().to_string().to_ascii_uppercase()
     )
+}
+
+fn artifact_version(mode: PaymentMode) -> &'static str {
+    if mode == PaymentMode::Live {
+        LIVE_ARTIFACT_VERSION
+    } else {
+        SANDBOX_ARTIFACT_VERSION
+    }
 }
 
 fn verify_stripe_signature_at(
@@ -463,10 +517,14 @@ fn attempt_matches_config(attempt: &PurchaseAttempt, config: &BillingConfig) -> 
         && attempt.expected_currency == config.expected_currency
 }
 
-fn resumed_session_matches_attempt(body: &Value, attempt: &PurchaseAttempt) -> bool {
+fn resumed_session_matches_attempt(
+    body: &Value,
+    attempt: &PurchaseAttempt,
+    mode: PaymentMode,
+) -> bool {
     let attempt_id = attempt.id.to_string();
     body["id"].as_str() == attempt.provider_session_id.as_deref()
-        && body["livemode"].as_bool() == Some(false)
+        && body["livemode"].as_bool() == Some(mode.expects_live_object())
         && body["mode"].as_str() == Some("payment")
         && body["metadata"]["purchase_attempt_id"].as_str() == Some(attempt_id.as_str())
         && body["metadata"]["product_sku"].as_str() == Some(CHECKOUT_OFFER)
@@ -500,7 +558,7 @@ async fn resume_open_checkout(
     let session_id = attempt
         .provider_session_id
         .as_deref()
-        .filter(|id| id.starts_with("cs_test_") && valid_provider_id(id))
+        .filter(|id| valid_checkout_session_id(id, config.mode))
         .ok_or_else(|| BillingConfigError::new("open checkout has no valid provider session"))?;
     let response = provider_http_client()?
         .get(format!(
@@ -511,7 +569,7 @@ async fn resume_open_checkout(
         .await
         .map_err(|_| BillingConfigError::new("Stripe Checkout recovery failed"))?;
     let body = bounded_json(response).await?;
-    if !resumed_session_matches_attempt(&body, &attempt) {
+    if !resumed_session_matches_attempt(&body, &attempt, config.mode) {
         return Err(BillingConfigError::new(
             "Stripe Checkout recovery did not match the authenticated purchase attempt",
         ));
@@ -616,9 +674,11 @@ async fn create_stripe_checkout(
 
     let session_id = body["id"]
         .as_str()
-        .filter(|id| id.starts_with("cs_test_") && valid_provider_id(id))
-        .ok_or_else(|| BillingConfigError::new("Stripe returned an invalid sandbox session ID"))?;
-    if body["livemode"].as_bool() != Some(false) || body["mode"].as_str() != Some("payment") {
+        .filter(|id| valid_checkout_session_id(id, config.mode))
+        .ok_or_else(|| BillingConfigError::new("Stripe returned an invalid Checkout Session ID"))?;
+    if body["livemode"].as_bool() != Some(config.mode.expects_live_object())
+        || body["mode"].as_str() != Some("payment")
+    {
         return Err(BillingConfigError::new(
             "Stripe returned a Checkout Session for the wrong mode",
         ));
@@ -786,8 +846,16 @@ async fn retrieve_verified_checkout(
 ) -> Result<Option<VerifiedCheckout>, BillingConfigError> {
     let session_id = event_session["id"]
         .as_str()
-        .filter(|id| id.starts_with("cs_test_") && valid_provider_id(id))
+        .filter(|id| valid_checkout_session_id(id, config.mode))
         .ok_or_else(|| BillingConfigError::new("invalid Stripe Checkout Session ID"))?;
+    let session = retrieve_checkout_session(config, session_id).await?;
+    verify_paid_checkout(config, session_id, &session)
+}
+
+async fn retrieve_checkout_session(
+    config: &BillingConfig,
+    session_id: &str,
+) -> Result<Value, BillingConfigError> {
     let response = provider_http_client()?
         .get(format!(
             "https://api.stripe.com/v1/checkout/sessions/{session_id}"
@@ -797,8 +865,14 @@ async fn retrieve_verified_checkout(
         .send()
         .await
         .map_err(|_| BillingConfigError::new("Stripe Checkout reconciliation failed"))?;
-    let session = bounded_json(response).await?;
+    bounded_json(response).await
+}
 
+fn verify_paid_checkout(
+    config: &BillingConfig,
+    session_id: &str,
+    session: &Value,
+) -> Result<Option<VerifiedCheckout>, BillingConfigError> {
     if session["payment_status"].as_str() != Some("paid") {
         return Ok(None);
     }
@@ -922,34 +996,193 @@ async fn persist_successful_checkout(
     .map_err(|_| BillingConfigError::new("purchase attempt could not be completed"))?;
 
     let entitlement_id = sqlx::query_scalar::<_, i32>(
-        "INSERT INTO entitlements (user_id, product_sku, provider, provider_payment_id, artifact_version, status) VALUES ($1, $2, 'stripe', $3, $4, 'active') ON CONFLICT (user_id, product_sku) DO UPDATE SET updated_at = entitlements.updated_at RETURNING id",
+        "INSERT INTO entitlements (user_id, product_sku, provider, provider_payment_id, artifact_version, status, revoked_reason, revoked_at) VALUES ($1, $2, 'stripe', $3, $4, 'active', NULL, NULL) ON CONFLICT (user_id, product_sku) DO UPDATE SET provider_payment_id = EXCLUDED.provider_payment_id, artifact_version = EXCLUDED.artifact_version, status = 'active', revoked_reason = NULL, revoked_at = NULL, updated_at = CURRENT_TIMESTAMP RETURNING id",
     )
     .bind(attempt.user_id)
     .bind(CHECKOUT_OFFER)
     .bind(&checkout.payment_intent_id)
-    .bind(ARTIFACT_VERSION)
+    .bind(artifact_version(config.mode))
     .fetch_one(&mut *transaction)
     .await
     .map_err(|_| BillingConfigError::new("entitlement could not be created"))?;
 
-    if config.mode != PaymentMode::Test {
-        return Err(BillingConfigError::new(
-            "tester certificates can only be issued from the reviewed sandbox flow",
-        ));
+    if config.mode == PaymentMode::Live {
+        sqlx::query("SELECT pg_advisory_xact_lock(731_225_991)")
+            .execute(&mut *transaction)
+            .await
+            .map_err(|_| BillingConfigError::new("certificate cohort lock failed"))?;
+        let issued = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM tester_certificates WHERE badge_kind = 'founding_customer' AND environment = 'live'",
+        )
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(|_| BillingConfigError::new("certificate cohort could not be counted"))?;
+        if issued < i64::from(config.founding_customer_limit) {
+            sqlx::query(
+                "INSERT INTO tester_certificates (entitlement_id, public_id, badge_kind, environment, status) VALUES ($1, $2, 'founding_customer', 'live', 'active') ON CONFLICT (entitlement_id) DO UPDATE SET badge_kind = 'founding_customer', environment = 'live', status = 'active', updated_at = CURRENT_TIMESTAMP",
+            )
+            .bind(entitlement_id)
+            .bind(new_certificate_id(config.mode))
+            .execute(&mut *transaction)
+            .await
+            .map_err(|_| BillingConfigError::new("founding customer certificate could not be issued"))?;
+        }
+    } else {
+        sqlx::query(
+            "INSERT INTO tester_certificates (entitlement_id, public_id, badge_kind, environment, status) VALUES ($1, $2, 'sandbox_pioneer', 'test', 'active') ON CONFLICT (entitlement_id) DO UPDATE SET status = 'active', updated_at = CURRENT_TIMESTAMP",
+        )
+        .bind(entitlement_id)
+        .bind(new_certificate_id(config.mode))
+        .execute(&mut *transaction)
+        .await
+        .map_err(|_| BillingConfigError::new("sandbox certificate could not be issued"))?;
     }
-    sqlx::query(
-        "INSERT INTO tester_certificates (entitlement_id, public_id, badge_kind, environment, status) VALUES ($1, $2, 'sandbox_pioneer', 'test', 'active') ON CONFLICT (entitlement_id) DO NOTHING",
-    )
-    .bind(entitlement_id)
-    .bind(new_sandbox_certificate_id())
-    .execute(&mut *transaction)
-    .await
-    .map_err(|_| BillingConfigError::new("sandbox certificate could not be issued"))?;
 
     transaction
         .commit()
         .await
         .map_err(|_| BillingConfigError::new("billing transaction commit failed"))
+}
+
+#[derive(Debug)]
+struct VerifiedRevocation {
+    payment_intent_id: String,
+    reason: &'static str,
+    attempt_status: &'static str,
+}
+
+async fn retrieve_verified_revocation(
+    config: &BillingConfig,
+    event_type: &str,
+    event_object: &Value,
+) -> Result<VerifiedRevocation, BillingConfigError> {
+    let (resource, id, reason, attempt_status) = match event_type {
+        "charge.refunded" => (
+            "charges",
+            event_object["id"]
+                .as_str()
+                .filter(|value| value.starts_with("ch_") && valid_provider_id(value))
+                .ok_or_else(|| BillingConfigError::new("invalid refunded Charge ID"))?,
+            "refunded",
+            "refunded",
+        ),
+        "charge.dispute.created" => (
+            "disputes",
+            event_object["id"]
+                .as_str()
+                .filter(|value| value.starts_with("dp_") && valid_provider_id(value))
+                .ok_or_else(|| BillingConfigError::new("invalid Stripe dispute ID"))?,
+            "disputed",
+            "disputed",
+        ),
+        _ => {
+            return Err(BillingConfigError::new(
+                "unsupported entitlement revocation event",
+            ));
+        }
+    };
+    let response = provider_http_client()?
+        .get(format!("https://api.stripe.com/v1/{resource}/{id}"))
+        .bearer_auth(&config.api_key)
+        .send()
+        .await
+        .map_err(|_| BillingConfigError::new("Stripe revocation reconciliation failed"))?;
+    let object = bounded_json(response).await?;
+    if object["id"].as_str() != Some(id)
+        || object["livemode"].as_bool() != Some(config.mode.expects_live_object())
+    {
+        return Err(BillingConfigError::new(
+            "Stripe revocation evidence belongs to the wrong environment",
+        ));
+    }
+    if event_type == "charge.refunded"
+        && (object["refunded"].as_bool() != Some(true)
+            || object["amount"].as_u64().is_none_or(|amount| {
+                amount == 0 || object["amount_refunded"].as_u64() != Some(amount)
+            }))
+    {
+        return Err(BillingConfigError::new(
+            "Stripe Charge is not fully refunded",
+        ));
+    }
+    let payment_intent_id = object["payment_intent"]
+        .as_str()
+        .filter(|value| value.starts_with("pi_") && valid_provider_id(value))
+        .ok_or_else(|| BillingConfigError::new("revocation has no valid PaymentIntent"))?;
+    Ok(VerifiedRevocation {
+        payment_intent_id: payment_intent_id.to_owned(),
+        reason,
+        attempt_status,
+    })
+}
+
+async fn persist_revocation(
+    event_id: &str,
+    event_type: &str,
+    payload_hash: &str,
+    revocation: &VerifiedRevocation,
+) -> Result<(), BillingConfigError> {
+    let mut transaction = Orm::begin_transaction()
+        .await
+        .map_err(|_| BillingConfigError::new("revocation transaction could not start"))?;
+    let event_insert = sqlx::query(
+        "INSERT INTO provider_events (provider, event_id, event_type, payload_sha256) VALUES ('stripe', $1, $2, $3) ON CONFLICT (provider, event_id) DO NOTHING",
+    )
+    .bind(event_id)
+    .bind(event_type)
+    .bind(payload_hash)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|_| BillingConfigError::new("revocation event could not be recorded"))?;
+    if event_insert.rows_affected() == 0 {
+        transaction
+            .rollback()
+            .await
+            .map_err(|_| BillingConfigError::new("duplicate revocation rollback failed"))?;
+        return Ok(());
+    }
+
+    sqlx::query(
+        "UPDATE purchase_attempts SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE provider = 'stripe' AND provider_payment_id = $2",
+    )
+    .bind(revocation.attempt_status)
+    .bind(&revocation.payment_intent_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|_| BillingConfigError::new("purchase revocation could not be recorded"))?;
+
+    let entitlement_ids = sqlx::query_scalar::<_, i32>(
+        "UPDATE entitlements SET status = 'revoked', revoked_reason = $1, revoked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE provider = 'stripe' AND provider_payment_id = $2 AND status = 'active' RETURNING id",
+    )
+    .bind(revocation.reason)
+    .bind(&revocation.payment_intent_id)
+    .fetch_all(&mut *transaction)
+    .await
+    .map_err(|_| BillingConfigError::new("entitlement could not be revoked"))?;
+
+    for entitlement_id in entitlement_ids {
+        sqlx::query(
+            "UPDATE tester_certificates SET status = 'revoked', updated_at = CURRENT_TIMESTAMP WHERE entitlement_id = $1 AND status = 'active'",
+        )
+        .bind(entitlement_id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(|_| BillingConfigError::new("certificate could not be revoked"))?;
+        if revocation.reason == "refunded" {
+            sqlx::query(
+                "UPDATE refund_requests SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE entitlement_id = $1 AND status IN ('requested', 'processing')",
+            )
+            .bind(entitlement_id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|_| BillingConfigError::new("refund request could not be completed"))?;
+        }
+    }
+
+    transaction
+        .commit()
+        .await
+        .map_err(|_| BillingConfigError::new("revocation transaction commit failed"))
 }
 
 async fn close_terminal_attempt(event_session: &Value, status: &str) {
@@ -1046,42 +1279,246 @@ pub async fn webhook_handler(headers: HeaderMap, body: String) -> Response {
         "checkout.session.expired" => {
             close_terminal_attempt(event_session, "expired").await;
         }
+        "charge.refunded" | "charge.dispute.created" => {
+            let revocation =
+                match retrieve_verified_revocation(&config, event_type, event_session).await {
+                    Ok(revocation) => revocation,
+                    Err(error) => {
+                        eprintln!("Stripe revocation evidence rejected: {error}");
+                        return StatusCode::UNPROCESSABLE_ENTITY.into_response();
+                    }
+                };
+            if let Err(error) = persist_revocation(
+                event_id,
+                event_type,
+                &sha256_hex(body.as_bytes()),
+                &revocation,
+            )
+            .await
+            {
+                eprintln!("Stripe revocation persistence failed: {error}");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        }
         _ => {}
     }
 
     StatusCode::OK.into_response()
 }
 
-pub async fn download_stripe_report(Extension(user_id): Extension<i32>) -> Response {
-    match account_has_stripe_report(user_id).await {
-        Ok(true) => {}
-        Ok(false) => return StatusCode::NOT_FOUND.into_response(),
-        Err(error) => {
-            eprintln!("Report entitlement lookup failed: {error}");
-            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+struct ReconciliationRunGuard;
+
+impl ReconciliationRunGuard {
+    fn acquire() -> Option<Self> {
+        RECONCILIATION_RUNNING
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .ok()
+            .map(|_| Self)
+    }
+}
+
+impl Drop for ReconciliationRunGuard {
+    fn drop(&mut self) {
+        RECONCILIATION_RUNNING.store(false, Ordering::Release);
+    }
+}
+
+fn reconciliation_authorized(headers: &HeaderMap, expected: &str) -> bool {
+    let Some(candidate) = headers
+        .get(rullst::server::header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+    else {
+        return false;
+    };
+    let expected_key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, expected.as_bytes());
+    let expected_tag = ring::hmac::sign(&expected_key, b"rullst-saas-reconciliation-v1");
+    let candidate_key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, candidate.as_bytes());
+    ring::hmac::verify(
+        &candidate_key,
+        b"rullst-saas-reconciliation-v1",
+        expected_tag.as_ref(),
+    )
+    .is_ok()
+}
+
+async fn reconcile_open_checkouts(config: &BillingConfig) -> Result<u32, BillingConfigError> {
+    let attempts = sqlx::query_as::<_, PurchaseAttempt>(
+        "SELECT * FROM purchase_attempts WHERE provider = 'stripe' AND product_sku = $1 AND status IN ('pending', 'unknown', 'checkout_created') AND provider_session_id IS NOT NULL ORDER BY last_reconciled_at ASC NULLS FIRST, id ASC LIMIT 50",
+    )
+    .bind(CHECKOUT_OFFER)
+    .fetch_all(Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?)
+    .await
+    .map_err(|_| BillingConfigError::new("open checkout reconciliation lookup failed"))?;
+
+    let mut processed = 0_u32;
+    for attempt in attempts {
+        if !attempt_matches_config(&attempt, config) {
+            continue;
+        }
+        let Some(session_id) = attempt
+            .provider_session_id
+            .as_deref()
+            .filter(|id| valid_checkout_session_id(id, config.mode))
+        else {
+            continue;
+        };
+        let session = retrieve_checkout_session(config, session_id).await?;
+        if let Some(checkout) = verify_paid_checkout(config, session_id, &session)? {
+            let event_id = format!("reconcile-checkout-{}", checkout.session_id);
+            let payload_hash = sha256_hex(
+                serde_json::to_vec(&session)
+                    .map_err(|_| BillingConfigError::new("Checkout evidence could not be hashed"))?
+                    .as_slice(),
+            );
+            persist_successful_checkout(
+                config,
+                &event_id,
+                "reconciliation.checkout.paid",
+                &payload_hash,
+                &checkout,
+            )
+            .await?;
+            processed += 1;
+        } else if session["status"].as_str() == Some("expired") {
+            let pool =
+                Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?;
+            let result = sqlx::query(
+                "UPDATE purchase_attempts SET status = 'expired', last_reconciled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND provider_session_id = $2 AND status IN ('pending', 'unknown', 'checkout_created')",
+            )
+            .bind(attempt.id)
+            .bind(session_id)
+            .execute(pool)
+            .await
+            .map_err(|_| BillingConfigError::new("expired checkout could not be recorded"))?;
+            processed += u32::from(result.rows_affected() > 0);
+        } else {
+            sqlx::query(
+                "UPDATE purchase_attempts SET last_reconciled_at = CURRENT_TIMESTAMP WHERE id = $1 AND status IN ('pending', 'unknown', 'checkout_created')",
+            )
+            .bind(attempt.id)
+            .execute(Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?)
+            .await
+            .map_err(|_| BillingConfigError::new("checkout reconciliation timestamp could not be recorded"))?;
         }
     }
+    Ok(processed)
+}
 
-    const REPORT: &str = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/reports/stripe-gateway-field-report-v1.md"
-    ));
-    let mut response = (StatusCode::OK, REPORT).into_response();
-    response.headers_mut().insert(
-        rullst::server::header::CONTENT_TYPE,
-        rullst::server::HeaderValue::from_static("text/markdown; charset=utf-8"),
-    );
-    response.headers_mut().insert(
-        rullst::server::header::CONTENT_DISPOSITION,
-        rullst::server::HeaderValue::from_static(
-            "attachment; filename=\"rullst-stripe-gateway-field-report-v1.md\"",
-        ),
-    );
-    response.headers_mut().insert(
-        rullst::server::header::CACHE_CONTROL,
-        rullst::server::HeaderValue::from_static("private, no-store"),
-    );
-    response
+async fn reconcile_active_entitlements(config: &BillingConfig) -> Result<u32, BillingConfigError> {
+    let entitlements = sqlx::query_as::<_, (i32, String)>(
+        "SELECT id, provider_payment_id FROM entitlements WHERE provider = 'stripe' AND product_sku = $1 AND status = 'active' ORDER BY last_reconciled_at ASC NULLS FIRST, id ASC LIMIT 50",
+    )
+    .bind(CHECKOUT_OFFER)
+    .fetch_all(Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?)
+    .await
+    .map_err(|_| BillingConfigError::new("active entitlement reconciliation lookup failed"))?;
+
+    let mut processed = 0_u32;
+    for (entitlement_id, payment_intent_id) in entitlements {
+        if !payment_intent_id.starts_with("pi_") || !valid_provider_id(&payment_intent_id) {
+            continue;
+        }
+        let response = provider_http_client()?
+            .get(format!(
+                "https://api.stripe.com/v1/payment_intents/{payment_intent_id}"
+            ))
+            .bearer_auth(&config.api_key)
+            .query(&[("expand[]", "latest_charge")])
+            .send()
+            .await
+            .map_err(|_| BillingConfigError::new("Stripe entitlement reconciliation failed"))?;
+        let intent = bounded_json(response).await?;
+        if intent["id"].as_str() != Some(payment_intent_id.as_str())
+            || intent["livemode"].as_bool() != Some(config.mode.expects_live_object())
+        {
+            return Err(BillingConfigError::new(
+                "Stripe entitlement evidence belongs to the wrong environment",
+            ));
+        }
+        let charge = &intent["latest_charge"];
+        let Some(charge_id) = charge["id"]
+            .as_str()
+            .filter(|value| value.starts_with("ch_") && valid_provider_id(value))
+        else {
+            continue;
+        };
+        if charge["payment_intent"].as_str() != Some(payment_intent_id.as_str())
+            || charge["livemode"].as_bool() != Some(config.mode.expects_live_object())
+        {
+            return Err(BillingConfigError::new(
+                "Stripe Charge evidence does not match its PaymentIntent",
+            ));
+        }
+
+        let full_refund = charge["refunded"].as_bool() == Some(true)
+            && charge["amount"].as_u64().is_some_and(|amount| {
+                amount > 0 && charge["amount_refunded"].as_u64() == Some(amount)
+            });
+        let disputed = charge["disputed"].as_bool() == Some(true);
+        let (reason, attempt_status, event_type) = if disputed {
+            ("disputed", "disputed", "reconciliation.charge.disputed")
+        } else if full_refund {
+            ("refunded", "refunded", "reconciliation.charge.refunded")
+        } else {
+            sqlx::query(
+                "UPDATE entitlements SET last_reconciled_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'active'",
+            )
+            .bind(entitlement_id)
+            .execute(Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?)
+            .await
+            .map_err(|_| BillingConfigError::new("entitlement reconciliation timestamp could not be recorded"))?;
+            continue;
+        };
+        let revocation = VerifiedRevocation {
+            payment_intent_id: payment_intent_id.clone(),
+            reason,
+            attempt_status,
+        };
+        let event_id = format!("reconcile-{reason}-{charge_id}");
+        let payload_hash = sha256_hex(
+            serde_json::to_vec(charge)
+                .map_err(|_| BillingConfigError::new("Charge evidence could not be hashed"))?
+                .as_slice(),
+        );
+        persist_revocation(&event_id, event_type, &payload_hash, &revocation).await?;
+        processed += 1;
+    }
+    Ok(processed)
+}
+
+/// Reconciles delayed Stripe state without exposing payment identifiers. This
+/// route is intended only for the protected scheduled GitHub Actions workflow.
+pub async fn reconciliation_handler(headers: HeaderMap) -> Response {
+    let config = match billing_config() {
+        Ok(config) if config.mode == PaymentMode::Live => config,
+        _ => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    };
+    if !reconciliation_authorized(&headers, &config.reconciliation_token) {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+    let Some(_guard) = ReconciliationRunGuard::acquire() else {
+        return StatusCode::CONFLICT.into_response();
+    };
+    let processed = match reconcile_open_checkouts(&config).await {
+        Ok(processed) => processed,
+        Err(error) => {
+            eprintln!("Checkout reconciliation failed: {error}");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
+    };
+    let processed = match reconcile_active_entitlements(&config).await {
+        Ok(entitlements) => processed.saturating_add(entitlements),
+        Err(error) => {
+            eprintln!("Entitlement reconciliation failed: {error}");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
+    };
+    (StatusCode::OK, format!("processed={processed}")).into_response()
+}
+
+pub async fn download_stripe_report(Extension(user_id): Extension<i32>) -> Response {
+    crate::controllers::artifact_controller::download_paid_artifact(user_id).await
 }
 
 fn format_amount(amount_minor: u64, currency: &str) -> String {
@@ -1106,6 +1543,8 @@ mod tests {
             price_id: "price_example".to_owned(),
             expected_currency: "BRL".to_owned(),
             expected_amount_minor: 100,
+            founding_customer_limit: 100,
+            reconciliation_token: String::new(),
             mode: PaymentMode::Test,
         }
     }
@@ -1123,6 +1562,7 @@ mod tests {
             provider_session_id: Some("cs_test_example".to_owned()),
             provider_payment_id: None,
             status: "checkout_created".to_owned(),
+            last_reconciled_at: None,
             created_at: "2026-09-17T00:00:00Z".to_owned(),
             updated_at: "2026-09-17T00:00:00Z".to_owned(),
         }
@@ -1133,6 +1573,43 @@ mod tests {
         assert!(valid_provider_id("price_123-test"));
         assert!(!valid_provider_id(""));
         assert!(!valid_provider_id("price/../../secret"));
+    }
+
+    #[test]
+    fn checkout_session_ids_are_environment_bound() {
+        assert!(valid_checkout_session_id(
+            "cs_test_example",
+            PaymentMode::Test
+        ));
+        assert!(!valid_checkout_session_id(
+            "cs_live_example",
+            PaymentMode::Test
+        ));
+        assert!(valid_checkout_session_id(
+            "cs_live_example",
+            PaymentMode::Live
+        ));
+        assert!(!valid_checkout_session_id(
+            "cs_test_example",
+            PaymentMode::Live
+        ));
+    }
+
+    #[test]
+    fn reconciliation_requires_the_exact_bearer_token() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            rullst::server::header::AUTHORIZATION,
+            rullst::server::HeaderValue::from_static("Bearer an-exact-random-reconciliation-token"),
+        );
+        assert!(reconciliation_authorized(
+            &headers,
+            "an-exact-random-reconciliation-token"
+        ));
+        assert!(!reconciliation_authorized(
+            &headers,
+            "a-different-random-reconciliation-token"
+        ));
     }
 
     #[test]
@@ -1151,11 +1628,19 @@ mod tests {
             }
         });
         assert!(attempt_matches_config(&attempt, &sandbox_config()));
-        assert!(resumed_session_matches_attempt(&session, &attempt));
+        assert!(resumed_session_matches_attempt(
+            &session,
+            &attempt,
+            PaymentMode::Test
+        ));
 
         let mut wrong_session = session;
         wrong_session["client_reference_id"] = Value::String("another-token".to_owned());
-        assert!(!resumed_session_matches_attempt(&wrong_session, &attempt));
+        assert!(!resumed_session_matches_attempt(
+            &wrong_session,
+            &attempt,
+            PaymentMode::Test
+        ));
     }
 
     #[test]
@@ -1181,11 +1666,14 @@ mod tests {
     }
 
     #[test]
-    fn sandbox_certificate_ids_are_random_opaque_identifiers() {
-        let first = new_sandbox_certificate_id();
-        let second = new_sandbox_certificate_id();
+    fn certificate_ids_are_random_opaque_and_environment_bound() {
+        let first = new_certificate_id(PaymentMode::Test);
+        let second = new_certificate_id(PaymentMode::Test);
+        let live = new_certificate_id(PaymentMode::Live);
         assert!(crate::controllers::certificate_controller::valid_public_certificate_id(&first));
         assert!(crate::controllers::certificate_controller::valid_public_certificate_id(&second));
+        assert!(crate::controllers::certificate_controller::valid_public_certificate_id(&live));
+        assert!(live.starts_with("RST-LIVE-"));
         assert_ne!(first, second);
     }
 

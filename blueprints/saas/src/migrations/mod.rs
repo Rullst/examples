@@ -2,11 +2,13 @@
 pub mod m20260601000000_create_users_table;
 pub mod m20260917000003_create_one_time_purchases;
 pub mod m20260917000004_create_tester_certificates;
+pub mod m20260917000005_add_live_commerce_controls;
 
 pub fn get_migrations() -> Vec<Box<dyn rullst::db::schema::Migration>> {
     vec![
         Box::new(m20260601000000_create_users_table::MigrationImpl),
         Box::new(m20260917000003_create_one_time_purchases::MigrationImpl),
         Box::new(m20260917000004_create_tester_certificates::MigrationImpl),
+        Box::new(m20260917000005_add_live_commerce_controls::MigrationImpl),
     ]
 }

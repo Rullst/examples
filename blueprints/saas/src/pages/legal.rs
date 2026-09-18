@@ -1,5 +1,7 @@
 use rullst::response::Html;
 
+use crate::controllers::legal_controller::MerchantNotice;
+
 const EFFECTIVE_DATE: &str = "2026-09-17";
 const VERSION: &str = "1.0";
 
@@ -46,6 +48,80 @@ pub fn sandbox_terms_page(csp_nonce: &str) -> Html<String> {
         <section><h2>No real payment or refund</h2><p>Because the published staging flow creates no real charge, there is no real amount to refund. If a real charge ever appears, stop and contact the operator and Stripe; that would not be an expected staging result.</p></section>
         <section><h2>Account action</h2><p>Creating an account after these links are presented records no optional marketing consent. It only starts the requested sandbox account. You may stop using the service and request closure through the contact address in the privacy notice.</p></section>
         "#,
+        csp_nonce,
+    )
+}
+
+fn production_page(
+    title: &str,
+    subtitle: &str,
+    content: &str,
+    support_email: &str,
+    csp_nonce: &str,
+) -> Html<String> {
+    Html(format!(
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"index,follow\"><title>{}</title><link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\"><style nonce=\"{}\">{}</style></head><body><main><nav><a href=\"/\">SaaS blueprint</a><a href=\"/privacy\">Privacy notice</a><a href=\"/terms\">Purchase and refund terms</a></nav><header><p class=\"eyebrow\">Rullst SaaS live showcase</p><h1>{}</h1><p class=\"subtitle\">{}</p><p class=\"version\">Effective {} &middot; Version {}</p></header>{}<footer><p>Privacy, refunds and support: <a href=\"mailto:{}\">{}</a></p><p>This notice does not replace rights that cannot lawfully be excluded in the customer's jurisdiction.</p></footer></main></body></html>",
+        rullst::html::escape_str(title),
+        rullst::html::escape_str(csp_nonce),
+        LEGAL_CSS,
+        rullst::html::escape_str(title),
+        rullst::html::escape_str(subtitle),
+        EFFECTIVE_DATE,
+        VERSION,
+        content,
+        rullst::html::escape_str(support_email),
+        rullst::html::escape_str(support_email),
+    ))
+}
+
+pub fn production_privacy_notice_page(merchant: &MerchantNotice, csp_nonce: &str) -> Html<String> {
+    let legal_name = rullst::html::escape_str(&merchant.legal_name);
+    let country = rullst::html::escape_str(&merchant.country);
+    let support_email = rullst::html::escape_str(&merchant.support_email);
+    let content = format!(
+        r#"<section><h2>Controller and contact</h2><p>{legal_name}, operating under the Rullst brand in {country}, controls the application account and purchase records. Privacy, refund and support requests may be sent to <a href="mailto:{support_email}">{support_email}</a>. Do not email passwords, card numbers or identity documents unless a verified support process specifically requires them.</p></section>
+        <section><h2>Data processed</h2><p>The service stores the account name, normalized email, Argon2id password hash, internal identifiers, purchase attempts, entitlement state, certificate state, refund-request state and bounded security metadata. Stripe hosts payment collection; Rullst does not receive or store complete card numbers or security codes.</p></section>
+        <section><h2>Purposes and providers</h2><p>Data is processed to create accounts, prevent abuse, complete the requested one-time purchase, reconcile signed Stripe events, deliver the purchased artifact, issue and verify a certificate, handle refunds and disputes, maintain security and meet legal obligations. The application runs in Microsoft Azure, application records are stored in Neon PostgreSQL, and payments are processed by Stripe. These providers can process data internationally under their respective contractual safeguards.</p></section>
+        <section><h2>Public certificate boundary</h2><p>The authenticated certificate can display the account name. Public verification uses a random identifier and discloses only certificate type, issue date, environment and current validity. It never publishes the holder's name, email, amount, payment method or provider identifiers.</p></section>
+        <section><h2>Retention and rights</h2><p>Account and purchase evidence is retained only as necessary for delivery, fraud prevention, refunds, disputes, accounting and applicable legal obligations. An authenticated account can download its application data from the dashboard. You may request correction, restriction, objection, account closure or deletion through the contact above. Identity is verified before account data is disclosed or changed; legally required records can be restricted rather than immediately erased.</p></section>
+        <section><h2>Security and minors</h2><p>TLS, encrypted sessions, CSRF protection, password hashing, server-owned prices, hosted payment entry, signed webhook verification, replay controls and private artifact integrity checks protect the service. No internet service can promise absolute security. A purchase must be made by an adult or by a parent or legal guardian acting for a minor.</p></section>"#,
+    );
+    production_page(
+        "Privacy notice",
+        "How the live Rullst SaaS showcase processes account and purchase data.",
+        &content,
+        &merchant.support_email,
+        csp_nonce,
+    )
+}
+
+pub fn production_terms_page(merchant: &MerchantNotice, csp_nonce: &str) -> Html<String> {
+    let legal_name = rullst::html::escape_str(&merchant.legal_name);
+    let support_email = rullst::html::escape_str(&merchant.support_email);
+    let days = merchant.refund_window_days;
+    let content = format!(
+        r#"<section><h2>Seller and product</h2><p>The seller is {legal_name}, operating under the Rullst brand. The product is a one-time digital Rullst and Stripe implementation guide plus any certificate explicitly displayed at Checkout. It is not a subscription, investment, professional licence or guarantee of commercial results.</p></section>
+        <section><h2>Price and delivery</h2><p>The exact BRL price is displayed before the customer leaves for Stripe Checkout. Access is granted only after a signed provider event is independently reconciled. The authenticated dashboard delivers the current purchased artifact; a redirect alone never proves payment.</p></section>
+        <section><h2>Refund policy</h2><p>The customer may request a full refund within {days} calendar days through the authenticated dashboard or by emailing <a href="mailto:{support_email}">{support_email}</a>. The seller processes approved refunds through Stripe. Access and certificate validity are revoked only after Stripe confirms the refund. This voluntary policy does not reduce any longer or non-waivable consumer right that applies by law.</p></section>
+        <section><h2>Disputes and support</h2><p>Contact support before opening a bank dispute so the seller can investigate delivery or issue a refund. This does not prevent a customer from exercising rights with a bank, payment provider or authority. Fraudulent use, credential sharing and attempts to bypass authorization are prohibited.</p></section>
+        <section><h2>Availability and changes</h2><p>This is a public framework showcase using low-cost serverless infrastructure and can have cold-start delay or temporary interruption. Purchased artifact access will be restored after recoverable outages, but no uninterrupted-availability promise is made. Material terms changes apply prospectively and do not remove rights attached to an earlier purchase.</p></section>
+        <section><h2>Purchaser authority</h2><p>The purchaser confirms that they are at least 18 years old or are a parent or legal guardian authorized to make the purchase for a minor. The service does not request a birth date.</p></section>"#,
+    );
+    production_page(
+        "Purchase and refund terms",
+        "Terms for the one-time live purchase offered by the Rullst SaaS showcase.",
+        &content,
+        &merchant.support_email,
+        csp_nonce,
+    )
+}
+
+pub fn configuration_unavailable_page(csp_nonce: &str) -> Html<String> {
+    production_page(
+        "Notice unavailable",
+        "The live merchant notice is not configured, so live Checkout remains unavailable.",
+        "<section><h2>Fail-closed configuration</h2><p>No purchase should be attempted until the merchant identity, support contact and refund window are configured.</p></section>",
+        "officialrullst@gmail.com",
         csp_nonce,
     )
 }

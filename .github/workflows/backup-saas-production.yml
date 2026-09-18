@@ -1,0 +1,83 @@
+name: Backup SaaS Production Database
+
+on:
+  schedule:
+    - cron: '43 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: saas-production-backup
+  cancel-in-progress: false
+
+env:
+  AZURE_CORE_OUTPUT: none
+
+jobs:
+  backup:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.SAAS_PRODUCTION_BACKUPS_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: saas-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate protected backup configuration
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.SAAS_PRODUCTION_DATABASE_URL }}
+          STORAGE_ACCOUNT: ${{ vars.SAAS_BACKUP_STORAGE_ACCOUNT }}
+          STORAGE_CONTAINER: ${{ vars.SAAS_BACKUP_CONTAINER }}
+        run: |
+          test "${DATABASE_URL#postgres}" != "$DATABASE_URL"
+          test "${DATABASE_URL#*sslmode=require}" != "$DATABASE_URL"
+          [[ "$STORAGE_ACCOUNT" =~ ^[a-z0-9]{3,24}$ ]]
+          [[ "$STORAGE_CONTAINER" =~ ^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$ ]]
+
+      - name: Create and validate an encrypted-in-transit PostgreSQL dump
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.SAAS_PRODUCTION_DATABASE_URL }}
+        run: |
+          export BACKUP_NAME="saas-production-$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}.dump"
+          docker run --rm \
+            --env DATABASE_URL \
+            --env BACKUP_NAME \
+            --volume "$PWD:/backup" \
+            postgres:17-bookworm \
+            sh -c 'pg_dump --format=custom --no-owner --no-acl --file="/backup/${BACKUP_NAME}" "$DATABASE_URL"'
+          docker run --rm \
+            --volume "$PWD:/backup" \
+            postgres:17-bookworm \
+            pg_restore --list "/backup/${BACKUP_NAME}" > /dev/null
+          echo "BACKUP_NAME=$BACKUP_NAME" >> "$GITHUB_ENV"
+
+      - name: Log in to Azure with a short-lived production OIDC token
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Require a private container and upload the validated dump
+        shell: bash
+        env:
+          STORAGE_ACCOUNT: ${{ vars.SAAS_BACKUP_STORAGE_ACCOUNT }}
+          STORAGE_CONTAINER: ${{ vars.SAAS_BACKUP_CONTAINER }}
+        run: |
+          PUBLIC_ACCESS="$(az storage container show \
+            --account-name "$STORAGE_ACCOUNT" \
+            --name "$STORAGE_CONTAINER" \
+            --auth-mode login \
+            --query 'properties.publicAccess' \
+            --output tsv \
+            --only-show-errors)"
+          test -z "$PUBLIC_ACCESS"
+          az storage blob upload \
+            --account-name "$STORAGE_ACCOUNT" \
+            --container-name "$STORAGE_CONTAINER" \
+            --name "$BACKUP_NAME" \
+            --file "$BACKUP_NAME" \
+            --auth-mode login \
+            --overwrite false \
+            --only-show-errors \
+            --output none

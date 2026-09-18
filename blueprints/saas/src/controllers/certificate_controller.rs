@@ -14,11 +14,15 @@ struct CertificateView {
 }
 
 pub fn valid_public_certificate_id(value: &str) -> bool {
-    value.len() == 40
-        && value.starts_with("RST-SBX-")
-        && value[8..]
-            .bytes()
-            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_lowercase())
+    let suffix = value
+        .strip_prefix("RST-SBX-")
+        .or_else(|| value.strip_prefix("RST-LIVE-"));
+    suffix.is_some_and(|suffix| {
+        suffix.len() == 32
+            && suffix
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_lowercase())
+    })
 }
 
 pub async fn account_certificate_public_id(
@@ -145,7 +149,7 @@ mod tests {
             "RST-SBX-0123456789abcdef0123456789abcdef"
         ));
         assert!(!valid_public_certificate_id("RST-SBX-1234"));
-        assert!(!valid_public_certificate_id(
+        assert!(valid_public_certificate_id(
             "RST-LIVE-0123456789ABCDEF0123456789ABCDEF"
         ));
     }

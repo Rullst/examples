@@ -280,12 +280,22 @@ pub async fn dashboard(
                         None
                     }
                 };
+            let refund_status =
+                match crate::controllers::refund_controller::refund_request_status(user.id).await {
+                    Ok(value) => value,
+                    Err(error) => {
+                        eprintln!("Dashboard refund lookup failed: {error}");
+                        None
+                    }
+                };
             auth::dashboard_page(
                 &user.name,
                 csrf_token,
                 get_csp_nonce(&csp_nonce),
                 has_stripe_report,
                 certificate_public_id.as_deref(),
+                crate::controllers::legal_controller::live_mode(),
+                refund_status.as_deref(),
             )
             .into_response()
         }

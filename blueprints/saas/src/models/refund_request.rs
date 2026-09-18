@@ -2,40 +2,36 @@ use rullst::db::{FromRow, Orm};
 use rullst::nexus::{FieldKind, FieldMeta, NexusModel};
 
 #[derive(Debug, Clone, FromRow, Orm)]
-#[orm(table = "entitlements")]
-pub struct Entitlement {
+#[orm(table = "refund_requests")]
+pub struct RefundRequest {
     pub id: i32,
     pub user_id: i32,
-    pub product_sku: String,
+    pub entitlement_id: i32,
     pub provider: String,
     pub provider_payment_id: String,
-    pub artifact_version: String,
     pub status: String,
-    pub revoked_reason: Option<String>,
-    pub revoked_at: Option<String>,
-    pub last_reconciled_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
 
-impl NexusModel for Entitlement {
+impl NexusModel for RefundRequest {
     fn nexus_table() -> &'static str {
-        "entitlements"
+        "refund_requests"
     }
 
     fn nexus_label() -> &'static str {
-        "Entitlements"
+        "Refund requests"
     }
 
     fn nexus_icon() -> &'static str {
-        "Access"
+        "Refunds"
     }
 
     fn nexus_fields() -> Vec<FieldMeta> {
         vec![
             readonly("id", "ID", FieldKind::Number, true),
             readonly("user_id", "User ID", FieldKind::Number, false),
-            readonly("product_sku", "Product SKU", FieldKind::Text, false),
+            readonly("entitlement_id", "Entitlement ID", FieldKind::Number, false),
             readonly("provider", "Provider", FieldKind::Text, false),
             readonly(
                 "provider_payment_id",
@@ -43,27 +39,8 @@ impl NexusModel for Entitlement {
                 FieldKind::Text,
                 false,
             ),
-            readonly(
-                "artifact_version",
-                "Artifact version",
-                FieldKind::Text,
-                false,
-            ),
             readonly("status", "Status", FieldKind::Text, false),
-            readonly(
-                "revoked_reason",
-                "Revocation reason",
-                FieldKind::Text,
-                false,
-            ),
-            readonly("revoked_at", "Revoked at", FieldKind::Text, false),
-            readonly(
-                "last_reconciled_at",
-                "Last reconciled at",
-                FieldKind::Text,
-                false,
-            ),
-            readonly("created_at", "Created at", FieldKind::Text, false),
+            readonly("created_at", "Requested at", FieldKind::Text, false),
             readonly("updated_at", "Updated at", FieldKind::Text, false),
         ]
     }

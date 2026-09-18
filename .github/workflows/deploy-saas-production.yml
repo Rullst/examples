@@ -1,0 +1,146 @@
+name: Prepare SaaS Production (Checkout Disabled)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type prepare-saas-production to authorize a fail-closed production deployment'
+        required: true
+        type: string
+      staging_commit:
+        description: 'Full Git commit SHA of the image currently accepted in SaaS staging'
+        required: true
+        type: string
+
+concurrency:
+  group: saas-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: rullst/examples
+  STAGING_CONTAINER_APP: rullst-saas-staging
+  PRODUCTION_CONTAINER_APP: rullst-saas
+  RESOURCE_GROUP: rullst-rg
+  AZURE_CORE_OUTPUT: none
+
+jobs:
+  promote-disabled:
+    if: ${{ inputs.confirmation == 'prepare-saas-production' }}
+    runs-on: ubuntu-latest
+    environment: saas-production
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    steps:
+      - name: Reject missing or malformed protected configuration
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.SAAS_PRODUCTION_DATABASE_URL }}
+          APP_KEY: ${{ secrets.SAAS_PRODUCTION_APP_KEY }}
+          NEXUS_USERNAME: ${{ secrets.SAAS_PRODUCTION_NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.SAAS_PRODUCTION_NEXUS_PASSWORD }}
+          STAGING_COMMIT: ${{ inputs.staging_commit }}
+        run: |
+          [[ "$STAGING_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "${DATABASE_URL#postgres}" != "$DATABASE_URL"
+          test "${DATABASE_URL#*sslmode=require}" != "$DATABASE_URL"
+          test "${#APP_KEY}" -ge 32
+          test -n "$NEXUS_USERNAME"
+          test "${#NEXUS_PASSWORD}" -ge 16
+
+      - name: Log in to Azure with a short-lived production OIDC token
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Require pre-provisioned production infrastructure
+        shell: bash
+        run: |
+          az containerapp show --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --only-show-errors --output none
+
+      - name: Prove the selected image is running in staging
+        id: image
+        shell: bash
+        env:
+          STAGING_COMMIT: ${{ inputs.staging_commit }}
+        run: |
+          SOURCE_IMAGE="${REGISTRY}/${IMAGE_NAME}:saas-staging-${STAGING_COMMIT}"
+          STAGING_IMAGE="$(az containerapp show --name "$STAGING_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --query 'properties.template.containers[0].image' --output tsv --only-show-errors)"
+          test "$STAGING_IMAGE" = "$SOURCE_IMAGE"
+          curl --fail --silent --show-error --max-time 30 \
+            --user-agent "Rullst-SaaS-Production-Promotion/1.0" \
+            https://saas-staging.rullst.win/healthz | grep --fixed-strings --quiet ready
+          echo "source=$SOURCE_IMAGE" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Resolve the accepted staging tag to an immutable digest
+        id: digest
+        shell: bash
+        env:
+          SOURCE_IMAGE: ${{ steps.image.outputs.source }}
+        run: |
+          DIGEST="$(docker buildx imagetools inspect "$SOURCE_IMAGE" | sed -n 's/^Digest:[[:space:]]*//p' | head -n 1)"
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "image=${REGISTRY}/${IMAGE_NAME}@${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Store production-only protected values
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.SAAS_PRODUCTION_DATABASE_URL }}
+          APP_KEY: ${{ secrets.SAAS_PRODUCTION_APP_KEY }}
+          NEXUS_USERNAME: ${{ secrets.SAAS_PRODUCTION_NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.SAAS_PRODUCTION_NEXUS_PASSWORD }}
+        run: |
+          az containerapp secret set --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --secrets \
+            database-url="$DATABASE_URL" \
+            app-key="$APP_KEY" \
+            nexus-username="$NEXUS_USERNAME" \
+            nexus-password="$NEXUS_PASSWORD" \
+            --only-show-errors --output none
+
+      - name: Deploy the accepted image with checkout fail-closed
+        shell: bash
+        env:
+          IMAGE: ${{ steps.digest.outputs.image }}
+        run: |
+          az containerapp update --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --image "$IMAGE" \
+            --min-replicas 0 --max-replicas 1 \
+            --set-env-vars \
+              RULLST_ENV=production \
+              DEPLOYMENT_TIER=production \
+              NEXUS_TRUSTED_TLS_TERMINATION=azure-container-apps \
+              MIGRATE_ON_STARTUP=true \
+              PAYMENTS_MODE=disabled \
+              BILLING_PROVIDER=stripe \
+              BILLING_EXPECTED_CURRENCY=BRL \
+              BILLING_EXPECTED_AMOUNT_MINOR=100 \
+              BILLING_REDIRECT_URL=https://saas.rullst.win/dashboard \
+              DATABASE_URL=secretref:database-url \
+              APP_KEY=secretref:app-key \
+              NEXUS_ADMIN_USERNAME=secretref:nexus-username \
+              NEXUS_ADMIN_PASSWORD=secretref:nexus-password \
+            --only-show-errors --output none
+
+      - name: Verify the immutable revision and production database
+        shell: bash
+        env:
+          IMAGE: ${{ steps.digest.outputs.image }}
+        run: |
+          for attempt in $(seq 1 30); do
+            ACTUAL_IMAGE="$(az containerapp show --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --query 'properties.template.containers[0].image' --output tsv --only-show-errors)"
+            FQDN="$(az containerapp show --name "$PRODUCTION_CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --query 'properties.configuration.ingress.fqdn' --output tsv --only-show-errors)"
+            if [ "$ACTUAL_IMAGE" = "$IMAGE" ] && curl --fail --silent --show-error --max-time 15 \
+              --user-agent "Rullst-SaaS-Production-Healthcheck/1.0" \
+              "https://${FQDN}/healthz" | grep --fixed-strings --quiet ready; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::SaaS production did not become ready; no secret or response body was logged.'
+          exit 1

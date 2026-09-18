@@ -36,8 +36,10 @@ transaction timestamp, card detail or webhook payload.
    identity and local purchase attempt.
 8. One database transaction records the accepted event, marks the purchase and
    creates the report entitlement.
-9. The private badge remains a later milestone. If added, public display must
-   require a separate opt-in.
+9. The same transaction issues an environment-specific certificate. Its public
+   verification URL uses a random identifier and omits the holder's identity
+   and every provider/payment identifier; the holder decides whether to share
+   it.
 
 ## Rullst v12 findings
 

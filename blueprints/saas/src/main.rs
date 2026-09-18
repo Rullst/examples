@@ -49,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .register::<models::user::User>()
         .register::<models::purchase_attempt::PurchaseAttempt>()
         .register::<models::entitlement::Entitlement>()
+        .register::<models::refund_request::RefundRequest>()
         .register::<models::tester_certificate::TesterCertificate>()
         .try_build()?;
 
@@ -91,10 +92,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 rullst::server::from_fn(middlewares::auth_middleware::auth_middleware),
             ),
         )
+        .route(
+            "/refund",
+            rullst::routing::get(controllers::refund_controller::refund_view)
+                .post(controllers::refund_controller::refund_submit)
+                .layer(rullst::server::from_fn(
+                    middlewares::auth_middleware::auth_middleware,
+                )),
+        )
+        .route(
+            "/account/data-export",
+            rullst::routing::get(controllers::privacy_controller::export_account_data).layer(
+                rullst::server::from_fn(middlewares::auth_middleware::auth_middleware),
+            ),
+        )
         .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
         .route(
             "/billing/webhook",
             rullst::routing::post(controllers::billing_controller::webhook_handler),
+        )
+        .route(
+            "/billing/reconcile",
+            rullst::routing::post(controllers::billing_controller::reconciliation_handler),
         )
         .layer(rullst::server::from_fn(
             rullst::security::headers_middleware,

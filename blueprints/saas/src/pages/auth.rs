@@ -100,14 +100,24 @@ pub fn dashboard_page(
     csp_nonce: &str,
     has_stripe_report: bool,
     certificate_public_id: Option<&str>,
+    live_mode: bool,
+    refund_status: Option<&str>,
 ) -> Html<String> {
     let nonce = rullst::html::escape_str(csp_nonce);
     let user_name = rullst::html::escape_str(user_name);
     let csrf_token = rullst::html::escape_str(csrf_token);
     let report_action = if has_stripe_report {
-        "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download Stripe report</a>"
+        if live_mode {
+            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download purchased guide</a>"
+        } else {
+            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download Stripe report</a>"
+        }
     } else {
-        "<a class=\"btn-report\" href=\"/pricing\">Open sandbox checkout</a>"
+        if live_mode {
+            "<a class=\"btn-report\" href=\"/pricing\">Open one-time checkout</a>"
+        } else {
+            "<a class=\"btn-report\" href=\"/pricing\">Open sandbox checkout</a>"
+        }
     };
     let certificate_action = certificate_public_id.map_or_else(
         || {
@@ -121,11 +131,38 @@ pub fn dashboard_page(
         },
         |public_id| {
             format!(
-                "<a class=\"btn-report btn-certificate\" href=\"/certificate\">View Sandbox Pioneer certificate</a><p class=\"muted small\">Public verification ID: {}</p>",
+                "<a class=\"btn-report btn-certificate\" href=\"/certificate\">View {} certificate</a><p class=\"muted small\">Public verification ID: {}</p>",
+                if public_id.starts_with("RST-LIVE-") { "Founding Customer" } else { "Sandbox Pioneer" },
                 rullst::html::escape_str(public_id)
             )
         },
     );
+    let refund_action = if live_mode && has_stripe_report {
+        match refund_status {
+            Some("requested" | "processing") => {
+                "<a class=\"btn-report btn-refund\" href=\"/refund\">Refund requested</a>"
+                    .to_owned()
+            }
+            Some("completed") => {
+                "<p class=\"muted small\">Stripe confirmed the refund.</p>".to_owned()
+            }
+            _ => {
+                "<a class=\"btn-report btn-refund\" href=\"/refund\">Request refund</a>".to_owned()
+            }
+        }
+    } else {
+        String::new()
+    };
+    let terms_label = if live_mode {
+        "Purchase terms"
+    } else {
+        "Sandbox terms"
+    };
+    let entitlement_description = if live_mode {
+        "Access is granted only after a verified live Stripe event. Refunds and disputes revoke access after provider confirmation."
+    } else {
+        "Access is granted only after a verified, replay-protected provider test event."
+    };
     Html(r#"<!DOCTYPE html><html lang="en" class="dark"><head>
          <meta charset="utf-8" />
          <link rel="icon" type="image/png" href="/static/rullst.png" />
@@ -158,7 +195,8 @@ pub fn dashboard_page(
            <div class="logo">⚡ Rullst SaaS Dashboard</div>
            <div class="topbar-actions">
              <a href="/privacy" class="btn-nexus">Privacy</a>
-             <a href="/terms" class="btn-nexus">Sandbox terms</a>
+             <a href="/account/data-export" class="btn-nexus">Export my data</a>
+             <a href="/terms" class="btn-nexus">__RULLST_TERMS_LABEL__</a>
              <a href="/nexus" class="btn-nexus">⚙️ Nexus CMS</a>
              <form method="post" action="/logout" class="logout-form"><input type="hidden" name="_token" value="__RULLST_CSRF_TOKEN__" /><button type="submit" class="btn-logout">Logout</button></form>
            </div>
@@ -170,9 +208,10 @@ pub fn dashboard_page(
              <div class="card">
                <h3 class="subscription">💳 Stripe report</h3>
                <p class="metric">Webhook-derived access</p>
-               <p class="muted small">Access is granted only after a verified, replay-protected provider event.</p>
+               <p class="muted small">__RULLST_ENTITLEMENT_DESCRIPTION__</p>
                __RULLST_REPORT_ACTION__
                __RULLST_CERTIFICATE_ACTION__
+               __RULLST_REFUND_ACTION__
              </div>
              <div class="card">
                <h3 class="performance">⚡ Performance</h3>
@@ -190,5 +229,11 @@ pub fn dashboard_page(
         .replace("__RULLST_CSRF_TOKEN__", &csrf_token)
         .replace("__RULLST_REPORT_ACTION__", report_action)
         .replace("__RULLST_CERTIFICATE_ACTION__", &certificate_action)
+        .replace("__RULLST_REFUND_ACTION__", &refund_action)
+        .replace("__RULLST_TERMS_LABEL__", terms_label)
+        .replace(
+            "__RULLST_ENTITLEMENT_DESCRIPTION__",
+            entitlement_description,
+        )
         .replace("__RULLST_USER_NAME__", &user_name))
 }

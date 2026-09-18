@@ -1,0 +1,173 @@
+name: Enable SaaS Live Checkout
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type enable-rullst-live to authorize real-money Checkout'
+        required: true
+        type: string
+      price_id:
+        description: 'Active Stripe live one-time price_... ID'
+        required: true
+        type: string
+      amount_minor:
+        description: 'Exact charge in BRL cents (R$1 initially; R$10 after acceptance)'
+        required: true
+        default: '100'
+        type: choice
+        options:
+          - '100'
+          - '1000'
+
+concurrency:
+  group: saas-production
+  cancel-in-progress: false
+
+env:
+  CONTAINER_APP: rullst-saas
+  RESOURCE_GROUP: rullst-rg
+  AZURE_CORE_OUTPUT: none
+
+jobs:
+  enable-live:
+    if: ${{ inputs.confirmation == 'enable-rullst-live' }}
+    runs-on: ubuntu-latest
+    environment: saas-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Reject missing or malformed live configuration
+        shell: bash
+        env:
+          PRICE_ID: ${{ inputs.price_id }}
+          AMOUNT_MINOR: ${{ inputs.amount_minor }}
+          STRIPE_KEY: ${{ secrets.STRIPE_LIVE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_LIVE_WEBHOOK_SECRET }}
+          RECONCILIATION_TOKEN: ${{ secrets.SAAS_PRODUCTION_RECONCILIATION_TOKEN }}
+          PAID_ARTIFACT_URL: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_URL }}
+          PAID_ARTIFACT_SHA256: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_SHA256 }}
+          MERCHANT_LEGAL_NAME: ${{ secrets.SAAS_PRODUCTION_MERCHANT_LEGAL_NAME }}
+        run: |
+          [[ "$PRICE_ID" =~ ^price_[A-Za-z0-9_-]+$ ]]
+          [[ "$AMOUNT_MINOR" = '100' || "$AMOUNT_MINOR" = '1000' ]]
+          test "${STRIPE_KEY#sk_live_}" != "$STRIPE_KEY"
+          test "${STRIPE_WEBHOOK_SECRET#whsec_}" != "$STRIPE_WEBHOOK_SECRET"
+          test "${#RECONCILIATION_TOKEN}" -ge 32
+          test "${#RECONCILIATION_TOKEN}" -le 200
+          [[ "$PAID_ARTIFACT_URL" =~ ^https://[^/]+\.blob\.core\.windows\.net/.+\?.+$ ]]
+          [[ "$PAID_ARTIFACT_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]
+          test -n "$MERCHANT_LEGAL_NAME"
+
+      - name: Verify the exact live one-time Stripe Price
+        shell: bash
+        env:
+          PRICE_ID: ${{ inputs.price_id }}
+          AMOUNT_MINOR: ${{ inputs.amount_minor }}
+          STRIPE_KEY: ${{ secrets.STRIPE_LIVE_SECRET_KEY }}
+        run: |
+          PRICE_JSON="$(curl --fail --silent --show-error --max-time 30 \
+            --user "${STRIPE_KEY}:" \
+            "https://api.stripe.com/v1/prices/${PRICE_ID}")"
+          jq --exit-status \
+            --arg price_id "$PRICE_ID" \
+            --argjson amount_minor "$AMOUNT_MINOR" \
+            '.id == $price_id and .active == true and .livemode == true and .type == "one_time" and .currency == "brl" and .unit_amount == $amount_minor' \
+            <<< "$PRICE_JSON" > /dev/null
+
+      - name: Verify the private paid artifact bytes
+        shell: bash
+        env:
+          PAID_ARTIFACT_URL: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_URL }}
+          PAID_ARTIFACT_SHA256: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_SHA256 }}
+        run: |
+          curl --fail --silent --show-error --max-time 30 --max-filesize 2097152 \
+            --proto '=https' \
+            --output paid-artifact.md \
+            "$PAID_ARTIFACT_URL"
+          test -s paid-artifact.md
+          iconv --from-code UTF-8 --to-code UTF-8 paid-artifact.md > /dev/null
+          ACTUAL_SHA256="$(sha256sum paid-artifact.md | cut -d ' ' -f 1)"
+          test "$ACTUAL_SHA256" = "${PAID_ARTIFACT_SHA256,,}"
+          rm paid-artifact.md
+
+      - name: Log in to Azure with a short-lived production OIDC token
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Require the reviewed production deployment
+        shell: bash
+        run: |
+          az containerapp show --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --only-show-errors --output none
+          CURRENT_MODE="$(az containerapp show --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --query "properties.template.containers[0].env[?name=='PAYMENTS_MODE'].value | [0]" --output tsv --only-show-errors)"
+          [[ "$CURRENT_MODE" = 'disabled' || "$CURRENT_MODE" = 'live' ]]
+
+      - name: Store live secrets without printing them
+        shell: bash
+        env:
+          STRIPE_KEY: ${{ secrets.STRIPE_LIVE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_LIVE_WEBHOOK_SECRET }}
+          RECONCILIATION_TOKEN: ${{ secrets.SAAS_PRODUCTION_RECONCILIATION_TOKEN }}
+          PAID_ARTIFACT_URL: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_URL }}
+          PAID_ARTIFACT_SHA256: ${{ secrets.SAAS_PRODUCTION_PAID_ARTIFACT_SHA256 }}
+          MERCHANT_LEGAL_NAME: ${{ secrets.SAAS_PRODUCTION_MERCHANT_LEGAL_NAME }}
+        run: |
+          az containerapp secret set --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --secrets \
+            stripe-live-key="$STRIPE_KEY" \
+            stripe-live-webhook-secret="$STRIPE_WEBHOOK_SECRET" \
+            reconciliation-token="$RECONCILIATION_TOKEN" \
+            paid-artifact-url="$PAID_ARTIFACT_URL" \
+            paid-artifact-sha256="$PAID_ARTIFACT_SHA256" \
+            merchant-legal-name="$MERCHANT_LEGAL_NAME" \
+            --only-show-errors --output none
+
+      - name: Atomically activate the exact live offer
+        shell: bash
+        env:
+          PRICE_ID: ${{ inputs.price_id }}
+          AMOUNT_MINOR: ${{ inputs.amount_minor }}
+        run: |
+          az containerapp update --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --set-env-vars \
+              PAYMENTS_MODE=live \
+              LIVE_PAYMENTS_ACKNOWLEDGEMENT=accept-real-money \
+              BILLING_PROVIDER=stripe \
+              BILLING_PRICE_ID="$PRICE_ID" \
+              BILLING_EXPECTED_CURRENCY=BRL \
+              BILLING_EXPECTED_AMOUNT_MINOR="$AMOUNT_MINOR" \
+              BILLING_REDIRECT_URL=https://saas.rullst.win/dashboard \
+              STRIPE_SECRET_KEY=secretref:stripe-live-key \
+              STRIPE_WEBHOOK_SECRET=secretref:stripe-live-webhook-secret \
+              RECONCILIATION_TOKEN=secretref:reconciliation-token \
+              PAID_ARTIFACT_URL=secretref:paid-artifact-url \
+              PAID_ARTIFACT_SHA256=secretref:paid-artifact-sha256 \
+              PAID_ARTIFACT_FILENAME=rullst-stripe-production-guide-v1.md \
+              MERCHANT_LEGAL_NAME=secretref:merchant-legal-name \
+              MERCHANT_COUNTRY=BR \
+              SUPPORT_EMAIL=officialrullst@gmail.com \
+              REFUND_WINDOW_DAYS=14 \
+              FOUNDING_CUSTOMER_LIMIT=100 \
+            --only-show-errors --output none
+
+      - name: Verify live revision health without creating a payment
+        shell: bash
+        run: |
+          FQDN="$(az containerapp show --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --query 'properties.configuration.ingress.fqdn' --output tsv --only-show-errors)"
+          for attempt in $(seq 1 30); do
+            MODE="$(az containerapp show --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --query "properties.template.containers[0].env[?name=='PAYMENTS_MODE'].value | [0]" --output tsv --only-show-errors)"
+            if [ "$MODE" = 'live' ] && curl --fail --silent --show-error --max-time 20 \
+              --user-agent "Rullst-SaaS-Live-Healthcheck/1.0" \
+              "https://${FQDN}/healthz" | grep --fixed-strings --quiet ready; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::Live checkout revision did not become healthy. No secret or provider response was logged.'
+          az containerapp update --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --set-env-vars PAYMENTS_MODE=disabled \
+            --only-show-errors --output none
+          exit 1

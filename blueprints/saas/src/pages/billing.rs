@@ -45,9 +45,9 @@ fn setup_banner(state: &PaymentPageState) -> String {
                 "setup-banner setup-banner--test",
             ),
             PaymentMode::Live => (
-                "Live-money mode is blocked",
-                "Live checkout remains fail-closed until sandbox evidence, refunds, monitoring and the production legal notices pass review.",
-                "setup-banner setup-banner--blocked",
+                "Live one-time purchase is enabled",
+                "Stripe will create a real charge. The server verifies the live Price and grants access only after signed provider reconciliation.",
+                "setup-banner setup-banner--live",
             ),
             PaymentMode::Disabled => (
                 "Payment checkout is disabled",
@@ -85,13 +85,26 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
         } else {
             "Continue to live checkout"
         };
+        let progress = if state.payment_mode == PaymentMode::Live {
+            "Verifying the live Price and opening Stripe Checkout&hellip;"
+        } else {
+            "Verifying the sandbox Price and opening Stripe Checkout&hellip;"
+        };
         format!(
-            "<form id=\"checkout-form\" method=\"post\" action=\"/billing/checkout\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><input type=\"hidden\" name=\"offer\" value=\"gateway-report-stripe\"><label class=\"purchase-authority\"><input type=\"checkbox\" name=\"purchase_authority\" value=\"adult_or_guardian\" required> I am 18 or older, or I am the parent/legal guardian making this purchase.</label><button id=\"checkout-submit\" type=\"submit\" class=\"btn-checkout primary\">{}</button><p id=\"checkout-status\" class=\"checkout-status\" role=\"status\" aria-live=\"polite\" hidden>Verifying the sandbox Price and opening Stripe Checkout&hellip;</p></form>",
+            "<form id=\"checkout-form\" method=\"post\" action=\"/billing/checkout\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><input type=\"hidden\" name=\"offer\" value=\"gateway-report-stripe\"><label class=\"purchase-authority\"><input type=\"checkbox\" name=\"purchase_authority\" value=\"adult_or_guardian\" required> I am 18 or older, or I am the parent/legal guardian making this purchase.</label><button id=\"checkout-submit\" type=\"submit\" class=\"btn-checkout primary\">{}</button><p id=\"checkout-status\" class=\"checkout-status\" role=\"status\" aria-live=\"polite\" hidden>{}</p></form>",
             rullst::html::escape_str(csrf_token),
             button_label,
+            progress,
         )
     } else if checkout_available {
-        "<a href=\"/login\" class=\"btn-checkout primary\">Sign in to open sandbox checkout</a><p class=\"checkout-status checkout-status--visible\">Checkout is tied to your authenticated account. Sign in first, then return here.</p>".to_owned()
+        let label = if state.payment_mode == PaymentMode::Live {
+            "Sign in to purchase"
+        } else {
+            "Sign in to open sandbox checkout"
+        };
+        format!(
+            "<a href=\"/login\" class=\"btn-checkout primary\">{label}</a><p class=\"checkout-status checkout-status--visible\">Checkout is tied to your authenticated account. Sign in first, then return here.</p>"
+        )
     } else {
         "<button type=\"button\" class=\"btn-checkout\" disabled>Payment checkout is disabled</button>"
             .to_owned()
@@ -101,7 +114,7 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
         <section class="pricing-card pricing-card--featured">
             <p class="eyebrow">"Server-controlled one-time checkout"</p>
             <h2 class="plan-name">"Stripe Gateway Field Report"</h2>
-            <p class="plan-desc">"The browser never supplies a Stripe Price ID or amount. Immediately before Checkout, the server verifies the configured Price is active, one-time, belongs to the sandbox and exactly matches the expected amount and currency."</p>
+            <p class="plan-desc">"The browser never supplies a Stripe Price ID or amount. Immediately before Checkout, the server verifies that the configured Price is active, one-time, belongs to this Stripe environment and exactly matches the expected amount and currency."</p>
             <div class="price-container">
                 <span class="price-label">{state.expected_price.as_str()}</span>
                 <span class="period">"one-time purchase"</span>
@@ -200,6 +213,32 @@ window.addEventListener('pageshow', reset);
     } else {
         String::new()
     };
+    let live = state.payment_mode == PaymentMode::Live;
+    let subtitle = if live {
+        "A real one-time purchase of the private Rullst and Stripe implementation guide. Stripe hosts payment collection; access is granted only after provider reconciliation."
+    } else {
+        "A deliberately constrained one-time Checkout harness. The published staging environment uses Stripe sandbox data and creates no real charge."
+    };
+    let checklist_title = if live {
+        "Live purchase safeguards"
+    } else {
+        "Test-mode checklist"
+    };
+    let checklist_items = if live {
+        "<li>The exact live one-time Price is verified by the server before redirect.</li><li>Live keys and webhook secrets remain in Azure Container Apps secrets.</li><li>Stripe Checkout collects payment details; this application never receives complete card data.</li><li>Signed webhooks reconcile payment, refund and dispute state.</li><li>The private guide is downloaded only after entitlement and SHA-256 verification.</li>"
+    } else {
+        "<li>Create the exact one-time sandbox Price in the provider dashboard.</li><li>Store test keys only in Azure Container Apps secrets.</li><li>Use the provider's documented test card or payment method.</li><li>Reconcile the signed webhook and persistent local state.</li><li>Test duplicate events, failed payments, expiration and refunds before any live rollout.</li>"
+    };
+    let heading = if live {
+        "A real purchase with explicit boundaries"
+    } else {
+        "Payment testing without hidden assumptions"
+    };
+    let final_note = if live {
+        "This is a real purchase, not an integration test. Use the sandbox environment for test cards. Refunds are requested from the authenticated dashboard and processed through Stripe."
+    } else {
+        "Never use a real card to test Stripe live mode. This environment stays in Stripe Test Mode and creates no real charge."
+    };
     let document = html! {
         <html lang="en">
             <head>
@@ -216,23 +255,17 @@ window.addEventListener('pageshow', reset);
                     { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in)) }
                     <header class="header">
                         <span class="badge">"Rullst SaaS Blueprint"</span>
-                        <h1>"Payment testing without hidden assumptions"</h1>
-                        <p class="subtitle">"A deliberately constrained one-time Checkout harness. The published staging environment uses Stripe sandbox data; live money remains blocked until the production acceptance gate is complete."</p>
+                        <h1>{heading}</h1>
+                        <p class="subtitle">{subtitle}</p>
                     </header>
                     { rullst::html::RawHtml(setup_banner(state)) }
                     <div class="pricing-grid">
                         { rullst::html::RawHtml(checkout_card(csrf_token, state)) }
                         <aside class="safety-card">
                             <p class="eyebrow">"Safe rollout order"</p>
-                            <h2>"Test-mode checklist"</h2>
-                            <ol>
-                                <li>"Create the exact one-time sandbox Price in the provider dashboard."</li>
-                                <li>"Store test keys only in Azure Container Apps secrets."</li>
-                                <li>"Use the provider's documented test card or payment method."</li>
-                                <li>"Reconcile the signed webhook and persistent local state."</li>
-                                <li>"Test duplicate events, failed payments, expiration and refunds before any live rollout."</li>
-                            </ol>
-                            <p class="fine-print">"Never use a real card to test Stripe live mode. The published demo must stay in Stripe Test Mode and creates no real charge."</p>
+                            <h2>{checklist_title}</h2>
+                            <ol>{ rullst::html::RawHtml(checklist_items.to_owned()) }</ol>
+                            <p class="fine-print">{final_note}</p>
                         </aside>
                     </div>
                     { rullst::html::RawHtml(gateway_matrix()) }

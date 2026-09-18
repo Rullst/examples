@@ -15,6 +15,7 @@ pub struct PurchaseAttempt {
     pub provider_session_id: Option<String>,
     pub provider_payment_id: Option<String>,
     pub status: String,
+    pub last_reconciled_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -70,6 +71,12 @@ impl NexusModel for PurchaseAttempt {
                 false,
             ),
             readonly("status", "Status", FieldKind::Text, false),
+            readonly(
+                "last_reconciled_at",
+                "Last reconciled at",
+                FieldKind::Text,
+                false,
+            ),
             readonly("created_at", "Created at", FieldKind::Text, false),
             readonly("updated_at", "Updated at", FieldKind::Text, false),
         ]
