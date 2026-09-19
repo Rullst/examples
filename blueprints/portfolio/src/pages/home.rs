@@ -4,13 +4,14 @@ use crate::models::profile::Profile;
 use crate::models::project::Project;
 use crate::models::skill::Skill;
 use rullst::html;
+use rullst::html::escape_str;
 
 const PUBLIC_DEMO_USERNAME: &str = "rullst_demo";
 const PUBLIC_DEMO_PASSWORD: &str = "RullstDemoAccess2026!";
 
 fn cv_styles() -> String {
     r#"
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
     
     :root {
         --bg-color: #050505;
@@ -640,7 +641,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                 <img src={&profile.avatar_url} alt={&profile.name} class="profile-img" />
                 <h1>{&profile.name}</h1>
                 <h2 class="role">{&profile.title}</h2>
-                <div class="engine-badge">"Rullst HTMX + Tailwind SSR profile selected"</div>
+                <div class="engine-badge">"cargo rullst new Portfolio Selected"</div>
                 <p class="summary">{&profile.subtitle}</p>
 
                 <div style="margin-top: 1.5rem; background: rgba(0, 255, 204, 0.04); border: 1px solid rgba(0, 255, 204, 0.3); border-radius: 14px; padding: 1.25rem; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.37);">
@@ -648,7 +649,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                         <span>"🛡️"</span> "Live Sandbox Access"
                     </div>
                     <p style="font-size: 0.8rem; color: #9ca3af; margin-bottom: 0.75rem; line-height: 1.4;">
-                        "Public showcase mode enabled. Explore the Nexus Admin CMS or monitor real-time Studio telemetry:"
+                        "Explore Nexus CMS and Studio with the shared demo login. Use fictional data only: CMS edits are public."
                     </p>
                     <div style="background: rgba(0, 0, 0, 0.5); border-radius: 8px; padding: 0.6rem 0.8rem; font-family: monospace; font-size: 0.82rem; color: #f3f4f6; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.1);">
                         <div style="margin-bottom: 0.25rem;"><span style="color: #9ca3af;">"Username: "</span><strong style="color: #00ffcc; user-select: all;">{PUBLIC_DEMO_USERNAME}</strong></div>
@@ -668,7 +669,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
             </div>
 
             <div class="contact-info">
-                <div class="contact-item">"📧 "{&profile.email}</div>
+                <div class="contact-item">"📧 "<a href={format!("mailto:{}", profile.email)}>{&profile.email}</a></div>
                 <div class="contact-item">"🌐 "<a href={&profile.website} target="_blank" style="color: var(--accent);">{&profile.website}</a></div>
                 <div class="contact-item">"💻 "<a href={&profile.github_url} target="_blank" style="color: var(--text-muted);">{&profile.github_url}</a></div>
                 <div class="contact-item">"💼 "<a href={&profile.linkedin_url} target="_blank" style="color: var(--text-muted);">{&profile.linkedin_url}</a></div>
@@ -677,16 +678,30 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
             <div>
                 <div class="skill-cat">"Technical Skills"</div>
                 <div class="tags">
-                    { rullst::html::RawHtml::new(skills.iter().map(|s| format!("<span class=\"tag\">{}</span>", s.name)).collect::<Vec<_>>().join("")) }
+                    { rullst::html::RawHtml::new(skills.iter().map(|s| format!("<span class=\"tag\">{}</span>", escape_str(&s.name))).collect::<Vec<_>>().join("")) }
                 </div>
             </div>
         </aside>
     }
 }
 
+fn safe_project_url(url: &str) -> &str {
+    if url.starts_with("https://") || url.starts_with("http://") {
+        url
+    } else {
+        "#"
+    }
+}
+
 fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
     html! {
         <main class="content">
+            <section class="framework-callout" aria-label="Built with Rullst">
+                <span class="showcase-badge">"Rullst Portfolio Showcase"</span>
+                <h2>"Built entirely with Rullst v12"</h2>
+                <p>"From the public portfolio to Nexus, Studio, and Generative AI integration: explore what you can build with the Rullst framework."</p>
+                <a href="https://rullst.win" rel="noreferrer">"Explore Rullst →"</a>
+            </section>
             { rullst::html::RawHtml(render_community_callout()) }
             <section>
                 <h2 class="section-title">"Experience"</h2>
@@ -697,7 +712,7 @@ fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
                             <h3 class=\"exp-role\">{}</h3>\
                             <div class=\"exp-company\">{}</div>\
                             <p class=\"exp-desc\">{}</p>\
-                        </div>", e.period, e.role, e.company, e.description
+                        </div>", escape_str(&e.period), escape_str(&e.role), escape_str(&e.company), escape_str(&e.description)
                     )).collect::<Vec<_>>().join("")) }
                 </div>
             </section>
@@ -712,7 +727,7 @@ fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
                             <div class=\"tags\"><span class=\"tag\">{}</span></div>\
                             <a href=\"{}\" target=\"_blank\" class=\"project-link\">View Project &rarr;</a>\
                         </div>",
-                        p.title, p.description, p.tags, p.url
+                        escape_str(&p.title), escape_str(&p.description), escape_str(&p.tags), escape_str(safe_project_url(&p.url))
                     )).collect::<Vec<_>>().join("")) }
                 </div>
             </section>
@@ -767,16 +782,16 @@ fn render_ai_widget(csrf_token: &str) -> String {
                 <div class="chat-bubble-sender">Career Copilot</div>
                 <div class="chat-bubble-body">
                     Hello! I am the <strong>Career Copilot</strong> for this portfolio. Ask me anything about Rust systems, architectures, projects, or hireability!
-                    <div class="ai-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
+                    <div class="ai-badge-footer">Local replies by default · Cloud AI is optional</div>
                 </div>
             </div>
         </div>
 
         <div class="ai-prompt-suggestions">
-            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('What are Vene\'s core backend and Rust engineering skills?')">🦀 Rust Skills</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('What are Venelouis\'s core backend and Rust engineering skills?')">🦀 Rust Skills</button>
             <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Explain the architecture and technical highlights of the LMS project.')">🏛️ LMS Architecture</button>
             <button class="ai-pill-btn" type="button" onclick="setAiQuestion('How does Rullst protect against Prompt Injections and LLM jailbreaks?')">🛡️ AI Security</button>
-            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Why hire Vene for high-concurrency Rust systems engineering?')">💼 Why Hire?</button>
+            <button class="ai-pill-btn" type="button" onclick="setAiQuestion('Why hire Venelouis for high-concurrency Rust systems engineering?')">💼 Why Hire?</button>
             <button class="ai-pill-btn" type="button" onclick="setAiQuestion('How can I contact the developer directly?')">📧 Contact</button>
         </div>
 
@@ -787,6 +802,7 @@ fn render_ai_widget(csrf_token: &str) -> String {
             <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
         </div>
 
+        <div class="portfolio-cloud-choice"><label><input type="checkbox" name="cloud_ai" value="yes" form="ai-chat-form" autocomplete="off"> Use cloud AI: send my message to Groq (optional).</label><span>Uncheck to keep future messages local. <a href="/privacy">Privacy notice</a></span></div>
         <form id="ai-chat-form" class="ai-form"
               hx-post="/api/chat"
               hx-target="#ai-chat-messages"
@@ -839,7 +855,7 @@ fn render_ai_widget(csrf_token: &str) -> String {
                 if (launcher) launcher.style.display = 'none';
                 if (window.innerWidth <= 640) document.body.style.overflow = 'hidden';
                 var input = document.getElementById('ai-message-input');
-                if (input) setTimeout(function() { input.focus(); }, 150);
+                if (input && window.innerWidth > 640) setTimeout(function() { input.focus(); }, 150);
                 scrollAiToBottom();
             }
         }
@@ -922,8 +938,8 @@ pub fn render(
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>"Rullst Developer — AI & Rust Portfolio"</title>
-                <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
-                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+                <link rel="icon" type="image/png" href="/static/rullst.png" />
+
                 <script src="/static/htmx.js"></script>
                 <style>{ rullst::html::RawHtml(cv_styles()) }</style>
             </head>

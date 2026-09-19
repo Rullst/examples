@@ -1,0 +1,32 @@
+/* Keep the chat grid and its form within the available content width. */
+.nexus-chat-layout { grid-template-columns: 280px minmax(0, 1fr); }
+.nexus-chat-panel, .nexus-chat-schema, .nexus-chat-text, .nexus-chat-input { min-width: 0; }
+.nexus-chat-messages { min-height: 0; overscroll-behavior: contain; }
+.nexus-chat-text { overflow-wrap: anywhere; }
+.nexus-chat-form { flex-shrink: 0; }
+.nexus-chat-form .nexus-btn { flex-shrink: 0; }
+@media (max-width: 900px) {
+    .nexus-body, .nexus-sidebar { height: var(--nexus-viewport-height, 100dvh); }
+    .nexus-main, .nexus-content { min-height: 0; }
+    .nexus-topbar { padding: 0 12px; gap: 8px; }
+    .nexus-topbar-breadcrumb { min-width: 0; overflow-wrap: anywhere; }
+    .nexus-content:has(.nexus-chat-layout) { padding: 16px 12px; }
+    .nexus-chat-layout { grid-template-columns: minmax(0, 1fr); height: auto; gap: 16px; }
+    .nexus-chat-panel {
+        order: -1;
+        height: clamp(280px, calc(var(--nexus-viewport-height, 100dvh) - 210px), 620px);
+    }
+    .nexus-chat-schema { max-height: none; padding: 12px; overflow: visible; }
+    .nexus-chat-messages { padding: 12px; gap: 12px; }
+    .nexus-chat-bubble { gap: 8px; }
+    .nexus-chat-avatar { width: 28px; height: 28px; font-size: 16px; }
+    .nexus-chat-text { max-width: calc(100% - 36px); padding: 10px 12px; }
+    .nexus-chat-form { padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); gap: 8px; }
+    .nexus-chat-input { width: 0; font-size: 16px; padding: 10px; }
+    /* Give the conversation the remaining viewport while typing. */
+    .nexus-content:has(.nexus-chat-input:focus) { display: flex; flex-direction: column; }
+    .nexus-content:has(.nexus-chat-input:focus) > .nexus-page-header,
+    .nexus-chat-layout:has(.nexus-chat-input:focus) > .nexus-chat-schema { display: none !important; }
+    .nexus-chat-layout:has(.nexus-chat-input:focus) { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+    .nexus-chat-panel:has(.nexus-chat-input:focus) { height: 100%; min-height: 0; }
+}

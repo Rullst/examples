@@ -4,6 +4,7 @@ pub mod controllers;
 pub mod migrations;
 pub mod models;
 pub mod pages;
+pub mod showcase;
 
 #[rullst::runtime::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -102,12 +103,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             <span>"🧊"</span> "Studio Cache Inspector"
                         </h1>
                         <p class="text-sm text-slate-400 mt-1">
-                            "Inspect real-time in-memory cache allocations, hit rates, and TTL entries."
+                            "This blueprint does not currently expose cache counters."
                         </p>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
-                            "Engine: In-Memory Bounded LRU"
+                            "Telemetry unavailable"
                         </span>
                     </div>
                 </div>
@@ -115,25 +116,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
                     <div class="p-5 bg-slate-900/90 border border-slate-800 rounded-xl shadow-md">
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">"Active Cache Entries"</p>
-                        <p class="text-3xl font-extrabold text-sky-400 mt-2">"0"</p>
-                        <p class="text-xs text-slate-400 mt-1">"Metadata snapshots cached"</p>
+                        <p class="text-3xl font-extrabold text-sky-400 mt-2">"Not instrumented"</p>
+                        <p class="text-xs text-slate-400 mt-1">"No cache entry counter is exposed"</p>
                     </div>
                     <div class="p-5 bg-slate-900/90 border border-slate-800 rounded-xl shadow-md">
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">"Hit Rate"</p>
-                        <p class="text-3xl font-extrabold text-emerald-400 mt-2">"100.0%"</p>
-                        <p class="text-xs text-slate-400 mt-1">"Zero cache miss degradations"</p>
+                        <p class="text-3xl font-extrabold text-emerald-400 mt-2">"Not instrumented"</p>
+                        <p class="text-xs text-slate-400 mt-1">"No hit or miss counter is exposed"</p>
                     </div>
                     <div class="p-5 bg-slate-900/90 border border-slate-800 rounded-xl shadow-md">
                         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">"Memory Footprint"</p>
-                        <p class="text-3xl font-extrabold text-indigo-400 mt-2">"14.2 KB"</p>
-                        <p class="text-xs text-slate-400 mt-1">"Bounded LRU store"</p>
+                        <p class="text-3xl font-extrabold text-indigo-400 mt-2">"Not instrumented"</p>
+                        <p class="text-xs text-slate-400 mt-1">"No memory counter is exposed"</p>
                     </div>
                 </div>
 
                 <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-6 shadow-md">
                     <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">"Cached Key Entries"</h3>
                     <div class="p-8 text-center border border-dashed border-slate-800 rounded-lg">
-                        <p class="text-sm text-slate-400">"No volatile cache keys currently held in memory. Values are cached dynamically during high-load traffic."</p>
+                        <p class="text-sm text-slate-400">"Cache statistics are unavailable for this blueprint; these cards do not represent measured values."</p>
                     </div>
                 </div>
             </div>
@@ -319,12 +320,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Router with Trusted TLS termination for cloud ingress (Azure Container Apps / Envoy)
     let router = routes![
         get("/" => controllers::portfolio_controller::index),
+        get("/privacy" => showcase::privacy),
+        get("/cookies" => showcase::cookies),
+        get("/static/showcase.css" => showcase::css),
+        get("/static/showcase.js" => showcase::js),
+        get("/static/tailwind.js" => showcase::tailwind),
+        get("/static/rullst.png" => showcase::logo),
+        get("/favicon.ico" => showcase::logo),
         get("/static/htmx.js" => htmx_handler),
         get("/static/crab.png" => crab_png_handler),
         post("/api/chat" => controllers::ai_controller::chat),
     ]
     .nest_axum("/nexus", nexus)
     .nest_axum("/studio", studio_router)
+    .layer(rullst::server::from_fn(showcase::shell))
+    // Forms need a token in development too; the framework deduplicates this
+    // middleware when its production security baseline is also installed.
+    .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
     .layer(rullst::server::Extension(
         rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination(),
     ));

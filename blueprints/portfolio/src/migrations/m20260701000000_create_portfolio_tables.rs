@@ -1,5 +1,5 @@
-use rullst::db::schema::{Schema, Migration};
 use rullst::db::async_trait;
+use rullst::db::schema::{Migration, Schema};
 
 pub struct CreatePortfolioTables;
 
@@ -21,7 +21,8 @@ impl Migration for CreatePortfolioTables {
             table.string("github_url").not_null();
             table.string("linkedin_url").not_null();
             table.timestamps();
-        }).await?;
+        })
+        .await?;
 
         Schema::create("projects", |table| {
             table.id();
@@ -31,7 +32,8 @@ impl Migration for CreatePortfolioTables {
             table.string("tags").not_null();
             table.integer("is_featured").not_null();
             table.timestamps();
-        }).await?;
+        })
+        .await?;
 
         Schema::create("experiences", |table| {
             table.id();
@@ -40,20 +42,30 @@ impl Migration for CreatePortfolioTables {
             table.string("period").not_null();
             table.string("description").not_null();
             table.timestamps();
-        }).await?;
+        })
+        .await?;
 
         Schema::create("skills", |table| {
             table.id();
             table.string("name").not_null();
             table.string("category").not_null();
             table.timestamps();
-        }).await?;
+        })
+        .await?;
 
         let pool = rullst::db::Orm::pool()?;
 
+        // Boot invokes this migration again. Preserve existing CMS content.
+        let existing: i64 = rullst::db::sqlx::query_scalar("SELECT COUNT(*) FROM profiles")
+            .fetch_one(pool)
+            .await?;
+        if existing > 0 {
+            return Ok(());
+        }
+
         rullst::db::sqlx::query(
             "INSERT INTO profiles (id, name, title, subtitle, email, website, avatar_url, github_url, linkedin_url, created_at, updated_at) VALUES 
-             (1, 'Vene Light', 'Senior Rust & AI Systems Engineer', 'Specializing in hyper-concurrent web backends, LLM inference pipelines, and high-throughput Rust architectures.', 'rullst@veneloius.de', 'https://rullst.github.io/', 'https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png', 'https://github.com/Rullst', 'https://linkedin.com', datetime('now'), datetime('now'))"
+             (1, 'Venelouis', 'Senior Rust & AI Engineer', 'Specializing in hyper-concurrent web backends, Generative AI integration, and high-throughput Rust architectures.', 'officialrullst@gmail.com', 'https://rullst.win', '/static/rullst.png', 'https://github.com/Rullst', 'https://linkedin.com/company/rullst', datetime('now'), datetime('now'))"
         ).execute(pool).await?;
 
         rullst::db::sqlx::query(
@@ -74,8 +86,10 @@ impl Migration for CreatePortfolioTables {
              (2, 'Python', 'Languages', datetime('now'), datetime('now')),
              (3, 'Rullst Framework', 'Frameworks', datetime('now'), datetime('now')),
              (4, 'SQLite / SQLx', 'Database', datetime('now'), datetime('now')),
-             (5, 'Docker & K8s', 'DevOps', datetime('now'), datetime('now'))"
-        ).execute(pool).await?;
+             (5, 'Docker & K8s', 'DevOps', datetime('now'), datetime('now'))",
+        )
+        .execute(pool)
+        .await?;
 
         Ok(())
     }
