@@ -320,11 +320,13 @@ pub async fn dashboard(
                 &user.name,
                 csrf_token,
                 get_csp_nonce(&csp_nonce),
-                has_stripe_report,
-                certificate_public_id.as_deref(),
-                crate::controllers::legal_controller::live_mode(),
-                refund_status.as_deref(),
-                checkout_price.as_deref(),
+                auth::DashboardPurchaseState {
+                    has_stripe_report,
+                    certificate_public_id: certificate_public_id.as_deref(),
+                    live_mode: crate::controllers::legal_controller::live_mode(),
+                    refund_status: refund_status.as_deref(),
+                    checkout_price: checkout_price.as_deref(),
+                },
             )
             .into_response()
         }

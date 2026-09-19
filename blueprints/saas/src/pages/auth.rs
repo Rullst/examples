@@ -219,16 +219,27 @@ pub fn reset_password_page(
     )
 }
 
+pub struct DashboardPurchaseState<'a> {
+    pub has_stripe_report: bool,
+    pub certificate_public_id: Option<&'a str>,
+    pub live_mode: bool,
+    pub refund_status: Option<&'a str>,
+    pub checkout_price: Option<&'a str>,
+}
+
 pub fn dashboard_page(
     user_name: &str,
     csrf_token: &str,
     csp_nonce: &str,
-    has_stripe_report: bool,
-    certificate_public_id: Option<&str>,
-    live_mode: bool,
-    refund_status: Option<&str>,
-    checkout_price: Option<&str>,
+    purchase: DashboardPurchaseState<'_>,
 ) -> Html<String> {
+    let DashboardPurchaseState {
+        has_stripe_report,
+        certificate_public_id,
+        live_mode,
+        refund_status,
+        checkout_price,
+    } = purchase;
     let production_prelaunch =
         !live_mode && crate::controllers::legal_controller::production_deployment();
     let nonce = rullst::html::escape_str(csp_nonce);
@@ -402,7 +413,7 @@ pub fn dashboard_page(
 
 #[cfg(test)]
 mod tests {
-    use super::{dashboard_page, register_page};
+    use super::{DashboardPurchaseState, dashboard_page, register_page};
 
     #[test]
     fn registration_requires_permanent_certificate_name_acknowledgement() {
@@ -419,11 +430,13 @@ mod tests {
             "Account Holder",
             "csrf",
             "nonce",
-            false,
-            None,
-            true,
-            None,
-            Some("BRL 1.00"),
+            DashboardPurchaseState {
+                has_stripe_report: false,
+                certificate_public_id: None,
+                live_mode: true,
+                refund_status: None,
+                checkout_price: Some("BRL 1.00"),
+            },
         )
         .0;
         assert!(page.contains("action=\"/billing/checkout\""));
@@ -438,11 +451,13 @@ mod tests {
             "Account Holder",
             "csrf",
             "nonce",
-            true,
-            Some("RST-LIVE-0123456789ABCDEF0123456789ABCDEF"),
-            true,
-            None,
-            Some("BRL 1.00"),
+            DashboardPurchaseState {
+                has_stripe_report: true,
+                certificate_public_id: Some("RST-LIVE-0123456789ABCDEF0123456789ABCDEF"),
+                live_mode: true,
+                refund_status: None,
+                checkout_price: Some("BRL 1.00"),
+            },
         )
         .0;
         assert!(page.contains("not a bank dispute"));
