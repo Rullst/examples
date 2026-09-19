@@ -270,18 +270,19 @@ fn render_floating_ai_copilot() -> String {
 
     <div id="showcase-ai-backdrop" class="showcase-ai-backdrop" onclick="toggleShowcaseAiDrawer()"></div>
 
-    <div id="showcase-ai-drawer" class="showcase-ai-drawer" style="display: none;" role="dialog" aria-label="Showcase AI Copilot">
+    <div id="showcase-ai-drawer" data-copilot data-copilot-launcher="showcase-crab-launcher" data-copilot-backdrop="showcase-ai-backdrop" class="showcase-ai-drawer" style="display: none;" role="dialog" aria-label="Showcase AI Copilot">
         <div class="ai-drawer-header">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <img src="/static/crab.png" alt="Crab" style="width: 24px; height: 24px; object-fit: contain;" />
                 <div>
                     <div style="font-weight: 700; font-size: 0.9rem; color: #fff;">Showcase Copilot</div>
-                    <div style="font-size: 0.68rem; color: #38bdf8;">Sovereign AI Architectural Copilot</div>
+                    <div class="copilot-subtitle" style="font-size: 0.68rem; color: #38bdf8;">Sovereign AI Architectural Copilot</div>
                 </div>
             </div>
-            <button class="ai-close-btn" onclick="toggleShowcaseAiDrawer()" aria-label="Close">×</button>
+            <div class="copilot-actions"><!-- COPILOT_EXPAND --><button class="ai-close-btn" onclick="toggleShowcaseAiDrawer()" aria-label="Close">×</button></div>
         </div>
 
+        <!-- COPILOT_NOTICE -->
         <div id="showcase-drawer-messages" class="ai-chat-messages">
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Showcase Copilot</div>
@@ -337,31 +338,7 @@ fn render_floating_ai_copilot() -> String {
         });
 
         function toggleShowcaseAiDrawer() {
-            var drawer = document.getElementById('showcase-ai-drawer');
-            var launcher = document.getElementById('showcase-crab-launcher');
-            var backdrop = document.getElementById('showcase-ai-backdrop');
-            if (!drawer) return;
-            var isOpen = drawer.style.display !== 'none';
-            if (isOpen) {
-                drawer.style.display = 'none';
-                if (launcher) launcher.style.display = 'flex';
-                if (backdrop) backdrop.classList.remove('open');
-                document.body.style.overflow = '';
-                if (launcher) launcher.focus({ preventScroll: true });
-            } else {
-                drawer.style.display = 'flex';
-                if (launcher && window.innerWidth <= 640) launcher.style.display = 'none';
-                if (backdrop && window.innerWidth <= 640) {
-                    backdrop.classList.add('open');
-                    document.body.style.overflow = 'hidden';
-                }
-                updateShowcaseChatViewport();
-                var focusTarget = window.innerWidth <= 640
-                    ? drawer.querySelector('.ai-close-btn')
-                    : document.getElementById('showcase-drawer-input');
-                if (focusTarget) focusTarget.focus({ preventScroll: true });
-                scrollDrawerToBottom();
-            }
+            window.RullstCopilot.toggle('showcase-ai-drawer');
         }
 
         function updateShowcaseChatViewport() {
@@ -435,10 +412,16 @@ fn render_floating_ai_copilot() -> String {
         });
     </script>
     "##;
-    markup.replace(
-        "<!-- SHOWCASE_AI_PRIVACY -->",
-        &crate::privacy::render_ai_choice("showcase-drawer-form"),
-    )
+    markup
+        .replace(
+            "<!-- SHOWCASE_AI_PRIVACY -->",
+            &crate::privacy::render_ai_choice("showcase-drawer-form"),
+        )
+        .replace("<!-- COPILOT_EXPAND -->", blueprint_ai::COPILOT_EXPAND)
+        .replace("<!-- COPILOT_NOTICE -->", blueprint_ai::COPILOT_NOTICE)
+        + "<script>"
+        + blueprint_ai::COPILOT_SCRIPT
+        + "</script>"
 }
 
 /// Renders shared CSS stylesheet for the Showcase theme.
@@ -872,5 +855,5 @@ pub fn render_shared_styles() -> String {
         .showcase-ai-drawer .ai-chat-messages { padding: 10px; gap: 8px; }
     }
     "#
-    .to_string() + include_str!("../static/showcase-shell.css") + blueprint_ai::STYLES
+    .to_string() + include_str!("../static/showcase-shell.css") + blueprint_ai::STYLES + blueprint_ai::COPILOT_STYLES
 }

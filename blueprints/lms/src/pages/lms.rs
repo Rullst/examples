@@ -765,21 +765,22 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         </div>
     </div>
 
-    <div id="lms-ai-drawer" class="lms-ai-drawer" style="display: none;" role="dialog" aria-label="Academic Copilot">
+    <div id="lms-ai-drawer" data-copilot data-copilot-launcher="lms-crab-launcher" data-copilot-backdrop="" class="lms-ai-drawer" style="display: none;" role="dialog" aria-label="Academic Copilot">
         <div class="lms-drawer-header">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">🎓</div>
                 <div>
                     <div style="font-weight: 800; font-size: 0.95rem; color: #fff;">Academic Copilot</div>
-                    <div style="font-size: 0.72rem; color: #34d399; display: flex; align-items: center; gap: 5px;">
+                    <div class="copilot-subtitle" style="font-size: 0.72rem; color: #34d399; display: flex; align-items: center; gap: 5px;">
                         <span style="width: 6px; height: 6px; border-radius: 50%; background: #34d399; display: inline-block;"></span>
                         <span>AI Learning & Curriculum Assistant</span>
                     </div>
                 </div>
             </div>
-            <button class="lms-close-btn" onclick="toggleLmsAiDrawer()" aria-label="Close">×</button>
+            <div class="copilot-actions"><!-- COPILOT_EXPAND --><button class="lms-close-btn" onclick="toggleLmsAiDrawer()" aria-label="Close">×</button></div>
         </div>
 
+        <!-- COPILOT_NOTICE -->
         <div id="lms-chat-messages" class="lms-chat-messages">
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Academic Copilot</div>
@@ -805,7 +806,7 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
             <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
         </div>
 
-        <div class="lms-cloud-choice"><label><input type="checkbox" name="cloud_ai" value="yes" form="lms-chat-form" autocomplete="off">Send this message to Groq for a cloud AI reply (optional).</label><a href="/privacy">Privacy details</a> · Leave unchecked for a local reply. Do not send personal data.</div>
+        <div class="lms-cloud-choice copilot-cloud"><label><input type="checkbox" name="cloud_ai" value="yes" form="lms-chat-form" autocomplete="off"><span><strong>Check this box to use cloud AI.</strong> Send my message to Groq (optional).</span></label><span class="copilot-choice-help">Unchecked = local replies. Avoid personal data. <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy details</a></span></div>
         <form id="lms-chat-form" class="lms-ai-form" method="post" action="/api/lms-chat"
               hx-post="/api/lms-chat"
               hx-target="#lms-chat-messages"
@@ -845,22 +846,7 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         });
 
         function toggleLmsAiDrawer() {
-            var drawer = document.getElementById('lms-ai-drawer');
-            var launcher = document.getElementById('lms-crab-launcher');
-            if (!drawer) return;
-            var isOpen = drawer.style.display !== 'none';
-            if (isOpen) {
-                drawer.style.display = 'none';
-                if (launcher) launcher.style.display = 'flex';
-                document.body.style.overflow = '';
-            } else {
-                drawer.style.display = 'flex';
-                if (launcher) launcher.style.display = 'none';
-                if (window.innerWidth <= 640) document.body.style.overflow = 'hidden';
-                var input = document.getElementById('lms-message-input');
-                if (input) setTimeout(function() { input.focus(); }, 150);
-                scrollLmsToBottom();
-            }
+            window.RullstCopilot.toggle('lms-ai-drawer');
         }
 
         function scrollLmsToBottom() {
@@ -926,4 +912,6 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         });
     </script>
     "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
+    .replace("<!-- COPILOT_EXPAND -->", blueprint_ai::COPILOT_EXPAND)
+    .replace("<!-- COPILOT_NOTICE -->", blueprint_ai::COPILOT_NOTICE)
 }

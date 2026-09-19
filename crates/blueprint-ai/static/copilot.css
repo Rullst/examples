@@ -1,0 +1,45 @@
+/* Shared by the three public crab copilots. Keep controls visible at both sizes. */
+[data-copilot] { box-sizing: border-box; }
+[data-copilot] .copilot-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+[data-copilot] .copilot-expand { display: inline-flex; align-items: center; justify-content: center; width: auto; min-height: 44px; margin: 0; padding: 0 8px; border: 1px solid #47657d; border-radius: 8px; background: #182f44; color: #e0f2fe; font: 600 12px/1.2 system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+[data-copilot] .copilot-expand:hover { background: #244760; }
+[data-copilot] .copilot-expand:focus-visible, [data-copilot] input[type="checkbox"]:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 3px; }
+[data-copilot] .copilot-notice { flex-shrink: 0; margin: 0; padding: 8px 12px; background: #29231a; border-bottom: 1px solid #69532d; color: #fde8b6; font: 12px/1.4 system-ui, sans-serif; text-align: left; }
+[data-copilot] .copilot-notice a { color: #fde8b6; text-decoration: underline; }
+[data-copilot] .copilot-cloud { flex-shrink: 0; padding: 8px 12px; background: #0c1826; border-top: 1px solid #334155; }
+[data-copilot] .copilot-cloud label { display: flex; align-items: flex-start; gap: 10px; padding: 9px; margin: 0 0 4px; border: 1px solid #4c7898; border-radius: 8px; background: #142b40; color: #e0f2fe; cursor: pointer; font: 12px/1.4 system-ui, sans-serif; }
+[data-copilot] .copilot-cloud label:has(:checked) { border-color: #6ee7b7; background: #123a32; }
+[data-copilot] .copilot-cloud input[type="checkbox"] { appearance: auto; width: 22px; height: 22px; flex: 0 0 22px; margin: 0; padding: 0; accent-color: #0ea5e9; cursor: pointer; }
+[data-copilot] .copilot-cloud label span { margin: 0; }
+[data-copilot] .copilot-choice-help { display: block; color: #afc3d5; font: 11px/1.4 system-ui, sans-serif; }
+[data-copilot] :is(.ai-drawer-header,.lms-drawer-header) { gap: 6px; padding: 8px 12px; }
+[data-copilot] :is(.ai-drawer-header,.lms-drawer-header) > :first-child { min-width: 0; }
+[data-copilot] :is(.ai-close-btn,.lms-close-btn) { min-width: 36px; min-height: 44px; margin: 0; padding: 0; }
+[data-copilot] :is(.ai-chat-messages,.lms-chat-messages) { min-height: 60px; }
+[data-copilot] :is(.ai-input,.lms-input) { font-size: 16px; min-width: 0; }
+[data-copilot] :is(.ai-submit-btn,.lms-submit-btn) { min-height: 44px; }
+:is(#showcase-ai-drawer,#ai-drawer,#lms-ai-drawer)[data-copilot].copilot-expanded {
+  top: var(--copilot-top, 0px) !important; left: var(--copilot-left, 0px) !important; right: auto !important; bottom: auto !important;
+  width: var(--copilot-width, 100vw) !important; height: var(--copilot-height, 100dvh) !important;
+  max-width: none !important; max-height: none !important; border-radius: 0 !important; z-index: 11000;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+[data-copilot].copilot-short { overflow-y: auto; }
+[data-copilot].copilot-short :is(.ai-prompt-suggestions,.lms-prompt-suggestions,.copilot-choice-help) { display: none; }
+[data-copilot].copilot-short .copilot-cloud { padding: 4px 10px; }
+[data-copilot].copilot-short .copilot-cloud label { margin: 0; padding: 5px; }
+[data-copilot].copilot-short .copilot-notice { padding: 4px 12px; }
+[data-copilot].copilot-short :is(.ai-drawer-header,.lms-drawer-header) { padding-top: 0; padding-bottom: 0; }
+[data-copilot].copilot-short :is(.ai-chat-messages,.lms-chat-messages) { flex-shrink: 0; }
+@media(max-width:760px) {
+  :is(#showcase-ai-drawer,#ai-drawer,#lms-ai-drawer)[data-copilot]:not(.copilot-expanded) {
+    bottom: calc(var(--copilot-bottom, 0px) + max(12px, env(safe-area-inset-bottom))) !important;
+    max-height: calc(var(--copilot-height, 100dvh) - 24px - env(safe-area-inset-bottom)) !important;
+  }
+}
+@media(max-width:480px) {
+  [data-copilot] :is(.ai-drawer-header,.lms-drawer-header) > :first-child > :first-child { display: none !important; }
+  [data-copilot] :is(.ai-header-sub,.copilot-subtitle) { display: none !important; }
+  [data-copilot] :is(.ai-drawer-header,.lms-drawer-header) { min-height: 52px; }
+}
+@media(prefers-reduced-motion:reduce) { [data-copilot] { animation: none !important; } }

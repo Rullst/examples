@@ -6,12 +6,12 @@ use rullst::html;
 
 pub fn render_ai_choice(form_id: &str) -> String {
     html! {
-        <div class="showcase-ai-privacy">
+        <div class="showcase-ai-privacy copilot-cloud">
             <label>
                 <input type="checkbox" name="cloud_ai" value="yes" form={form_id} autocomplete="off" />
-                <span>"Use cloud AI: send my message to Groq or the configured AI provider."</span>
+                <span><strong>"Check this box to use cloud AI. "</strong>"Send my message to Groq or the configured AI provider (optional)."</span>
             </label>
-            <span>"Optional. Uncheck to keep future messages local. Avoid personal or confidential data. "
+            <span class="copilot-choice-help">"Unchecked = local replies. Avoid personal or confidential data. "
                 <a href="/privacy#ai" target="_blank" rel="noopener noreferrer">"Privacy details"</a>
             </span>
         </div>

@@ -762,7 +762,7 @@ fn render_ai_widget(csrf_token: &str) -> String {
         </div>
     </div>
 
-    <div id="ai-drawer" class="ai-drawer" style="display: none;" role="dialog" aria-label="AI Career Copilot">
+    <div id="ai-drawer" data-copilot data-copilot-launcher="ai-crab-launcher" data-copilot-backdrop="" class="ai-drawer" style="display: none;" role="dialog" aria-label="AI Career Copilot">
         <div class="ai-drawer-header">
             <div class="ai-header-left" style="display: flex; align-items: center; gap: 10px;">
                 <div class="ai-avatar-badge" style="width: 34px; height: 34px; border-radius: 10px; background: rgba(0, 255, 204, 0.15); border: 1px solid rgba(0, 255, 204, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">⚡</div>
@@ -774,9 +774,10 @@ fn render_ai_widget(csrf_token: &str) -> String {
                     </div>
                 </div>
             </div>
-            <button class="ai-close-btn" onclick="toggleAiDrawer()" aria-label="Close">×</button>
+            <div class="copilot-actions"><!-- COPILOT_EXPAND --><button class="ai-close-btn" onclick="toggleAiDrawer()" aria-label="Close">×</button></div>
         </div>
 
+        <!-- COPILOT_NOTICE -->
         <div id="ai-chat-messages" class="ai-chat-messages">
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Career Copilot</div>
@@ -802,7 +803,7 @@ fn render_ai_widget(csrf_token: &str) -> String {
             <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
         </div>
 
-        <div class="portfolio-cloud-choice"><label><input type="checkbox" name="cloud_ai" value="yes" form="ai-chat-form" autocomplete="off"> Use cloud AI: send my message to Groq (optional).</label><span>Uncheck to keep future messages local. <a href="/privacy">Privacy notice</a></span></div>
+        <div class="portfolio-cloud-choice copilot-cloud"><label><input type="checkbox" name="cloud_ai" value="yes" form="ai-chat-form" autocomplete="off"><span><strong>Check this box to use cloud AI.</strong> Send my message to Groq (optional).</span></label><span class="copilot-choice-help">Unchecked = local replies. Avoid personal data. <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy details</a></span></div>
         <form id="ai-chat-form" class="ai-form"
               hx-post="/api/chat"
               hx-target="#ai-chat-messages"
@@ -842,22 +843,7 @@ fn render_ai_widget(csrf_token: &str) -> String {
         });
 
         function toggleAiDrawer() {
-            var drawer = document.getElementById('ai-drawer');
-            var launcher = document.getElementById('ai-crab-launcher');
-            if (!drawer) return;
-            var isOpen = drawer.style.display !== 'none';
-            if (isOpen) {
-                drawer.style.display = 'none';
-                if (launcher) launcher.style.display = 'flex';
-                document.body.style.overflow = '';
-            } else {
-                drawer.style.display = 'flex';
-                if (launcher) launcher.style.display = 'none';
-                if (window.innerWidth <= 640) document.body.style.overflow = 'hidden';
-                var input = document.getElementById('ai-message-input');
-                if (input && window.innerWidth > 640) setTimeout(function() { input.focus(); }, 150);
-                scrollAiToBottom();
-            }
+            window.RullstCopilot.toggle('ai-drawer');
         }
 
         function scrollAiToBottom() {
@@ -923,6 +909,8 @@ fn render_ai_widget(csrf_token: &str) -> String {
         });
     </script>
     "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
+    .replace("<!-- COPILOT_EXPAND -->", blueprint_ai::COPILOT_EXPAND)
+    .replace("<!-- COPILOT_NOTICE -->", blueprint_ai::COPILOT_NOTICE)
 }
 
 pub fn render(

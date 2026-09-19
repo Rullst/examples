@@ -11,7 +11,7 @@ pub async fn css() -> impl IntoResponse {
             "{}{}{}",
             include_str!("../static/showcase.css"),
             include_str!("../static/nexus-responsive.css"),
-            blueprint_ai::STYLES
+            blueprint_ai::STYLES.to_owned() + blueprint_ai::COPILOT_STYLES
         ),
     )
 }
@@ -21,7 +21,7 @@ pub async fn js() -> impl IntoResponse {
             header::CONTENT_TYPE,
             "application/javascript; charset=utf-8",
         )],
-        include_str!("../static/showcase.js"),
+        include_str!("../static/showcase.js").to_owned() + blueprint_ai::COPILOT_SCRIPT,
     )
 }
 pub async fn tailwind() -> impl IntoResponse {
