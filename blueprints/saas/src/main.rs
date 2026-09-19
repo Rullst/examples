@@ -124,7 +124,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .route(
             "/billing/artifact-ready",
-            rullst::routing::post(controllers::artifact_controller::live_artifact_readiness),
+            rullst::routing::get(controllers::artifact_controller::live_artifact_readiness),
         )
         .layer(rullst::server::from_fn(
             rullst::security::headers_middleware,

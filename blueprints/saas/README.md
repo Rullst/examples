@@ -337,9 +337,10 @@ embedding them in a public GHCR image, would make the route paywall cosmetic.
 
 Azure Blob requests authorized by the Container App's managed identity include
 an explicit supported `x-ms-version` header. The live activation workflow uses
-the protected `/billing/artifact-ready` operation to exercise that same runtime
-path before checkout can be enabled. The operation exposes only readiness; it
-does not return the artifact, token, URL or digest.
+the protected read-only `GET /billing/artifact-ready` operation to exercise
+that same runtime path before checkout can be enabled. It requires the private
+reconciliation bearer token, is marked `private, no-store`, and exposes only
+readiness; it does not return the artifact, token, URL or digest.
 
 The repository may retain a public summary, schema and loader mechanism. The
 private artifact record should contain a version, media type, immutable

@@ -576,6 +576,22 @@ and Discord community; they do not attach private artifacts or add open/click
 tracking. This was a missing application lifecycle feature, not a Rullst
 framework defect.
 
+### APP-SAAS-017 — The live artifact gate used a CSRF-protected HTTP method
+
+The production activation workflow invoked the read-only private-artifact
+readiness operation with `POST`. Rullst Shield correctly rejected the default
+curl user agent first and, after the workflow supplied its explicit automation
+identity, the framework's CSRF middleware correctly rejected the state-changing
+method without a browser CSRF cookie. The fail-closed release gate disabled
+live checkout, so no buyer could pay while artifact delivery was unproven.
+
+**Correction implemented here:** model the side-effect-free authenticated
+readiness probe as `GET`, retain its constant-time bearer-token check, send an
+explicit non-curl automation user agent, return `Cache-Control: private,
+no-store`, and keep the automatic checkout shutdown on any failed probe. No
+CSRF or WAF exception was added. This was an application route/release-workflow
+integration defect, not a Rullst framework defect.
+
 ## Rullst Mail and account-lifecycle improvements
 
 Rullst Mail should remain the framework's transactional-message SDK and

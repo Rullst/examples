@@ -187,7 +187,6 @@ jobs:
               --user-agent "Rullst-SaaS-Live-Healthcheck/1.0" \
               "https://${FQDN}/healthz" | grep --fixed-strings --quiet ready; then
               if curl --fail --silent --show-error --max-time 20 \
-                --request POST \
                 --header "Authorization: Bearer ${RECONCILIATION_TOKEN}" \
                 --user-agent "Rullst-SaaS-Artifact-Healthcheck/1.0" \
                 "https://${FQDN}/billing/artifact-ready" | grep --fixed-strings --quiet ready; then

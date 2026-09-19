@@ -276,16 +276,23 @@ fn temporarily_unavailable_response() -> Response {
 /// and verifies the private artifact through the Container App's own managed
 /// identity, but never returns the purchased content.
 pub async fn live_artifact_readiness(headers: HeaderMap) -> Response {
-    if !crate::controllers::billing_controller::protected_operation_authorized(&headers) {
-        return StatusCode::UNAUTHORIZED.into_response();
-    }
-    match retrieve_live_artifact().await {
-        Ok(_) => (StatusCode::OK, "ready").into_response(),
-        Err(error) => {
-            eprintln!("Private artifact readiness failed: {error}");
-            StatusCode::SERVICE_UNAVAILABLE.into_response()
-        }
-    }
+    let mut response =
+        if !crate::controllers::billing_controller::protected_operation_authorized(&headers) {
+            StatusCode::UNAUTHORIZED.into_response()
+        } else {
+            match retrieve_live_artifact().await {
+                Ok(_) => (StatusCode::OK, "ready").into_response(),
+                Err(error) => {
+                    eprintln!("Private artifact readiness failed: {error}");
+                    StatusCode::SERVICE_UNAVAILABLE.into_response()
+                }
+            }
+        };
+    response.headers_mut().insert(
+        rullst::server::header::CACHE_CONTROL,
+        rullst::server::HeaderValue::from_static("private, no-store"),
+    );
+    response
 }
 
 pub async fn download_paid_artifact(user_id: i32) -> Response {
