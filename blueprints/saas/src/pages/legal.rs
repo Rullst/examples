@@ -3,7 +3,7 @@ use rullst::response::Html;
 use crate::controllers::legal_controller::MerchantNotice;
 
 const EFFECTIVE_DATE: &str = "2026-09-19";
-const VERSION: &str = "1.3";
+const VERSION: &str = "1.4";
 
 fn page(title: &str, subtitle: &str, content: &str, csp_nonce: &str) -> Html<String> {
     Html(format!(
@@ -27,7 +27,7 @@ pub fn privacy_notice_page(csp_nonce: &str) -> Html<String> {
         <section><h2>Scope and controller contact</h2><p>This notice covers the public Rullst SaaS staging blueprint. It is a technical test environment, not the future live-money service. The operator is an individual seller in Brazil using the public brand Rullst. Privacy requests are handled at <a href="mailto:officialrullst@gmail.com">officialrullst@gmail.com</a>. Do not send passwords, card data or government identifiers by email.</p></section>
         <section><h2>Data processed</h2><ul><li>Permanent account/certificate name, normalized email address and an Argon2id password hash.</li><li>Hashed, short-lived password-reset codes, keyed request-limit identifiers, transactional-mail delivery state and a PostgreSQL session registry. Complete reset codes are not stored.</li><li>Internal account, purchase-attempt, entitlement and certificate references.</li><li>Provider session, payment and event references needed for signature verification, idempotency and reconciliation. These are confidential and never shown publicly.</li><li>Bounded connection and security metadata, such as IP address, user agent, timestamps and rejected-request class, can be processed by the hosting and security boundary. Application logs must not contain passwords, reset codes, card data or raw webhook bodies.</li><li>Essential encrypted-session and CSRF cookies. Advertising, analytics and personalization cookies are not enabled.</li></ul><p>Rullst does not receive or store raw card numbers. Stripe hosts payment-method collection. Use only Stripe's documented test payment methods in this environment.</p></section>
         <section><h2>Purposes and sharing</h2><p>Data is used only to authenticate or recover the requested account, create and reconcile a sandbox Checkout, grant the versioned test entitlement, issue or verify the Sandbox Pioneer certificate, deliver one transactional confirmation with the requested access links, prevent abuse and investigate failures. Starting Checkout sends the account email and server-owned offer metadata to Stripe. When account mail is enabled, the recipient address and deterministic password-recovery or purchase-confirmation message are sent to Resend for transactional delivery; no marketing or open/click tracking is added. The application runs in Microsoft Azure and stores staging records in Neon PostgreSQL hosted in an AWS US region. This can involve international processing; a production launch requires a reviewed transfer and subprocessor assessment for the actual users served.</p></section>
-        <section><h2>Public certificate boundary</h2><p>The authenticated certificate can display the account name. The public verification URL contains a random identifier and exposes only badge type, issue date, test environment and current validity. It does not expose name, email, amount, country, payment method or Stripe identifiers. Sharing the random URL is the holder's choice and never grants account access.</p></section>
+        <section><h2>Public certificate boundary</h2><p>The authenticated certificate can display the account name. The public verification URL contains a random identifier and exposes only badge type, issue date, test environment and current validity. It does not expose name, email, amount, country, payment method or Stripe identifiers. Sharing the random URL is the holder's choice and never grants account access. Sandbox activity is kept separate and never increases the production Founding Customer count.</p></section>
         <section><h2>Retention and rights</h2><p>Expired password-reset request and token records are removed after a 24-hour abuse-investigation window. Other staging records may be reset and are not production records. An authenticated account can export its application data from the dashboard. Contact the address above to request access, correction, a portable copy, closure/deletion, restriction or human review. Some security and reconciliation evidence can require temporary restricted retention; the response will explain any applicable exception. Requests are verified before account data is disclosed or changed.</p></section>
         <section><h2>Security and minors</h2><p>TLS, encrypted session cookies, CSRF protection, password hashing, provider-hosted payment entry and signed webhook reconciliation protect the staging flow. No internet service can promise absolute security. Public content can be viewed by minors, but an account purchase flow must be operated by an adult or a parent/legal guardian. The application does not ask for a birth date.</p></section>
         <section><h2>Notices and complaints</h2><p>Material changes receive a new version and effective date. You may contact the operator first and may also complain to the data-protection authority applicable to you. Production use requires jurisdiction-specific notices and qualified legal review.</p></section>
@@ -126,7 +126,7 @@ pub fn production_privacy_notice_page(merchant: &MerchantNotice, csp_nonce: &str
         r#"<section><h2>Controller and contact</h2><p><strong>{legal_name}</strong>, operating under the Rullst brand in {country}, controls the application account and purchase records.</p><dl><dt>Brazilian tax registration</dt><dd>{tax_id}</dd><dt>Physical address</dt><dd>{physical_address}</dd><dt>Electronic and support address</dt><dd><a href="mailto:{support_email}">{support_email}</a></dd></dl><p>Do not email passwords, card numbers or identity documents unless a verified support process specifically requires them.</p></section>
         <section><h2>Data processed</h2><p>The service stores the permanent account/certificate name, normalized email, Argon2id password hash, internal identifiers, purchase attempts, entitlement state, certificate state, refund-request state, transactional-mail delivery state and bounded security metadata. Password recovery additionally uses hashed short-lived reset codes, keyed request-limit identifiers and revocable session references; complete reset codes are not stored. Stripe hosts payment collection; Rullst does not receive or store complete card numbers or security codes.</p></section>
         <section><h2>Purposes and providers</h2><p>Data is processed to create, authenticate and recover accounts, prevent abuse, complete the requested one-time purchase, reconcile signed Stripe events, deliver the purchased artifact, issue and verify a certificate, send one purchase confirmation with the requested account and community links, handle refunds and disputes, maintain security and meet legal obligations. The application runs in Microsoft Azure, application records are stored in Neon PostgreSQL, payments are processed by Stripe, and enabled password-recovery and purchase-confirmation messages are delivered by Resend using the account email without marketing or open/click tracking. These providers can process data internationally under their respective contractual safeguards.</p></section>
-        <section><h2>Public certificate boundary</h2><p>The authenticated certificate can display the account name. Public verification uses a random identifier and discloses only certificate type, issue date, environment and current validity. It never publishes the holder's name, email, amount, payment method or provider identifiers.</p></section>
+        <section><h2>Public certificate and aggregate-count boundary</h2><p>The authenticated certificate can display the account name. Public verification uses a random identifier and discloses only certificate type, issue date, environment and current validity. It never publishes the holder's name, email, amount, payment method or provider identifiers. The offer page publishes only an aggregate count of distinct accounts with an active reconciled live entitlement and active Founding Customer certificate. Refunded, disputed, revoked and sandbox records are excluded; no buyer identifier is included in the count.</p></section>
         <section><h2>Retention and rights</h2><p>Expired password-reset request and token records are removed after a 24-hour abuse-investigation window. Account and purchase evidence is retained only as necessary for delivery, fraud prevention, refunds, disputes, accounting and applicable legal obligations. An authenticated account can download its application data from the dashboard. You may request correction, restriction, objection, account closure or deletion through the contact above. Identity is verified before account data is disclosed or changed; legally required records can be restricted rather than immediately erased.</p></section>
         <section><h2>Security and minors</h2><p>TLS, encrypted sessions, CSRF protection, password hashing, server-owned prices, hosted payment entry, signed webhook verification, replay controls and private artifact integrity checks protect the service. No internet service can promise absolute security. A purchase must be made by an adult or by a parent or legal guardian acting for a minor.</p></section>"#,
     );
@@ -181,7 +181,8 @@ const LEGAL_CSS: &str = r#"
 #[cfg(test)]
 mod tests {
     use super::{
-        prelaunch_terms_page, privacy_notice_page, production_terms_page, sandbox_terms_page,
+        prelaunch_terms_page, privacy_notice_page, production_privacy_notice_page,
+        production_terms_page, sandbox_terms_page,
     };
     use crate::controllers::legal_controller::MerchantNotice;
 
@@ -202,18 +203,31 @@ mod tests {
 
     #[test]
     fn production_terms_publish_escaped_required_seller_identification() {
-        let merchant = MerchantNotice {
+        let merchant = merchant_notice();
+        let page = production_terms_page(&merchant, "nonce").0;
+        assert!(page.contains("Seller &amp; Owner"));
+        assert!(page.contains("529.982.247-25"));
+        assert!(page.contains("123 Public Street, Brazil"));
+    }
+
+    #[test]
+    fn production_privacy_notice_explains_the_anonymous_public_count() {
+        let page = production_privacy_notice_page(&merchant_notice(), "nonce").0;
+
+        assert!(page.contains("aggregate count of distinct accounts"));
+        assert!(page.contains("Refunded, disputed, revoked and sandbox records are excluded"));
+        assert!(page.contains("Version 1.4"));
+    }
+
+    fn merchant_notice() -> MerchantNotice {
+        MerchantNotice {
             legal_name: "Seller & Owner".to_owned(),
             tax_id: "529.982.247-25".to_owned(),
             physical_address: "123 Public Street, Brazil".to_owned(),
             country: "BR".to_owned(),
             support_email: "support@example.com".to_owned(),
             refund_window_days: 14,
-        };
-        let page = production_terms_page(&merchant, "nonce").0;
-        assert!(page.contains("Seller &amp; Owner"));
-        assert!(page.contains("529.982.247-25"));
-        assert!(page.contains("123 Public Street, Brazil"));
+        }
     }
 
     #[test]

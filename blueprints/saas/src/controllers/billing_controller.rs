@@ -717,15 +717,28 @@ pub async fn pricing_view(
         .map(|Extension(nonce)| nonce.as_str())
         .unwrap_or_default();
     let signed_in = authenticated_pricing_identity(&headers).await.is_some();
+    let production_deployment = crate::controllers::legal_controller::production_deployment();
+    let founding_customer_count = if production_deployment {
+        match active_founding_customer_count().await {
+            Ok(count) => Some(count),
+            Err(error) => {
+                eprintln!("Founding Customer count lookup failed: {error}");
+                None
+            }
+        }
+    } else {
+        None
+    };
 
     let state = match billing_config() {
         Ok(config) => PaymentPageState {
             selected_provider: config.provider,
             payment_mode: config.mode,
-            production_deployment: crate::controllers::legal_controller::production_deployment(),
+            production_deployment,
             expected_price: format_amount(config.expected_amount_minor, &config.expected_currency),
             setup_error: None,
             signed_in,
+            founding_customer_count,
             merchant_notice: (config.mode == PaymentMode::Live)
                 .then(crate::controllers::legal_controller::live_merchant_notice)
                 .transpose()
@@ -735,14 +748,25 @@ pub async fn pricing_view(
         Err(error) => PaymentPageState {
             selected_provider: "unavailable".to_owned(),
             payment_mode: PaymentMode::Disabled,
-            production_deployment: crate::controllers::legal_controller::production_deployment(),
+            production_deployment,
             expected_price: "not configured".to_owned(),
             setup_error: Some(error.to_string()),
             signed_in,
+            founding_customer_count,
             merchant_notice: None,
         },
     };
     billing::pricing_page(csrf_token, nonce, &state)
+}
+
+async fn active_founding_customer_count() -> Result<i64, BillingConfigError> {
+    sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(DISTINCT entitlement.user_id) FROM entitlements entitlement INNER JOIN tester_certificates certificate ON certificate.entitlement_id = entitlement.id WHERE entitlement.provider = 'stripe' AND entitlement.product_sku = $1 AND entitlement.status = 'active' AND certificate.badge_kind = 'founding_customer' AND certificate.environment = 'live' AND certificate.status = 'active'",
+    )
+    .bind(CHECKOUT_OFFER)
+    .fetch_one(Orm::pool().map_err(|_| BillingConfigError::new("database is unavailable"))?)
+    .await
+    .map_err(|_| BillingConfigError::new("Founding Customer count is unavailable"))
 }
 
 async fn authenticated_pricing_identity(headers: &HeaderMap) -> Option<BillingIdentity> {

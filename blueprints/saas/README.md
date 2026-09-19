@@ -24,6 +24,11 @@ confirmation. A persistent transactional outbox sends each reconciled buyer a
 purchase confirmation with authenticated certificate, guide and dashboard
 links plus the public Rullst, source repository and Discord community links.
 
+The production offer also shows a privacy-preserving aggregate of distinct
+active Founding Customers. Only reconciled live Stripe entitlements with active
+live certificates are counted; refunded, disputed, revoked and sandbox records
+are excluded. No buyer name, email, amount or provider identifier is exposed.
+
 ## Published environments
 
 | Environment | Public URL | Payment boundary | Data boundary |

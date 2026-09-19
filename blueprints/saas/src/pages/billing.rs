@@ -11,7 +11,47 @@ pub struct PaymentPageState {
     pub expected_price: String,
     pub setup_error: Option<String>,
     pub signed_in: bool,
+    pub founding_customer_count: Option<i64>,
     pub merchant_notice: Option<MerchantNotice>,
+}
+
+fn founding_customer_meter(state: &PaymentPageState) -> String {
+    if state.production_deployment {
+        return state
+            .founding_customer_count
+            .map(|count| {
+                let buyer_label = if count == 1 {
+                    "verified active buyer"
+                } else {
+                    "verified active buyers"
+                };
+                html! {
+                    <section class="founding-meter" aria-label="Founding Customer count">
+                        <div class="founding-meter__seal" aria-hidden="true">"FC"</div>
+                        <div class="founding-meter__copy">
+                            <p class="founding-meter__eyebrow">"Rullst Founding Customers"</p>
+                            <p class="founding-meter__value"><strong>{count}</strong><span>{buyer_label}</span></p>
+                            <p>"Counted only after live payment reconciliation. Refunded or disputed purchases are excluded."</p>
+                        </div>
+                    </section>
+                }
+            })
+            .unwrap_or_default();
+    }
+
+    if state.payment_mode == PaymentMode::Test {
+        html! {
+            <aside class="founding-meter founding-meter--sandbox" aria-label="Sandbox count policy">
+                <div class="founding-meter__seal" aria-hidden="true">"TEST"</div>
+                <div class="founding-meter__copy">
+                    <p class="founding-meter__eyebrow">"Sandbox activity stays separate"</p>
+                    <p>"Test checkouts and Sandbox Pioneer certificates never increase the live Founding Customer count."</p>
+                </div>
+            </aside>
+        }
+    } else {
+        String::new()
+    }
 }
 
 fn pricing_navbar(
@@ -312,6 +352,7 @@ window.addEventListener('pageshow', reset);
                         <h1>{heading}</h1>
                         <p class="subtitle">{subtitle}</p>
                     </header>
+                    { rullst::html::RawHtml(founding_customer_meter(state)) }
                     <section class="community-callout" aria-labelledby="community-heading">
                         <div class="community-callout__mark" aria-hidden="true">"R"</div>
                         <div>
@@ -352,6 +393,7 @@ mod tests {
             expected_price: "BRL 1.00".to_owned(),
             setup_error: None,
             signed_in,
+            founding_customer_count: None,
             merchant_notice: None,
         }
     }
@@ -380,6 +422,8 @@ mod tests {
     fn live_offer_places_required_seller_identity_before_checkout() {
         let mut state = state(true);
         state.payment_mode = PaymentMode::Live;
+        state.production_deployment = true;
+        state.founding_customer_count = Some(1);
         state.merchant_notice = Some(MerchantNotice {
             legal_name: "Public Seller".to_owned(),
             tax_id: "529.982.247-25".to_owned(),
@@ -395,6 +439,9 @@ mod tests {
         assert!(page.contains("Read the purchase and refund terms before paying."));
         assert!(page.contains("What this purchase includes"));
         assert!(page.contains("every reconciled live purchase"));
+        assert!(page.contains("Rullst Founding Customers"));
+        assert!(page.contains("<strong>1</strong><span>verified active buyer</span>"));
+        assert!(page.contains("Refunded or disputed purchases are excluded."));
         assert!(!page.contains("first 100"));
         assert!(page.contains("sanitized implementation tutorial"));
     }
@@ -414,6 +461,7 @@ mod tests {
         let mut state = state(false);
         state.payment_mode = PaymentMode::Disabled;
         state.production_deployment = true;
+        state.founding_customer_count = Some(12);
         let page = pricing_page("csrf-token", "csp-nonce", &state).0;
 
         assert!(page.contains("Production checkout is safely locked"));
@@ -421,5 +469,16 @@ mod tests {
         assert!(page.contains("No payment can be initiated"));
         assert!(!page.contains("published staging environment"));
         assert!(!page.contains("This environment stays in Stripe Test Mode"));
+        assert!(page.contains("<strong>12</strong><span>verified active buyers</span>"));
+        assert!(!page.contains("Sandbox activity stays separate"));
+    }
+
+    #[test]
+    fn sandbox_metrics_never_claim_live_founding_customers() {
+        let page = pricing_page("csrf-token", "csp-nonce", &state(false)).0;
+
+        assert!(page.contains("Sandbox activity stays separate"));
+        assert!(page.contains("never increase the live Founding Customer count"));
+        assert!(!page.contains("verified active buyer"));
     }
 }

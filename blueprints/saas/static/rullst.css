@@ -154,6 +154,110 @@ h1 {
     line-height: 1.6;
 }
 
+.founding-meter {
+    position: relative;
+    display: grid;
+    max-width: 760px;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 1.25rem;
+    margin: -0.5rem auto 2rem;
+    padding: 1.25rem 1.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(251, 191, 36, 0.5);
+    border-radius: 1.25rem;
+    background: linear-gradient(135deg, rgba(120, 53, 15, 0.4), rgba(15, 23, 42, 0.96) 55%, rgba(16, 185, 129, 0.16));
+    box-shadow: 0 18px 55px rgba(2, 6, 23, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    text-align: left;
+    animation: fade-in 600ms ease-out;
+}
+
+.founding-meter::after {
+    position: absolute;
+    top: -3rem;
+    right: -3rem;
+    width: 9rem;
+    height: 9rem;
+    border-radius: 9999px;
+    background: rgba(251, 191, 36, 0.1);
+    content: "";
+    filter: blur(8px);
+}
+
+.founding-meter__seal {
+    display: grid;
+    width: 4.25rem;
+    height: 4.25rem;
+    place-items: center;
+    border: 1px solid rgba(254, 243, 199, 0.65);
+    border-radius: 9999px;
+    background: linear-gradient(145deg, #fbbf24, #f97316);
+    color: #1c1917;
+    font-size: 1rem;
+    font-weight: 950;
+    letter-spacing: 0.05em;
+    box-shadow: 0 10px 30px rgba(249, 115, 22, 0.3);
+}
+
+.founding-meter__copy,
+.founding-meter__copy p {
+    min-width: 0;
+    margin: 0;
+}
+
+.founding-meter__copy > p:last-child {
+    color: #b8c2d3;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.founding-meter .founding-meter__eyebrow {
+    color: #fcd34d;
+    font-size: 0.75rem;
+    font-weight: 850;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.founding-meter__value {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    margin: 0.05rem 0 0.25rem !important;
+}
+
+.founding-meter__value strong {
+    color: #fff7d6;
+    font-size: clamp(2.25rem, 7vw, 3.5rem);
+    line-height: 1;
+    text-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
+}
+
+.founding-meter__value span {
+    color: #f8fafc;
+    font-weight: 750;
+}
+
+.founding-meter--sandbox {
+    border-color: rgba(59, 130, 246, 0.45);
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.25), rgba(15, 23, 42, 0.94));
+}
+
+.founding-meter--sandbox::after {
+    background: rgba(59, 130, 246, 0.09);
+}
+
+.founding-meter--sandbox .founding-meter__seal {
+    border-color: rgba(191, 219, 254, 0.65);
+    background: linear-gradient(145deg, #60a5fa, #4f46e5);
+    color: #fff;
+    font-size: 0.72rem;
+}
+
+.founding-meter--sandbox .founding-meter__eyebrow {
+    color: #93c5fd;
+}
+
 .setup-banner {
     display: flex;
     max-width: 800px;
@@ -713,6 +817,29 @@ tbody tr:last-child td {
         font-size: 1rem;
     }
 
+    .founding-meter {
+        align-items: start;
+        gap: 0.9rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+    }
+
+    .founding-meter__seal {
+        width: 3.25rem;
+        height: 3.25rem;
+        font-size: 0.82rem;
+    }
+
+    .founding-meter__value {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .founding-meter__value strong {
+        font-size: 2.4rem;
+    }
+
     .community-callout {
         grid-template-columns: auto minmax(0, 1fr);
         margin-bottom: 1.5rem;
@@ -729,6 +856,7 @@ tbody tr:last-child td {
     .pricing-card,
     .pricing-nav__link,
     .setup-banner,
+    .founding-meter,
     .community-callout a {
         animation: none;
         transition: none;
