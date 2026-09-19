@@ -177,6 +177,8 @@ jobs:
 
       - name: Verify live revision health without creating a payment
         shell: bash
+        env:
+          RECONCILIATION_TOKEN: ${{ secrets.SAAS_PRODUCTION_RECONCILIATION_TOKEN }}
         run: |
           FQDN="$(az containerapp show --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" --query 'properties.configuration.ingress.fqdn' --output tsv --only-show-errors)"
           for attempt in $(seq 1 30); do
@@ -184,11 +186,17 @@ jobs:
             if [ "$MODE" = 'live' ] && curl --fail --silent --show-error --max-time 20 \
               --user-agent "Rullst-SaaS-Live-Healthcheck/1.0" \
               "https://${FQDN}/healthz" | grep --fixed-strings --quiet ready; then
-              exit 0
+              if curl --fail --silent --show-error --max-time 20 \
+                --request POST \
+                --header "Authorization: Bearer ${RECONCILIATION_TOKEN}" \
+                --user-agent "Rullst-SaaS-Artifact-Healthcheck/1.0" \
+                "https://${FQDN}/billing/artifact-ready" | grep --fixed-strings --quiet ready; then
+                exit 0
+              fi
             fi
             sleep 10
           done
-          echo '::error::Live checkout revision did not become healthy. No secret or provider response was logged.'
+          echo '::error::Live checkout or private artifact delivery did not become healthy. No secret or provider response was logged.'
           az containerapp update --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
             --set-env-vars PAYMENTS_MODE=disabled \
             --only-show-errors --output none

@@ -122,6 +122,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/billing/reconcile",
             rullst::routing::post(controllers::billing_controller::reconciliation_handler),
         )
+        .route(
+            "/billing/artifact-ready",
+            rullst::routing::post(controllers::artifact_controller::live_artifact_readiness),
+        )
         .layer(rullst::server::from_fn(
             rullst::security::headers_middleware,
         ))

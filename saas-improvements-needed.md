@@ -499,6 +499,83 @@ after success. A storage lifecycle rule is limited to
 days; Azure's existing 30-day soft-delete protection remains separate. This is
 an application operations/readiness gap, not a Rullst framework defect.
 
+### APP-SAAS-012 — Runtime Blob download omitted the required storage API version
+
+The production artifact route obtained an Azure managed-identity bearer token
+and sent it to the configured private Blob URL, but it did not send an explicit
+`x-ms-version` request header. Azure Storage rejected the authorized request,
+so an entitled buyer received HTTP 503 while the certificate remained
+available.
+
+The former activation check was incomplete: GitHub's deployment identity could
+read and hash the blob, but that did not prove that the running Container App's
+managed identity could execute the application's own HTTP request.
+
+**Correction implemented here:** send a pinned supported Azure Storage API
+version on every OAuth-authorized Blob request. A protected runtime-readiness
+operation now exercises the complete token, download, size and SHA-256 path
+from the running application. Live activation disables checkout if either the
+health check or this runtime artifact check fails. The readiness response does
+not disclose the blob URL, access token, digest or artifact bytes. This was an
+application/storage-protocol and release-gate defect, not a Rullst framework
+defect.
+
+### APP-SAAS-013 — Refund eligibility used an ambiguous PostgreSQL timestamp comparison
+
+The refund request route compared the entitlement creation value to a computed
+timestamp without explicitly converting the selected ORM value to PostgreSQL's
+timestamp type. The dashboard could show an eligible refund action while the
+eligibility query failed and returned HTTP 503 when the buyer opened it.
+
+**Correction implemented here:** cast `created_at` explicitly before applying
+the 14-day eligibility interval, and render a bounded temporary-unavailability
+page with the support path instead of a blank server error. The refund page now
+states that an application refund request is not a bank dispute, does not move
+money automatically, normally takes 5–10 business days after processing, and
+does not guarantee that the merchant recovers the original processing fee.
+This was an application query and buyer-communication defect, not a Rullst
+framework defect.
+
+### APP-SAAS-014 — Certificate print handler ran before the button existed
+
+The private certificate placed its inline script in the document head and
+looked up the print button immediately. The body had not been parsed yet, so no
+listener was attached and “Print or save to PDF” appeared to do nothing.
+
+**Correction implemented here:** bind the `window.print()` handler after
+`DOMContentLoaded` and cover the generated page with a regression test. This
+was a blueprint page-lifecycle defect, not a Rullst framework defect.
+
+### APP-SAAS-015 — Authenticated checkout unnecessarily returned buyers to the offer page
+
+An authenticated unpaid dashboard linked back to `/pricing`. The customer had
+already registered, signed in and accepted the relevant disclosures, so the
+extra navigation looked like lost authentication and made the next required
+action unclear.
+
+**Correction implemented here:** the dashboard renders a CSRF-protected POST
+directly to the fixed server-owned checkout operation, repeats the exact price
+and required adult-or-guardian and terms acknowledgement, and then hands off to
+the validated Stripe-hosted URL. Staging uses the same interaction with Stripe
+test data. This was an application UX defect, not a Rullst framework defect.
+
+### APP-SAAS-016 — Reconciled purchases had no durable confirmation delivery
+
+Access and the certificate were created transactionally after Stripe
+reconciliation, but the buyer received no transactional summary or durable set
+of authenticated access links. Sending inline during webhook handling would
+also have coupled provider acknowledgement to an external mail API.
+
+**Correction implemented here:** create a PostgreSQL purchase-confirmation
+outbox in the same transaction as the entitlement, deliver through the existing
+Rullst Mail plus Resend boundary with bounded retry, and cancel pending delivery
+when access is revoked. The migration backfills one job for every active
+entitlement. The HTML and plain-text messages link to the guide, private and
+public certificate views, dashboard, Rullst website, public examples repository
+and Discord community; they do not attach private artifacts or add open/click
+tracking. This was a missing application lifecycle feature, not a Rullst
+framework defect.
+
 ## Rullst Mail and account-lifecycle improvements
 
 Rullst Mail should remain the framework's transactional-message SDK and

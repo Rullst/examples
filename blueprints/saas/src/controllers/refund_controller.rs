@@ -31,7 +31,7 @@ async fn refundable_entitlement(
 ) -> Result<Option<RefundableEntitlement>, rullst_orm::Error> {
     let days = i32::from(crate::controllers::legal_controller::refund_window_days());
     sqlx::query_as::<_, RefundableEntitlement>(
-        "SELECT id, provider, provider_payment_id, created_at >= CURRENT_TIMESTAMP - make_interval(days => $2) AS eligible FROM entitlements WHERE user_id = $1 AND product_sku = 'gateway-report-stripe' AND status = 'active' LIMIT 1",
+        "SELECT id, provider, provider_payment_id, created_at::timestamp >= CURRENT_TIMESTAMP - make_interval(days => $2) AS eligible FROM entitlements WHERE user_id = $1 AND product_sku = 'gateway-report-stripe' AND status = 'active' LIMIT 1",
     )
     .bind(user_id)
     .bind(days)
@@ -69,7 +69,7 @@ pub async fn refund_view(
         )
         .into_response(),
         (Ok(None), _) => StatusCode::NOT_FOUND.into_response(),
-        _ => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        _ => refund::refund_unavailable_page(nonce).into_response(),
     }
 }
 

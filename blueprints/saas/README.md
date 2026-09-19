@@ -20,7 +20,9 @@ report plus sanitized implementation tutorial stored in Azure Blob; every
 reconciled live purchase also receives a `Rullst Founding Customer`
 certificate. There is no quantity limit for that certificate. Refunds and
 disputes revoke both artifact and certificate access after provider
-confirmation.
+confirmation. A persistent transactional outbox sends each reconciled buyer a
+purchase confirmation with authenticated certificate, guide and dashboard
+links plus the public Rullst, source repository and Discord community links.
 
 ## Published environments
 
@@ -29,12 +31,14 @@ confirmation.
 | Staging | `https://saas-staging.rullst.win` | Permanent Stripe sandbox; test payment methods only; no real charge | Separate Neon PostgreSQL project, Stripe sandbox objects, webhook secret and private Nexus credentials |
 | Production | `https://saas.rullst.win` | Customer-facing Stripe live checkout; a click can create a real charge | Separate Neon PostgreSQL project, Stripe live objects, webhook secret, merchant disclosure and private Nexus credentials |
 
-Both deployments are intentionally retained. Staging is where checkout,
-webhook, refund and deployment changes are verified without moving money;
-production is never a substitute for provider sandbox testing. They must not
-share databases, Stripe keys, Price IDs, webhook secrets, application keys or
-administrator credentials. The authoritative environment rationale and current
-operational status are maintained in
+Both deployments are intentionally retained. Staging is not a second public
+product: it is the permanent release gate where every payment, webhook,
+artifact, refund, email and deployment change is verified with Stripe test
+data before the exact commit is promoted. Production is never a substitute for
+provider sandbox testing. The environments must not share databases, Stripe
+keys, Price IDs, webhook secrets, application keys or administrator
+credentials. The authoritative environment rationale and current operational
+status are maintained in
 [`docs/DEPLOYMENT_PROFILE.md`](docs/DEPLOYMENT_PROFILE.md); the live launch gate
 is maintained in
 [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md).
@@ -88,19 +92,25 @@ mode.
 The browser supplies only a fixed local offer identifier and an adult-or-
 guardian purchaser attestation. The server owns the Stripe Price ID, expected
 amount and currency, fetches that Price immediately before checkout, and
-requires an exact active one-time Price match. A return-page redirect never
-grants access. The signed webhook is replay-protected in PostgreSQL, the paid
-Checkout Session and line item are re-read from Stripe, and only then is a
-versioned report entitlement created. The same database transaction issues a
-test-only `Rullst Sandbox Pioneer` certificate or, for every reconciled live
-purchase, a `Rullst Founding Customer` certificate. Full refunds and disputes
-revoke the entitlement and certificate after provider verification.
+requires an exact active one-time Price match. An authenticated unpaid buyer's
+dashboard posts directly to this checkout operation; it does not send the
+buyer back through the public offer page. A return-page redirect never grants
+access. The signed webhook is replay-protected in PostgreSQL, the paid Checkout
+Session and line item are re-read from Stripe, and only then is a versioned
+report entitlement created. The same database transaction issues a test-only
+`Rullst Sandbox Pioneer` certificate or, for every reconciled live purchase, a
+`Rullst Founding Customer` certificate and queues the transactional purchase
+confirmation. Full refunds and disputes revoke the entitlement and certificate
+after provider verification.
 
 The authenticated certificate page may show the account holder's name and can
 be printed or saved as PDF. Its public `/verify/{public_id}` page uses a random
 122-bit identifier and shows only badge type, issue date, environment and
 validity. It omits the holder's name, email and all provider/payment IDs. The
-identifier is not listed publicly; the holder decides whether to share it.
+identifier is not listed publicly; the holder decides whether to share it. The
+registration form explicitly identifies the account holder name as the
+permanent certificate name and requires acknowledgement that it cannot be
+changed after registration.
 
 The public `/privacy` and `/terms` pages disclose the staging data boundary,
 international hosting path, essential cookies, data-rights contact, minors
@@ -181,6 +191,14 @@ The deployment workflows keep recovery disabled unless their explicit
 recipient address and deterministic security-message content; no marketing
 tracking is added. The privacy notice describes this processor boundary.
 
+The same provider configuration delivers purchase confirmations from a
+PostgreSQL outbox. Delivery is retried with bounded attempts, survives process
+restarts and is cancelled if the associated entitlement or certificate is no
+longer active. A migration queues one confirmation for each existing active
+entitlement, so buyers reconciled before this feature are not silently omitted.
+The email contains authenticated links rather than attaching the private paid
+guide, and it contains no tracking pixel or click tracker.
+
 ## Local setup
 
 1. Start a local PostgreSQL database named `rullst_saas` or supply another
@@ -257,15 +275,24 @@ simulate a customer.
    commit SHA. Verify TLS, private Nexus, backup and restore while checkout is
    still disabled.
 6. Run `Enable SaaS Live Checkout` with the reviewed live Price ID and exact
-   amount. Startup rejects mixed test/live objects and incomplete settings.
+   amount. Startup rejects mixed test/live objects and incomplete settings. The
+   workflow also asks the running application to retrieve and verify the paid
+   artifact with its own managed identity before enabling sales; a GitHub OIDC
+   identity being able to read the blob is not sufficient runtime evidence.
 7. Keep the scheduled reconciliation and daily backup workflows enabled.
 
-An authenticated buyer may submit a refund request during the published
-window. The operator reviews it in private Nexus and creates the full refund in
-Stripe. The signed `charge.refunded` webhook, or scheduled provider
-reconciliation if that webhook is delayed, marks the request complete and
-revokes guide and certificate access. A dispute revokes access immediately;
-restoration after a won dispute requires manual review.
+An authenticated buyer may submit a refund request within 14 calendar days of
+the reconciled purchase. This application request is not a card-network or bank
+dispute and does not move money automatically: the operator reviews it in
+private Nexus and creates the full refund in Stripe. Stripe generally does not
+return the original payment-processing fee to the merchant, and exceptions can
+apply by payment method or account; therefore a refund must never be described
+as guaranteeing zero merchant cost. Stripe says an approved refund normally
+appears to the customer in 5–10 business days. The signed `charge.refunded`
+webhook, or scheduled provider reconciliation if that webhook is delayed,
+marks the request complete and revokes guide and certificate access. A dispute
+is a separate bank/card-network process and can carry a dispute fee; it revokes
+access immediately, and restoration after a won dispute requires manual review.
 
 ## Manual Azure staging workflow
 
@@ -307,6 +334,12 @@ implementation tutorial in addition to the gateway field report. The complete pa
 live in private application storage and be streamed only after authentication
 and entitlement checks. Committing those bytes to this public repository, or
 embedding them in a public GHCR image, would make the route paywall cosmetic.
+
+Azure Blob requests authorized by the Container App's managed identity include
+an explicit supported `x-ms-version` header. The live activation workflow uses
+the protected `/billing/artifact-ready` operation to exercise that same runtime
+path before checkout can be enabled. The operation exposes only readiness; it
+does not return the artifact, token, URL or digest.
 
 The repository may retain a public summary, schema and loader mechanism. The
 private artifact record should contain a version, media type, immutable

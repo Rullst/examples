@@ -58,6 +58,22 @@ pub async fn export_account_data(Extension(user_id): Extension<i32>) -> Response
         Ok(value) => value,
         Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
     };
+    let purchase_confirmation_delivery =
+        match sqlx::query_as::<_, (i64, String, i32, Option<String>, String, String)>(
+            r#"SELECT outbox.id, outbox.status, outbox.attempts,
+                  outbox.sent_at::text, outbox.created_at::text, outbox.updated_at::text
+           FROM purchase_confirmation_mail_outbox AS outbox
+           INNER JOIN entitlements AS entitlement ON entitlement.id = outbox.entitlement_id
+           WHERE entitlement.user_id = $1
+           ORDER BY outbox.id ASC"#,
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+        {
+            Ok(value) => value,
+            Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        };
 
     let exported_at_unix = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -117,6 +133,14 @@ pub async fn export_account_data(Extension(user_id): Extension<i32>) -> Response
             "status": item.status,
             "created_at": item.created_at,
             "updated_at": item.updated_at
+        })).collect::<Vec<_>>(),
+        "purchase_confirmation_delivery": purchase_confirmation_delivery.into_iter().map(|item| json!({
+            "id": item.0,
+            "status": item.1,
+            "attempts": item.2,
+            "sent_at": item.3,
+            "created_at": item.4,
+            "updated_at": item.5
         })).collect::<Vec<_>>()
     });
     let body = match serde_json::to_string_pretty(&payload) {

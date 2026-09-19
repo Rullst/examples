@@ -1,12 +1,13 @@
 use crate::controllers::billing_controller::{BillingConfigError, account_has_stripe_report};
 use reqwest::{Client, Url};
-use rullst::server::{IntoResponse, Response, StatusCode};
+use rullst::server::{HeaderMap, IntoResponse, Response, StatusCode};
 use sha2::{Digest, Sha256};
 use std::net::IpAddr;
 use std::time::Duration;
 
 const MAX_PRIVATE_ARTIFACT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_IDENTITY_RESPONSE_BYTES: usize = 32 * 1024;
+const AZURE_STORAGE_API_VERSION: &str = "2023-11-03";
 const SANDBOX_REPORT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/reports/stripe-gateway-field-report-v1.md"
@@ -217,11 +218,15 @@ async fn retrieve_live_artifact() -> Result<(String, String), BillingConfigError
     let mut response = client
         .get(config.url)
         .bearer_auth(access_token)
+        .header("x-ms-version", AZURE_STORAGE_API_VERSION)
         .send()
         .await
         .map_err(|_| BillingConfigError::new("private artifact is unavailable"))?;
     if !response.status().is_success() {
-        return Err(BillingConfigError::new("private artifact is unavailable"));
+        return Err(BillingConfigError::new(format!(
+            "private artifact returned HTTP {}",
+            response.status().as_u16()
+        )));
     }
     if response
         .content_length()
@@ -250,6 +255,39 @@ async fn retrieve_live_artifact() -> Result<(String, String), BillingConfigError
     Ok((body, config.filename))
 }
 
+fn temporarily_unavailable_response() -> Response {
+    let mut response = (
+        StatusCode::SERVICE_UNAVAILABLE,
+        "The purchased guide is temporarily unavailable. Your purchase and certificate remain safe. Return to the dashboard and try again in 30 seconds; contact officialrullst@gmail.com if the problem continues.",
+    )
+        .into_response();
+    response.headers_mut().insert(
+        rullst::server::header::RETRY_AFTER,
+        rullst::server::HeaderValue::from_static("30"),
+    );
+    response.headers_mut().insert(
+        rullst::server::header::CACHE_CONTROL,
+        rullst::server::HeaderValue::from_static("private, no-store"),
+    );
+    response
+}
+
+/// End-to-end readiness probe for the protected production workflow. It reads
+/// and verifies the private artifact through the Container App's own managed
+/// identity, but never returns the purchased content.
+pub async fn live_artifact_readiness(headers: HeaderMap) -> Response {
+    if !crate::controllers::billing_controller::protected_operation_authorized(&headers) {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
+    match retrieve_live_artifact().await {
+        Ok(_) => (StatusCode::OK, "ready").into_response(),
+        Err(error) => {
+            eprintln!("Private artifact readiness failed: {error}");
+            StatusCode::SERVICE_UNAVAILABLE.into_response()
+        }
+    }
+}
+
 pub async fn download_paid_artifact(user_id: i32) -> Response {
     match account_has_stripe_report(user_id).await {
         Ok(true) => {}
@@ -272,19 +310,34 @@ pub async fn download_paid_artifact(user_id: i32) -> Response {
         Ok((body, filename)) => attachment_response(body, &filename),
         Err(error) => {
             eprintln!("Private artifact delivery failed: {error}");
-            StatusCode::SERVICE_UNAVAILABLE.into_response()
+            temporarily_unavailable_response()
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_PRIVATE_ARTIFACT_BYTES, trusted_identity_endpoint};
+    use super::{
+        AZURE_STORAGE_API_VERSION, MAX_PRIVATE_ARTIFACT_BYTES, temporarily_unavailable_response,
+        trusted_identity_endpoint,
+    };
     use reqwest::Url;
+    use rullst::server::StatusCode;
 
     #[test]
     fn private_artifact_is_deliberately_bounded() {
         assert_eq!(MAX_PRIVATE_ARTIFACT_BYTES, 2 * 1024 * 1024);
+        assert_eq!(AZURE_STORAGE_API_VERSION, "2023-11-03");
+    }
+
+    #[test]
+    fn unavailable_download_is_explained_without_losing_purchase_context() {
+        let response = temporarily_unavailable_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            response.headers()[rullst::server::header::RETRY_AFTER],
+            "30"
+        );
     }
 
     #[test]

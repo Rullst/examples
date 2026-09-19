@@ -491,6 +491,13 @@ pub async fn account_has_stripe_report(user_id: i32) -> Result<bool, BillingConf
     .map_err(|_| BillingConfigError::new("entitlement lookup failed"))
 }
 
+pub fn configured_checkout_price() -> Option<String> {
+    billing_config()
+        .ok()
+        .filter(|config| config.mode.accepts_checkout())
+        .map(|config| format_amount(config.expected_amount_minor, &config.expected_currency))
+}
+
 async fn open_purchase_attempt(
     user_id: i32,
 ) -> Result<Option<PurchaseAttempt>, BillingConfigError> {
@@ -1031,6 +1038,14 @@ async fn persist_successful_checkout(
     .await
     .map_err(|_| BillingConfigError::new("customer certificate could not be issued"))?;
 
+    sqlx::query(
+        "INSERT INTO purchase_confirmation_mail_outbox (entitlement_id) VALUES ($1) ON CONFLICT (entitlement_id) DO NOTHING",
+    )
+    .bind(entitlement_id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(|_| BillingConfigError::new("purchase confirmation could not be queued"))?;
+
     transaction
         .commit()
         .await
@@ -1333,6 +1348,15 @@ fn reconciliation_authorized(headers: &HeaderMap, expected: &str) -> bool {
         expected_tag.as_ref(),
     )
     .is_ok()
+}
+
+pub(crate) fn protected_operation_authorized(headers: &HeaderMap) -> bool {
+    matches!(
+        billing_config(),
+        Ok(config)
+            if config.mode == PaymentMode::Live
+                && reconciliation_authorized(headers, &config.reconciliation_token)
+    )
 }
 
 async fn reconcile_open_checkouts(config: &BillingConfig) -> Result<u32, BillingConfigError> {

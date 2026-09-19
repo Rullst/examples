@@ -12,6 +12,7 @@ pub struct RegisterDto {
     pub name: String,
     pub email: String,
     pub password: String,
+    pub certificate_name_acknowledgement: String,
 }
 
 #[derive(Deserialize)]
@@ -161,6 +162,14 @@ pub async fn register_submit(
         )
         .into_response();
     }
+    if payload.certificate_name_acknowledgement != "permanent_certificate_name" {
+        return auth::register_page(
+            &token,
+            Some("Confirm that the registered name is permanent and will appear on certificates"),
+            nonce,
+        )
+        .into_response();
+    }
     if !valid_email(&email) {
         return auth::register_page(&token, Some("Enter a valid email address"), nonce)
             .into_response();
@@ -305,6 +314,8 @@ pub async fn dashboard(
                         None
                     }
                 };
+            let checkout_price =
+                crate::controllers::billing_controller::configured_checkout_price();
             auth::dashboard_page(
                 &user.name,
                 csrf_token,
@@ -313,6 +324,7 @@ pub async fn dashboard(
                 certificate_public_id.as_deref(),
                 crate::controllers::legal_controller::live_mode(),
                 refund_status.as_deref(),
+                checkout_price.as_deref(),
             )
             .into_response()
         }

@@ -33,6 +33,9 @@ pub fn login_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Htm
          label {{ display: block; font-size: 0.85rem; color: #9ca3af; margin-bottom: 0.4rem; }}\
          input {{ width: 100%; padding: 0.75rem 1rem; border-radius: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.95rem; }}\
          input:focus {{ outline: none; border-color: #10b981; }}\
+         .field-help {{ margin: .45rem 0 0; color: #fbbf24; font-size: .8rem; line-height: 1.45; }}\
+         .acknowledgement {{ display: flex; gap: .65rem; align-items: flex-start; margin: .9rem 0 1.1rem; color: #d1d5db; text-align: left; line-height: 1.45; }}\
+         .acknowledgement input {{ width: auto; margin-top: .2rem; }}\
          .btn-primary {{ width: 100%; padding: 0.85rem; border-radius: 0.5rem; background: #10b981; color: #000; font-weight: 700; border: none; cursor: pointer; font-size: 1rem; margin-top: 0.5rem; }}\
          .btn-primary:hover {{ background: #34d399; }}\
          .links {{ margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.8; color: #9ca3af; }}\
@@ -106,9 +109,10 @@ pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> 
          <div class=\"card\"><h1>Create Account</h1>{}\
          <form method=\"POST\" action=\"/register\">\
          <input type=\"hidden\" name=\"_token\" value=\"{}\" />\
-         <div class=\"form-group\"><label>Name</label><input type=\"text\" name=\"name\" placeholder=\"John Doe\" required /></div>\
+         <div class=\"form-group\"><label>Permanent certificate name</label><input type=\"text\" name=\"name\" autocomplete=\"name\" maxlength=\"120\" placeholder=\"John Doe\" required /><p class=\"field-help\">Use the exact name you want printed on your certificate. It cannot be changed after registration.</p></div>\
          <div class=\"form-group\"><label>Email</label><input type=\"email\" name=\"email\" placeholder=\"you@example.com\" required /></div>\
          <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
+         <label class=\"acknowledgement\"><input type=\"checkbox\" name=\"certificate_name_acknowledgement\" value=\"permanent_certificate_name\" required />I understand that this account name is permanent and will be used on certificates issued after a purchase.</label>\
          <p class=\"links\">By creating this __RULLST_ACCOUNT_LABEL__, you acknowledge the <a href=\"/privacy\">Privacy notice</a> and <a href=\"/terms\">__RULLST_TERMS_LABEL__</a>. This is not optional marketing consent.</p>\
          <button type=\"submit\" class=\"btn-primary\">Register</button>\
          </form>\
@@ -223,24 +227,44 @@ pub fn dashboard_page(
     certificate_public_id: Option<&str>,
     live_mode: bool,
     refund_status: Option<&str>,
+    checkout_price: Option<&str>,
 ) -> Html<String> {
     let production_prelaunch =
         !live_mode && crate::controllers::legal_controller::production_deployment();
     let nonce = rullst::html::escape_str(csp_nonce);
     let user_name = rullst::html::escape_str(user_name);
     let csrf_token = rullst::html::escape_str(csrf_token);
+    let direct_checkout = |button_label: &str, purchase_note: &str| {
+        format!(
+            "<form class=\"dashboard-checkout\" method=\"post\" action=\"/billing/checkout\"><input type=\"hidden\" name=\"_token\" value=\"{csrf_token}\"><input type=\"hidden\" name=\"offer\" value=\"gateway-report-stripe\"><p class=\"muted small\">{purchase_note}</p><label class=\"purchase-authority\"><input type=\"checkbox\" name=\"purchase_authority\" value=\"adult_or_guardian\" required> I am 18 or older, or I am the parent/legal guardian making this purchase, and I reviewed the purchase terms.</label><button class=\"btn-report\" type=\"submit\">{button_label}</button></form>"
+        )
+    };
     let report_action = if has_stripe_report {
         if live_mode {
-            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download purchased guide</a>"
+            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download purchased guide</a>".to_owned()
         } else {
-            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download Stripe report</a>"
+            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download Stripe report</a>".to_owned()
         }
-    } else if live_mode {
-        "<a class=\"btn-report\" href=\"/pricing\">Open one-time checkout</a>"
+    } else if live_mode && checkout_price.is_some() {
+        direct_checkout(
+            "Continue directly to Stripe Checkout",
+            &format!(
+                "This starts a real one-time purchase for {}. Stripe will display the final payment screen.",
+                rullst::html::escape_str(checkout_price.unwrap_or_default())
+            ),
+        )
     } else if production_prelaunch {
-        "<a class=\"btn-report\" href=\"/pricing\">View production launch status</a>"
+        "<a class=\"btn-report\" href=\"/pricing\">View production launch status</a>".to_owned()
+    } else if checkout_price.is_some() {
+        direct_checkout(
+            "Open Stripe test checkout",
+            &format!(
+                "This opens Stripe Test Mode for {} and creates no real charge.",
+                rullst::html::escape_str(checkout_price.unwrap_or_default())
+            ),
+        )
     } else {
-        "<a class=\"btn-report\" href=\"/pricing\">Open sandbox checkout</a>"
+        "<p class=\"muted small\">Checkout is temporarily unavailable.</p>".to_owned()
     };
     let certificate_action = certificate_public_id.map_or_else(
         || {
@@ -273,7 +297,10 @@ pub fn dashboard_page(
                 "<p class=\"muted small\">Stripe confirmed the refund.</p>".to_owned()
             }
             _ => {
-                "<a class=\"btn-report btn-refund\" href=\"/refund\">Request refund</a>".to_owned()
+                format!(
+                    "<a class=\"btn-report btn-refund\" href=\"/refund\">Request refund</a><p class=\"muted small refund-note\">This opens a refund request; it is not a bank dispute and does not move money immediately. Online requests are available for {} calendar days after purchase.</p>",
+                    crate::controllers::legal_controller::refund_window_days()
+                )
             }
         }
     } else {
@@ -312,6 +339,11 @@ pub fn dashboard_page(
          .btn-nexus { background: #1e293b; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; font-size: 0.9rem; border: 1px solid #374151; }
          .btn-report { display: inline-block; margin-top: 1rem; background: #10b981; color: #03120c; padding: 0.65rem 0.9rem; border-radius: 0.5rem; text-decoration: none; font-weight: 750; }
          .btn-certificate { margin-left: 0.5rem; background: #f97316; color: #fff; }
+         .dashboard-checkout { margin-top: 1rem; padding: 1rem; border: 1px solid #334155; border-radius: .75rem; background: rgba(2,6,23,.45); }
+         .purchase-authority { display: flex; gap: .65rem; align-items: flex-start; margin-top: .8rem; color: #cbd5e1; font-size: .88rem; line-height: 1.5; }
+         .purchase-authority input { flex: 0 0 auto; margin-top: .2rem; }
+         .dashboard-checkout .btn-report { width: 100%; border: 0; cursor: pointer; font: inherit; }
+         .refund-note { max-width: 48rem; line-height: 1.5; }
          .muted { color: #9ca3af; margin-top: 0.5rem; }
          .small { font-size: 0.85rem; }
          .metric { font-size: 1.5rem; font-weight: 700; }
@@ -357,7 +389,7 @@ pub fn dashboard_page(
           </div></body></html>"#
         .replace("__RULLST_CSP_NONCE__", &nonce)
         .replace("__RULLST_CSRF_TOKEN__", &csrf_token)
-        .replace("__RULLST_REPORT_ACTION__", report_action)
+        .replace("__RULLST_REPORT_ACTION__", &report_action)
         .replace("__RULLST_CERTIFICATE_ACTION__", &certificate_action)
         .replace("__RULLST_REFUND_ACTION__", &refund_action)
         .replace("__RULLST_TERMS_LABEL__", terms_label)
@@ -366,4 +398,54 @@ pub fn dashboard_page(
             entitlement_description,
         )
         .replace("__RULLST_USER_NAME__", &user_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{dashboard_page, register_page};
+
+    #[test]
+    fn registration_requires_permanent_certificate_name_acknowledgement() {
+        let page = register_page("csrf", None, "nonce").0;
+        assert!(page.contains("Permanent certificate name"));
+        assert!(page.contains("It cannot be changed after registration"));
+        assert!(page.contains("name=\"certificate_name_acknowledgement\""));
+        assert!(page.contains("value=\"permanent_certificate_name\""));
+    }
+
+    #[test]
+    fn dashboard_posts_directly_to_live_stripe_checkout() {
+        let page = dashboard_page(
+            "Account Holder",
+            "csrf",
+            "nonce",
+            false,
+            None,
+            true,
+            None,
+            Some("BRL 1.00"),
+        )
+        .0;
+        assert!(page.contains("action=\"/billing/checkout\""));
+        assert!(page.contains("Continue directly to Stripe Checkout"));
+        assert!(page.contains("BRL 1.00"));
+        assert!(!page.contains(">Open one-time checkout</a>"));
+    }
+
+    #[test]
+    fn dashboard_explains_refund_request_before_navigation() {
+        let page = dashboard_page(
+            "Account Holder",
+            "csrf",
+            "nonce",
+            true,
+            Some("RST-LIVE-0123456789ABCDEF0123456789ABCDEF"),
+            true,
+            None,
+            Some("BRL 1.00"),
+        )
+        .0;
+        assert!(page.contains("not a bank dispute"));
+        assert!(page.contains("14 calendar days"));
+    }
 }

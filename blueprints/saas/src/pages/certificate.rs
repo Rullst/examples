@@ -66,7 +66,7 @@ pub fn owner_certificate_page(
         terms_label = rullst::html::escape_str(terms_label),
     );
     let script = format!(
-        "<script nonce=\"{}\">document.getElementById('print-certificate').addEventListener('click',function(){{window.print();}});</script>",
+        "<script nonce=\"{}\">document.addEventListener('DOMContentLoaded',function(){{const button=document.getElementById('print-certificate');if(button){{button.addEventListener('click',function(){{window.print();}});}}}});</script>",
         rullst::html::escape_str(csp_nonce)
     );
     page_shell(
@@ -114,7 +114,24 @@ const CERTIFICATE_CSS: &str = r#"
 
 #[cfg(test)]
 mod tests {
-    use super::{issued_date, public_verification_page};
+    use super::{issued_date, owner_certificate_page, public_verification_page};
+
+    #[test]
+    fn private_certificate_wires_print_after_the_document_is_ready() {
+        let page = owner_certificate_page(
+            "Certificate Holder",
+            "RST-LIVE-0123456789ABCDEF0123456789ABCDEF",
+            "founding_customer",
+            "live",
+            "active",
+            "active",
+            "2026-09-17 12:00:00",
+            "test-nonce",
+        )
+        .0;
+        assert!(page.contains("DOMContentLoaded"));
+        assert!(page.contains("window.print()"));
+    }
 
     #[test]
     fn public_page_omits_holder_and_payment_fields() {
