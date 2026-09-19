@@ -312,6 +312,15 @@ window.addEventListener('pageshow', reset);
                         <h1>{heading}</h1>
                         <p class="subtitle">{subtitle}</p>
                     </header>
+                    <section class="community-callout" aria-labelledby="community-heading">
+                        <div class="community-callout__mark" aria-hidden="true">"R"</div>
+                        <div>
+                            <p class="community-callout__eyebrow">"Rullst community"</p>
+                            <h2 id="community-heading">"Build alongside the Rullst community"</h2>
+                            <p>"Meet other builders, exchange ideas, and help shape what comes next."</p>
+                        </div>
+                        <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join us on Discord"</a>
+                    </section>
                     { rullst::html::RawHtml(setup_banner(state)) }
                     <div class="pricing-grid">
                         { rullst::html::RawHtml(checkout_card(csrf_token, state)) }
@@ -324,15 +333,6 @@ window.addEventListener('pageshow', reset);
                     </div>
                     { rullst::html::RawHtml(gateway_matrix()) }
                 </main>
-                <footer class="community-footer">
-                    <div class="community-footer__mark" aria-hidden="true">"R"</div>
-                    <div>
-                        <p class="community-footer__eyebrow">"Build with us"</p>
-                        <h2>"Join our community on Discord"</h2>
-                        <p>"Meet Rullst builders, exchange ideas, and help shape what comes next."</p>
-                    </div>
-                    <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join the Rullst Discord"</a>
-                </footer>
                 { rullst::html::RawHtml(checkout_script) }
             </body>
         </html>
@@ -402,9 +402,11 @@ mod tests {
     #[test]
     fn pricing_page_links_to_the_discord_community() {
         let page = pricing_page("csrf-token", "csp-nonce", &state(false)).0;
-        assert!(page.contains("Join our community on Discord"));
+        assert!(page.contains("Build alongside the Rullst community"));
         assert!(page.contains("https://discord.gg/2ntKFtsSjw"));
         assert!(page.contains("rel=\"noopener noreferrer\""));
+        assert!(page.contains("<section class=\"community-callout\""));
+        assert!(!page.contains("<footer class=\"community-footer\""));
     }
 
     #[test]

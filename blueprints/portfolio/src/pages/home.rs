@@ -552,31 +552,31 @@ fn cv_styles() -> String {
         40% { transform: scale(1.1); opacity: 1; }
     }
 
-    .community-footer {
+    .community-callout {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
         gap: 1.25rem;
-        width: min(calc(100% - 2rem), 1350px);
-        margin: 0 auto 2.5rem;
+        width: 100%;
+        margin: 0 0 2.5rem;
         padding: 1.35rem 1.5rem;
         border: 1px solid rgba(88, 101, 242, 0.48);
         border-radius: 20px;
         background: linear-gradient(135deg, rgba(88, 101, 242, 0.18), rgba(15, 15, 20, 0.94) 58%, rgba(0, 255, 204, 0.1));
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
     }
-    .community-footer-mark { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 16px; background: linear-gradient(145deg, #5865f2, #00bfa5); color: #fff; font-size: 1.4rem; font-weight: 900; box-shadow: 0 10px 28px rgba(88, 101, 242, .35); }
-    .community-footer h2, .community-footer p { margin: 0; }
-    .community-footer h2 { margin: 2px 0 4px; font-size: clamp(1.2rem, 3vw, 1.55rem); }
-    .community-footer-copy > p:not(.community-footer-eyebrow) { color: var(--text-muted); }
-    .community-footer-eyebrow { color: #a5b4fc; font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-    .community-footer a { padding: .8rem 1rem; border: 1px solid rgba(255, 255, 255, .16); border-radius: 12px; background: #5865f2; color: #fff; font-weight: 800; text-align: center; text-decoration: none; transition: transform 160ms ease, background 160ms ease; }
-    .community-footer a:hover { background: #4752c4; transform: translateY(-2px); }
-    .community-footer a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .community-callout-mark { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 16px; background: linear-gradient(145deg, #5865f2, #00bfa5); color: #fff; font-size: 1.4rem; font-weight: 900; box-shadow: 0 10px 28px rgba(88, 101, 242, .35); }
+    .community-callout h2, .community-callout p { margin: 0; }
+    .community-callout h2 { margin: 2px 0 4px; font-size: clamp(1.2rem, 3vw, 1.55rem); }
+    .community-callout-copy > p:not(.community-callout-eyebrow) { color: var(--text-muted); }
+    .community-callout-eyebrow { color: #a5b4fc; font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .community-callout a { min-width: max-content; padding: .8rem 1rem; border: 1px solid rgba(255, 255, 255, .16); border-radius: 12px; background: #5865f2; color: #fff; font-weight: 800; text-align: center; text-decoration: none; transition: transform 160ms ease, background 160ms ease; }
+    .community-callout a:hover { background: #4752c4; transform: translateY(-2px); }
+    .community-callout a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 
     @media (max-width: 640px) {
-        .community-footer { grid-template-columns: auto minmax(0, 1fr); padding: 1.15rem; }
-        .community-footer a { grid-column: 1 / -1; width: 100%; }
+        .community-callout { grid-template-columns: auto minmax(0, 1fr); padding: 1.15rem; }
+        .community-callout a { grid-column: 1 / -1; width: 100%; }
         .ai-crab-launcher {
             bottom: max(16px, env(safe-area-inset-bottom));
             right: max(16px, env(safe-area-inset-right));
@@ -687,6 +687,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
 fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
     html! {
         <main class="content">
+            { rullst::html::RawHtml(render_community_callout()) }
             <section>
                 <h2 class="section-title">"Experience"</h2>
                 <div class="timeline">
@@ -719,17 +720,17 @@ fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
     }
 }
 
-fn render_community_footer() -> String {
+fn render_community_callout() -> String {
     html! {
-        <footer class="community-footer">
-            <div class="community-footer-mark" aria-hidden="true">"R"</div>
-            <div class="community-footer-copy">
-                <p class="community-footer-eyebrow">"Connect with the builders"</p>
-                <h2>"Join our community on Discord"</h2>
+        <section class="community-callout" aria-labelledby="community-heading">
+            <div class="community-callout-mark" aria-hidden="true">"R"</div>
+            <div class="community-callout-copy">
+                <p class="community-callout-eyebrow">"Connect with the builders"</p>
+                <h2 id="community-heading">"Build alongside the Rullst community"</h2>
                 <p>"Share projects, discuss Rust architecture, and help shape the Rullst ecosystem."</p>
             </div>
-            <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join the Rullst Discord"</a>
-        </footer>
+            <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join us on Discord"</a>
+        </section>
     }
 }
 
@@ -937,7 +938,6 @@ pub fn render(
                     { rullst::html::RawHtml(render_content(projects, experiences)) }
                 </div>
 
-                { rullst::html::RawHtml(render_community_footer()) }
                 { rullst::html::RawHtml(render_ai_widget(csrf_token)) }
             </body>
         </html>
@@ -945,14 +945,15 @@ pub fn render(
 }
 
 #[cfg(test)]
-mod community_footer_tests {
-    use super::render_community_footer;
+mod community_callout_tests {
+    use super::render_community_callout;
 
     #[test]
-    fn footer_links_to_discord_safely() {
-        let footer = render_community_footer();
-        assert!(footer.contains("Join our community on Discord"));
-        assert!(footer.contains("https://discord.gg/2ntKFtsSjw"));
-        assert!(footer.contains("rel=\"noopener noreferrer\""));
+    fn callout_links_to_discord_safely() {
+        let callout = render_community_callout();
+        assert!(callout.contains("Build alongside the Rullst community"));
+        assert!(callout.contains("https://discord.gg/2ntKFtsSjw"));
+        assert!(callout.contains("rel=\"noopener noreferrer\""));
+        assert!(callout.contains("<section class=\"community-callout\""));
     }
 }
