@@ -4,7 +4,7 @@ This is the public **lms.rullst.win** demonstration, not the production Academy 
 
 ## Deploy
 
-Pushing changes under `blueprints/lms/` to `main` triggers `.github/workflows/deploy-lms.yml`. It builds and publishes an image to GHCR. Azure deployment runs only when the repository has a valid `AZURE_CREDENTIALS` secret, with access to `rullst-lms` in `rullst-rg`. A successful image build alone does not prove the running site was updated; check the Azure deploy step and the active revision.
+Pushing changes under `blueprints/lms/` to `main` triggers `.github/workflows/deploy-lms.yml`. It builds and publishes an image to GHCR. The workflow requires a valid `AZURE_CREDENTIALS` secret for Azure deployment, with access to `rullst-lms` in `rullst-rg`. A successful image build alone does not prove the running site was updated; check the Azure deploy step and the active revision.
 
 Before deploying this version, configure **APP_KEY as a unique, persistent secret** in the Container App (at least 32 random bytes encoded as a string). The former shared key baked into the Dockerfile has been removed. Rotate that known key if it is still configured; existing sessions will need to sign in again. All replicas must use the same private key. Missing or invalid keys fail startup in production. Never publish this key alongside the public demo password.
 

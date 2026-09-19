@@ -1,9 +1,12 @@
 // Frontend Adapter: Zero-Bundle HTMX
-use rullst::html;
+use crate::models::experience::Experience;
 use crate::models::profile::Profile;
 use crate::models::project::Project;
-use crate::models::experience::Experience;
 use crate::models::skill::Skill;
+use rullst::html;
+
+const PUBLIC_DEMO_USERNAME: &str = "rullst_demo";
+const PUBLIC_DEMO_PASSWORD: &str = "RullstDemoAccess2026!";
 
 fn cv_styles() -> String {
     r#"
@@ -303,6 +306,7 @@ fn cv_styles() -> String {
         width: 420px;
         max-width: calc(100vw - 32px);
         height: 590px;
+        height: min(590px, calc(100dvh - 110px));
         max-height: calc(100vh - 110px);
         background: rgba(15, 15, 22, 0.94);
         border: 1px solid rgba(0, 255, 204, 0.25);
@@ -332,6 +336,7 @@ fn cv_styles() -> String {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-shrink: 0;
     }
     .ai-drawer-title {
         font-size: 1rem;
@@ -351,8 +356,8 @@ fn cv_styles() -> String {
         background: rgba(255,255,255,0.06);
         border: 1px solid var(--border-color);
         color: #ddd;
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
         border-radius: 8px;
         display: flex;
         align-items: center;
@@ -366,18 +371,22 @@ fn cv_styles() -> String {
 
     .ai-chat-messages {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 18px;
         display: flex;
         flex-direction: column;
         gap: 14px;
         scroll-behavior: smooth;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
 
     .chat-bubble {
         display: flex;
         flex-direction: column;
         max-width: 90%;
+        min-width: 0;
         animation: bubbleFadeIn 0.2s ease;
     }
     @keyframes bubbleFadeIn {
@@ -405,6 +414,9 @@ fn cv_styles() -> String {
         border-radius: 16px;
         font-size: 0.88rem;
         line-height: 1.55;
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
     .chat-bubble-user .chat-bubble-body {
         background: linear-gradient(135deg, rgba(0, 255, 204, 0.25), rgba(0, 255, 204, 0.15));
@@ -422,6 +434,16 @@ fn cv_styles() -> String {
         background: rgba(239, 68, 68, 0.15);
         border-color: rgba(239, 68, 68, 0.4);
         color: #fca5a5;
+    }
+    .chat-bubble-body .rullst-ai-prose { min-width: 0; max-width: 100%; }
+    .chat-bubble-body .rullst-ai-prose > :first-child { margin-top: 0; }
+    .chat-bubble-body .rullst-ai-prose > :last-child { margin-bottom: 0; }
+    .chat-bubble-body .rullst-ai-prose pre,
+    .chat-bubble-body .rullst-ai-prose table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .ai-badge-footer {
         margin-top: 8px;
@@ -476,9 +498,11 @@ fn cv_styles() -> String {
         display: flex;
         gap: 8px;
         align-items: center;
+        flex-shrink: 0;
     }
     .ai-input {
         flex: 1;
+        min-width: 0;
         background: rgba(10, 10, 15, 0.8);
         border: 1px solid var(--border-color);
         border-radius: 12px;
@@ -528,10 +552,34 @@ fn cv_styles() -> String {
         40% { transform: scale(1.1); opacity: 1; }
     }
 
+    .community-callout {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 1.25rem;
+        width: 100%;
+        margin: 0 0 2.5rem;
+        padding: 1.35rem 1.5rem;
+        border: 1px solid rgba(88, 101, 242, 0.48);
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(88, 101, 242, 0.18), rgba(15, 15, 20, 0.94) 58%, rgba(0, 255, 204, 0.1));
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+    }
+    .community-callout-mark { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 16px; background: linear-gradient(145deg, #5865f2, #00bfa5); color: #fff; font-size: 1.4rem; font-weight: 900; box-shadow: 0 10px 28px rgba(88, 101, 242, .35); }
+    .community-callout h2, .community-callout p { margin: 0; }
+    .community-callout h2 { margin: 2px 0 4px; font-size: clamp(1.2rem, 3vw, 1.55rem); }
+    .community-callout-copy > p:not(.community-callout-eyebrow) { color: var(--text-muted); }
+    .community-callout-eyebrow { color: #a5b4fc; font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .community-callout a { min-width: max-content; padding: .8rem 1rem; border: 1px solid rgba(255, 255, 255, .16); border-radius: 12px; background: #5865f2; color: #fff; font-weight: 800; text-align: center; text-decoration: none; transition: transform 160ms ease, background 160ms ease; }
+    .community-callout a:hover { background: #4752c4; transform: translateY(-2px); }
+    .community-callout a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
     @media (max-width: 640px) {
+        .community-callout { grid-template-columns: auto minmax(0, 1fr); padding: 1.15rem; }
+        .community-callout a { grid-column: 1 / -1; width: 100%; }
         .ai-crab-launcher {
-            bottom: 16px;
-            right: 16px;
+            bottom: max(16px, env(safe-area-inset-bottom));
+            right: max(16px, env(safe-area-inset-right));
             gap: 8px;
         }
         .ai-crab-avatar-wrapper {
@@ -548,12 +596,39 @@ fn cv_styles() -> String {
             left: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
-            height: 80vh !important;
-            max-height: 85vh !important;
+            height: 92vh !important;
+            height: 92dvh !important;
+            max-height: 100vh !important;
+            max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
             border-radius: 20px 20px 0 0 !important;
             border-bottom: none !important;
             box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
         }
+        .ai-drawer-header { padding: 10px 12px; }
+        .ai-close-btn { width: 44px; height: 44px; font-size: 24px; }
+        .ai-chat-messages { padding: 12px; gap: 10px; }
+        .chat-bubble { max-width: 100%; }
+        .chat-bubble-body { padding: 10px 12px; font-size: 0.95rem; }
+        .ai-prompt-suggestions {
+            flex-wrap: nowrap;
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .ai-pill-btn { min-height: 40px; padding: 8px 12px; flex-shrink: 0; }
+        .ai-form { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+        .ai-input { min-height: 44px; font-size: 16px; padding: 10px 12px; }
+        .ai-submit-btn { min-width: 72px; min-height: 44px; font-size: 0.9rem; }
+    }
+    @media (max-width: 380px) {
+        .ai-crab-speech-bubble { display: none; }
+        .ai-header-sub { max-width: 190px; line-height: 1.25; }
+    }
+    @media (max-height: 500px) and (orientation: landscape) {
+        .ai-drawer { height: 100vh !important; height: 100dvh !important; max-height: 100vh !important; max-height: 100dvh !important; border-radius: 0 !important; }
+        .ai-prompt-suggestions { display: none; }
     }
     "#.to_string()
 }
@@ -567,7 +642,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                 <h2 class="role">{&profile.title}</h2>
                 <div class="engine-badge">"Rullst HTMX + Tailwind SSR profile selected"</div>
                 <p class="summary">{&profile.subtitle}</p>
-                
+
                 <div style="margin-top: 1.5rem; background: rgba(0, 255, 204, 0.04); border: 1px solid rgba(0, 255, 204, 0.3); border-radius: 14px; padding: 1.25rem; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.37);">
                     <div style="display: flex; align-items: center; gap: 0.5rem; color: #00ffcc; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
                         <span>"🛡️"</span> "Live Sandbox Access"
@@ -576,8 +651,8 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                         "Public showcase mode enabled. Explore the Nexus Admin CMS or monitor real-time Studio telemetry:"
                     </p>
                     <div style="background: rgba(0, 0, 0, 0.5); border-radius: 8px; padding: 0.6rem 0.8rem; font-family: monospace; font-size: 0.82rem; color: #f3f4f6; margin-bottom: 1rem; border: 1px solid rgba(255, 255, 255, 0.1);">
-                        <div style="margin-bottom: 0.25rem;"><span style="color: #9ca3af;">"User: "</span><strong style="color: #00ffcc; user-select: all;">"admin"</strong></div>
-                        <div><span style="color: #9ca3af;">"Pass: "</span><strong style="color: #00ffcc; user-select: all;">"SovereignPortfolio2026!"</strong></div>
+                        <div style="margin-bottom: 0.25rem;"><span style="color: #9ca3af;">"Username: "</span><strong style="color: #00ffcc; user-select: all;">{PUBLIC_DEMO_USERNAME}</strong></div>
+                        <div><span style="color: #9ca3af;">"Password: "</span><strong style="color: #00ffcc; user-select: all;">{PUBLIC_DEMO_PASSWORD}</strong></div>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                         <a href="/nexus" target="_blank" style="display: block; text-align: center; background: #10b981; color: #000; padding: 0.6rem 1rem; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.85rem;">"⚙️ Manage via Nexus CMS"</a>
@@ -586,12 +661,12 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
                     <div style="margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: flex-start; gap: 0.4rem;">
                         <span style="font-size: 0.85rem;">"🔄"</span>
                         <p style="font-size: 0.72rem; color: #9ca3af; line-height: 1.35;">
-                            <strong style="color: #e5e7eb;">"Ephemeral Scale-to-Zero Sandbox:"</strong> " Any modifications in Nexus or Studio are non-destructive and temporary. When the container sleeps and wakes, SQLite automatically resets to pristine defaults."
+                            <strong style="color: #e5e7eb;">"Ephemeral Scale-to-Zero Sandbox:"</strong> " Nexus changes remain visible to other visitors until the active container shuts down or restarts; the next container starts with pristine SQLite defaults."
                         </p>
                     </div>
                 </div>
             </div>
-            
+
             <div class="contact-info">
                 <div class="contact-item">"📧 "{&profile.email}</div>
                 <div class="contact-item">"🌐 "<a href={&profile.website} target="_blank" style="color: var(--accent);">{&profile.website}</a></div>
@@ -612,6 +687,7 @@ fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
 fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
     html! {
         <main class="content">
+            { rullst::html::RawHtml(render_community_callout()) }
             <section>
                 <h2 class="section-title">"Experience"</h2>
                 <div class="timeline">
@@ -641,6 +717,20 @@ fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
                 </div>
             </section>
         </main>
+    }
+}
+
+fn render_community_callout() -> String {
+    html! {
+        <section class="community-callout" aria-labelledby="community-heading">
+            <div class="community-callout-mark" aria-hidden="true">"R"</div>
+            <div class="community-callout-copy">
+                <p class="community-callout-eyebrow">"Connect with the builders"</p>
+                <h2 id="community-heading">"Build alongside the Rullst community"</h2>
+                <p>"Share projects, discuss Rust architecture, and help shape the Rullst ecosystem."</p>
+            </div>
+            <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join us on Discord"</a>
+        </section>
     }
 }
 
@@ -676,7 +766,7 @@ fn render_ai_widget(csrf_token: &str) -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Career Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the <strong>Career Copilot</strong> for this portfolio. Ask me anything about Rust systems, architectures, projects, or hireability! (Você também pode perguntar em português!)
+                    Hello! I am the <strong>Career Copilot</strong> for this portfolio. Ask me anything about Rust systems, architectures, projects, or hireability!
                     <div class="ai-badge-footer">⚡ Context-Aware RAG • Protected by Rullst Guardrails</div>
                 </div>
             </div>
@@ -743,9 +833,11 @@ fn render_ai_widget(csrf_token: &str) -> String {
             if (isOpen) {
                 drawer.style.display = 'none';
                 if (launcher) launcher.style.display = 'flex';
+                document.body.style.overflow = '';
             } else {
                 drawer.style.display = 'flex';
                 if (launcher) launcher.style.display = 'none';
+                if (window.innerWidth <= 640) document.body.style.overflow = 'hidden';
                 var input = document.getElementById('ai-message-input');
                 if (input) setTimeout(function() { input.focus(); }, 150);
                 scrollAiToBottom();
@@ -817,12 +909,18 @@ fn render_ai_widget(csrf_token: &str) -> String {
     "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
 }
 
-pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience], skills: &[Skill], csrf_token: &str) -> String {
+pub fn render(
+    profile: &Profile,
+    projects: &[Project],
+    experiences: &[Experience],
+    skills: &[Skill],
+    csrf_token: &str,
+) -> String {
     html! {
         <html lang="en">
             <head>
                 <meta charset="UTF-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>"Rullst Developer — AI & Rust Portfolio"</title>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/venelouis/Rullst/main/Rullst.png" />
                 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -834,7 +932,7 @@ pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience
                 <div class="scanlines"></div>
                 <div class="glow-blob glow-1"></div>
                 <div class="glow-blob glow-2"></div>
-                
+
                 <div class="layout">
                     { rullst::html::RawHtml(render_sidebar(profile, skills)) }
                     { rullst::html::RawHtml(render_content(projects, experiences)) }
@@ -846,4 +944,16 @@ pub fn render(profile: &Profile, projects: &[Project], experiences: &[Experience
     }
 }
 
+#[cfg(test)]
+mod community_callout_tests {
+    use super::render_community_callout;
 
+    #[test]
+    fn callout_links_to_discord_safely() {
+        let callout = render_community_callout();
+        assert!(callout.contains("Build alongside the Rullst community"));
+        assert!(callout.contains("https://discord.gg/2ntKFtsSjw"));
+        assert!(callout.contains("rel=\"noopener noreferrer\""));
+        assert!(callout.contains("<section class=\"community-callout\""));
+    }
+}

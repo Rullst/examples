@@ -273,47 +273,31 @@ pub async fn chat(
         )
         .into_response();
     }
-    let courses = Course::all().await.unwrap_or_default();
-    let categories = Category::all().await.unwrap_or_default();
+    let courses = Course::query()
+        .order_by("title")
+        .limit(6)
+        .get()
+        .await
+        .unwrap_or_default();
+    let categories = Category::query()
+        .order_by("name")
+        .limit(20)
+        .get()
+        .await
+        .unwrap_or_default();
     let local = || fallback_offline_response(raw_msg, &courses, &categories);
-    let key = if cloud_requested(&payload) {
-        std::env::var("GROQ_API_KEY")
-            .or_else(|_| std::env::var("GROQ_KEY"))
-            .or_else(|_| std::env::var("GROQ_APIKEY"))
-            .or_else(|_| std::env::var("GROQ_TOKEN"))
-            .ok()
-            .map(|value| value.trim().trim_matches(['\"', '\'']).to_string())
-            .filter(|value| !value.is_empty() && !value.starts_with("mock_"))
-    } else {
-        None
-    };
     let mut cloud_reply = false;
-    let content = if let Some(key) = key {
-        let base_url = std::env::var("GROQ_BASE_URL")
-            .unwrap_or_else(|_| "https://api.groq.com/openai/v1".into());
-        let model = std::env::var("GROQ_MODEL").unwrap_or_else(|_| "openai/gpt-oss-120b".into());
-        // No database records, account identifiers or learning history go to the provider.
-        let prompt = "You are a tutor in a simple Rullst v12 LMS showcase. Explain Rust and Rullst clearly in English, or Portuguese if requested. The real Academy is at https://academy.rullst.win. The homepage shows the shared demo login for platform, Nexus and Studio. Never guess private credentials. Do not claim to know a visitor's learning history or unpublished course data.";
-        match rullst::ai::providers::openai_compatible::OpenAiCompatibleProvider::try_cloud(
-            base_url, key, model,
-        ) {
-            Ok(provider) => {
-                let client = rullst::ai::AiClient::new(provider);
-                match client.chat().system(prompt).user(raw_msg).send().await {
-                    Ok(reply) => {
-                        cloud_reply = true;
-                        rullst::html::escape_str(&reply).replace('\n', "<br>")
-                    }
-                    Err(_) => {
-                        tracing::warn!("LMS cloud response unavailable; returning a local reply");
-                        local()
-                    }
-                }
+    let content = if cloud_requested(&payload) {
+        let prompt = "You are a tutor in the simple Rullst v12 LMS showcase. Reply only in the language predominantly used in the user's latest message. Teach Rust and Rullst clearly. The real Academy is https://academy.rullst.win. The homepage provides a shared demo login for platform, Nexus and Studio. Never guess private credentials or claim to know private learner records. You have no database access.";
+        match blueprint_ai::chat(prompt, raw_msg).await {
+            Ok(reply) => {
+                cloud_reply = true;
+                blueprint_ai::render_markdown(&reply)
             }
-            Err(_) => local(),
+            Err(_) => blueprint_ai::render_offline_html(&local()),
         }
     } else {
-        local()
+        blueprint_ai::render_offline_html(&local())
     };
     let mode = if cloud_reply {
         "Cloud reply · Groq · Enabled for this request"

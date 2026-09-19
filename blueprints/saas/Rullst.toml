@@ -1,0 +1,15 @@
+[database]
+# Local-development fallback only. Azure must inject a secret DATABASE_URL
+# pointing to persistent managed PostgreSQL.
+url = "postgres://postgres:postgres@localhost:5432/rullst_saas"
+
+[security]
+# Rullst v12 exposes only this exact-path CSRF exception list for non-browser
+# POST endpoints. The webhook still verifies Stripe's signature. The scheduled
+# reconciliation route never uses cookie authentication and separately requires
+# an exact high-entropy Bearer token, compared in constant time.
+csrf_signed_webhook_paths = ["/billing/webhook", "/billing/reconcile"]
+# The strict framework default permits forms only on this origin. Chrome also
+# applies form-action to the 303 that hands a local POST to hosted Checkout, so
+# allow only Stripe's already server-validated HTTPS Checkout host.
+csp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://checkout.stripe.com; script-src 'self' 'nonce-{NONCE}'; style-src 'self' 'nonce-{NONCE}'; img-src 'self' data:; connect-src 'self'; font-src 'self'; worker-src 'self' blob:"

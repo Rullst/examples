@@ -1,0 +1,466 @@
+use rullst::response::Html;
+
+pub fn login_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Html<String> {
+    let error_html = if let Some(err) = error {
+        format!(
+            "<div class=\"error\" role=\"alert\">{}</div>",
+            rullst::html::escape_str(err)
+        )
+    } else {
+        String::new()
+    };
+
+    let live_mode = crate::controllers::legal_controller::live_mode();
+    let terms_label = if live_mode {
+        "Purchase terms"
+    } else if crate::controllers::legal_controller::production_deployment() {
+        "Pre-launch terms"
+    } else {
+        "Sandbox terms"
+    };
+    let document = format!(
+        "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head>\
+         <meta charset=\"utf-8\" />\
+         <link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\" />\
+         <title>Login &mdash; Rullst SaaS</title>\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\
+         <style nonce=\"{}\">\
+         * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }}\
+         body {{ background: #0b0f19; color: #f3f4f6; min-height: 100vh; display: flex; align-items: center; justify-content: center; }}\
+         .card {{ background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 1.5rem; padding: 2.5rem; width: 100%; max-width: 420px; text-align: center; }}\
+         h1 {{ font-size: 2rem; margin-bottom: 1.5rem; font-weight: 700; }}\
+         .form-group {{ margin-bottom: 1.25rem; text-align: left; }}\
+         label {{ display: block; font-size: 0.85rem; color: #9ca3af; margin-bottom: 0.4rem; }}\
+         input {{ width: 100%; padding: 0.75rem 1rem; border-radius: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.95rem; }}\
+         input:focus {{ outline: none; border-color: #10b981; }}\
+         .field-help {{ margin: .45rem 0 0; color: #fbbf24; font-size: .8rem; line-height: 1.45; }}\
+         .acknowledgement {{ display: flex; gap: .65rem; align-items: flex-start; margin: .9rem 0 1.1rem; color: #d1d5db; text-align: left; line-height: 1.45; }}\
+         .acknowledgement input {{ width: auto; margin-top: .2rem; }}\
+         .btn-primary {{ width: 100%; padding: 0.85rem; border-radius: 0.5rem; background: #10b981; color: #000; font-weight: 700; border: none; cursor: pointer; font-size: 1rem; margin-top: 0.5rem; }}\
+         .btn-primary:hover {{ background: #34d399; }}\
+         .links {{ margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.8; color: #9ca3af; }}\
+         .links a {{ color: #10b981; text-decoration: none; }}\
+         .error {{ background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); color: #f87171; padding: .75rem 1rem; border-radius: .5rem; margin-bottom: 1.5rem; font-size: .9rem; }}\
+         </style></head><body>\
+         <div class=\"card\"><h1>Welcome Back</h1>{}\
+         <form method=\"POST\" action=\"/login\">\
+         <input type=\"hidden\" name=\"_token\" value=\"{}\" />\
+         <div class=\"form-group\"><label>Email</label><input type=\"email\" name=\"email\" placeholder=\"you@example.com\" required /></div>\
+         <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
+         <button type=\"submit\" class=\"btn-primary\">Sign In</button>\
+         </form>\
+         <div class=\"links\"><a href=\"/forgot-password\">Forgot your password?</a><br />Don't have an account? <a href=\"/register\">Register</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">__RULLST_TERMS_LABEL__</a></div>\
+         </div></body></html>",
+        rullst::html::escape_str(csp_nonce),
+        error_html,
+        rullst::html::escape_str(csrf_token)
+    );
+    Html(document.replace("__RULLST_TERMS_LABEL__", terms_label))
+}
+
+pub fn register_page(csrf_token: &str, error: Option<&str>, csp_nonce: &str) -> Html<String> {
+    let error_html = if let Some(err) = error {
+        format!(
+            "<div class=\"error\" role=\"alert\">{}</div>",
+            rullst::html::escape_str(err)
+        )
+    } else {
+        String::new()
+    };
+
+    let live_mode = crate::controllers::legal_controller::live_mode();
+    let production_prelaunch =
+        !live_mode && crate::controllers::legal_controller::production_deployment();
+    let terms_label = if live_mode {
+        "Purchase terms"
+    } else if production_prelaunch {
+        "Pre-launch terms"
+    } else {
+        "Sandbox terms"
+    };
+    let account_label = if live_mode {
+        "production account"
+    } else if production_prelaunch {
+        "production pre-launch account"
+    } else {
+        "sandbox account"
+    };
+    let document = format!(
+        "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head>\
+         <meta charset=\"utf-8\" />\
+         <link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\" />\
+         <title>Register &mdash; Rullst SaaS</title>\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\
+         <style nonce=\"{}\">\
+         * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }}\
+         body {{ background: #0b0f19; color: #f3f4f6; min-height: 100vh; display: flex; align-items: center; justify-content: center; }}\
+         .card {{ background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 1.5rem; padding: 2.5rem; width: 100%; max-width: 420px; text-align: center; }}\
+         h1 {{ font-size: 2rem; margin-bottom: 1.5rem; font-weight: 700; }}\
+         .form-group {{ margin-bottom: 1.25rem; text-align: left; }}\
+         label {{ display: block; font-size: 0.85rem; color: #9ca3af; margin-bottom: 0.4rem; }}\
+         input {{ width: 100%; padding: 0.75rem 1rem; border-radius: 0.5rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.95rem; }}\
+         input:focus {{ outline: none; border-color: #10b981; }}\
+         .btn-primary {{ width: 100%; padding: 0.85rem; border-radius: 0.5rem; background: #10b981; color: #000; font-weight: 700; border: none; cursor: pointer; font-size: 1rem; margin-top: 0.5rem; }}\
+         .btn-primary:hover {{ background: #34d399; }}\
+         .links {{ margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.8; color: #9ca3af; }}\
+         .links a {{ color: #10b981; text-decoration: none; }}\
+         .error {{ background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); color: #f87171; padding: .75rem 1rem; border-radius: .5rem; margin-bottom: 1.5rem; font-size: .9rem; }}\
+         </style></head><body>\
+         <div class=\"card\"><h1>Create Account</h1>{}\
+         <form method=\"POST\" action=\"/register\">\
+         <input type=\"hidden\" name=\"_token\" value=\"{}\" />\
+         <div class=\"form-group\"><label>Permanent certificate name</label><input type=\"text\" name=\"name\" autocomplete=\"name\" maxlength=\"120\" placeholder=\"John Doe\" required /><p class=\"field-help\">Use the exact name you want printed on your certificate. It cannot be changed after registration.</p></div>\
+         <div class=\"form-group\"><label>Email</label><input type=\"email\" name=\"email\" placeholder=\"you@example.com\" required /></div>\
+         <div class=\"form-group\"><label>Password</label><input type=\"password\" name=\"password\" placeholder=\"••••••••\" required /></div>\
+         <label class=\"acknowledgement\"><input type=\"checkbox\" name=\"certificate_name_acknowledgement\" value=\"permanent_certificate_name\" required />I understand that this account name is permanent and will be used on certificates issued after a purchase.</label>\
+         <p class=\"links\">By creating this __RULLST_ACCOUNT_LABEL__, you acknowledge the <a href=\"/privacy\">Privacy notice</a> and <a href=\"/terms\">__RULLST_TERMS_LABEL__</a>. This is not optional marketing consent.</p>\
+         <button type=\"submit\" class=\"btn-primary\">Register</button>\
+         </form>\
+         <div class=\"links\">Already have an account? <a href=\"/login\">Sign In</a> | <a href=\"/\">Pricing</a><br /><a href=\"/privacy\">Privacy</a> | <a href=\"/terms\">__RULLST_TERMS_LABEL__</a></div>\
+         </div></body></html>",
+        rullst::html::escape_str(csp_nonce),
+        error_html,
+        rullst::html::escape_str(csrf_token)
+    );
+    Html(
+        document
+            .replace("__RULLST_TERMS_LABEL__", terms_label)
+            .replace("__RULLST_ACCOUNT_LABEL__", account_label),
+    )
+}
+
+pub fn forgot_password_page(
+    csrf_token: &str,
+    message: Option<&str>,
+    available: bool,
+    csp_nonce: &str,
+) -> Html<String> {
+    let status = message.map_or_else(String::new, |message| {
+        format!(
+            "<div class=\"notice\" role=\"status\">{}</div>",
+            rullst::html::escape_str(message)
+        )
+    });
+    let form = if available {
+        format!(
+            r#"<form method="post" action="/forgot-password">
+            <input type="hidden" name="_token" value="{}" />
+            <label for="recovery-email">Account email</label>
+            <input id="recovery-email" type="email" name="email" autocomplete="email" maxlength="254" required />
+            <button type="submit">Send reset link</button>
+            </form>"#,
+            rullst::html::escape_str(csrf_token)
+        )
+    } else {
+        "<div class=\"error\" role=\"alert\">Password recovery is not enabled for this deployment yet. Contact support without sending your password.</div>".to_owned()
+    };
+    Html(
+        r#"<!DOCTYPE html><html lang="en"><head>
+        <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="referrer" content="no-referrer" /><meta name="robots" content="noindex,nofollow,noarchive" />
+        <title>Forgot password — Rullst SaaS</title>
+        <style nonce="__NONCE__">*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:1rem;background:#0b0f19;color:#f3f4f6;font-family:system-ui,sans-serif}.card{width:min(100%,440px);padding:clamp(1.25rem,6vw,2.5rem);border:1px solid rgba(255,255,255,.1);border-radius:1.25rem;background:#0f172a}h1{margin:0 0 .75rem}p{color:#cbd5e1;line-height:1.55}label{display:block;margin:1.25rem 0 .4rem;color:#cbd5e1}input{width:100%;padding:.8rem;border:1px solid #475569;border-radius:.5rem;background:#020617;color:#fff;font:inherit}button{width:100%;margin-top:1rem;padding:.85rem;border:0;border-radius:.5rem;background:#10b981;color:#02120c;font:inherit;font-weight:800;cursor:pointer}.notice,.error{margin:1rem 0;padding:.8rem;border-radius:.5rem;line-height:1.45}.notice{border:1px solid #047857;background:#052e2b;color:#a7f3d0}.error{border:1px solid #991b1b;background:#450a0a;color:#fecaca}.links{margin-top:1.25rem;font-size:.9rem}.links a{color:#6ee7b7}</style>
+        </head><body><main class="card"><h1>Reset your password</h1><p>Enter the email used for this account. For privacy, the response is the same whether an eligible account exists or not.</p>__STATUS____FORM__<p class="links"><a href="/login">Back to sign in</a> · <a href="/privacy">Privacy</a></p></main></body></html>"#
+            .replace("__NONCE__", &rullst::html::escape_str(csp_nonce))
+            .replace("__STATUS__", &status)
+            .replace("__FORM__", &form),
+    )
+}
+
+pub fn reset_password_page(
+    csrf_token: &str,
+    error: Option<&str>,
+    success: bool,
+    initial_code: Option<&str>,
+    csp_nonce: &str,
+) -> Html<String> {
+    let error_html = error.map_or_else(String::new, |message| {
+        format!(
+            "<div id=\"reset-status\" class=\"error\" role=\"alert\">{}</div>",
+            rullst::html::escape_str(message)
+        )
+    });
+    let body = if success {
+        "<div class=\"notice\" role=\"status\">Your password was changed and all previous sessions were revoked.</div><a class=\"button-link\" href=\"/login\">Sign in with the new password</a>".to_owned()
+    } else {
+        format!(
+            r#"{error_html}<div id="client-error" class="error" role="alert" hidden>This reset link is missing or invalid. Request a new one.</div>
+            <form id="reset-form" method="post" action="/reset-password">
+            <input type="hidden" name="_token" value="{}" />
+            <input id="reset-code" type="hidden" name="code" value="{}" />
+            <label for="new-password">New password</label>
+            <input id="new-password" type="password" name="password" autocomplete="new-password" minlength="12" maxlength="72" required />
+            <label for="password-confirmation">Confirm new password</label>
+            <input id="password-confirmation" type="password" name="password_confirmation" autocomplete="new-password" minlength="12" maxlength="72" required />
+            <button id="reset-submit" type="submit" disabled>Change password</button>
+            </form>"#,
+            rullst::html::escape_str(csrf_token),
+            rullst::html::escape_str(initial_code.unwrap_or_default())
+        )
+    };
+    let script = if success {
+        String::new()
+    } else {
+        format!(
+            r#"<script nonce="{}">(()=>{{const codeInput=document.getElementById('reset-code');const submit=document.getElementById('reset-submit');const clientError=document.getElementById('client-error');const fragment=new URLSearchParams(window.location.hash.slice(1));const fragmentCode=fragment.get('code');if(fragmentCode){{codeInput.value=fragmentCode;history.replaceState(null,'','/reset-password');}}const valid=/^[0-9a-f]{{64}}\.[0-9a-f]{{64}}$/.test(codeInput.value);submit.disabled=!valid;clientError.hidden=valid;}})();</script>"#,
+            rullst::html::escape_str(csp_nonce)
+        )
+    };
+    Html(
+        r#"<!DOCTYPE html><html lang="en"><head>
+        <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="referrer" content="no-referrer" /><meta name="robots" content="noindex,nofollow,noarchive" />
+        <title>Reset password — Rullst SaaS</title>
+        <style nonce="__NONCE__">*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:1rem;background:#0b0f19;color:#f3f4f6;font-family:system-ui,sans-serif}.card{width:min(100%,440px);padding:clamp(1.25rem,6vw,2.5rem);border:1px solid rgba(255,255,255,.1);border-radius:1.25rem;background:#0f172a}h1{margin:0 0 .75rem}p{color:#cbd5e1;line-height:1.55}label{display:block;margin:1rem 0 .4rem;color:#cbd5e1}input{width:100%;padding:.8rem;border:1px solid #475569;border-radius:.5rem;background:#020617;color:#fff;font:inherit}button,.button-link{display:block;width:100%;margin-top:1rem;padding:.85rem;border:0;border-radius:.5rem;background:#10b981;color:#02120c;font:inherit;font-weight:800;text-align:center;text-decoration:none;cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}.notice,.error{margin:1rem 0;padding:.8rem;border-radius:.5rem;line-height:1.45}.notice{border:1px solid #047857;background:#052e2b;color:#a7f3d0}.error{border:1px solid #991b1b;background:#450a0a;color:#fecaca}.links{margin-top:1.25rem;font-size:.9rem}.links a{color:#6ee7b7}</style>
+        </head><body><main class="card"><h1>Choose a new password</h1><p>The link expires after 15 minutes, works once and never reveals whether another account exists.</p>__BODY__<p class="links"><a href="/forgot-password">Request a new link</a> · <a href="/privacy">Privacy</a></p></main>__SCRIPT__</body></html>"#
+            .replace("__NONCE__", &rullst::html::escape_str(csp_nonce))
+            .replace("__BODY__", &body)
+            .replace("__SCRIPT__", &script),
+    )
+}
+
+pub struct DashboardPurchaseState<'a> {
+    pub has_stripe_report: bool,
+    pub certificate_public_id: Option<&'a str>,
+    pub live_mode: bool,
+    pub refund_status: Option<&'a str>,
+    pub checkout_price: Option<&'a str>,
+}
+
+pub fn dashboard_page(
+    user_name: &str,
+    csrf_token: &str,
+    csp_nonce: &str,
+    purchase: DashboardPurchaseState<'_>,
+) -> Html<String> {
+    let DashboardPurchaseState {
+        has_stripe_report,
+        certificate_public_id,
+        live_mode,
+        refund_status,
+        checkout_price,
+    } = purchase;
+    let production_prelaunch =
+        !live_mode && crate::controllers::legal_controller::production_deployment();
+    let nonce = rullst::html::escape_str(csp_nonce);
+    let user_name = rullst::html::escape_str(user_name);
+    let csrf_token = rullst::html::escape_str(csrf_token);
+    let direct_checkout = |button_label: &str, purchase_note: &str| {
+        format!(
+            "<form class=\"dashboard-checkout\" method=\"post\" action=\"/billing/checkout\"><input type=\"hidden\" name=\"_token\" value=\"{csrf_token}\"><input type=\"hidden\" name=\"offer\" value=\"gateway-report-stripe\"><p class=\"muted small\">{purchase_note}</p><label class=\"purchase-authority\"><input type=\"checkbox\" name=\"purchase_authority\" value=\"adult_or_guardian\" required> I am 18 or older, or I am the parent/legal guardian making this purchase, and I reviewed the purchase terms.</label><button class=\"btn-report\" type=\"submit\">{button_label}</button></form>"
+        )
+    };
+    let report_action = if has_stripe_report {
+        if live_mode {
+            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download purchased guide</a>".to_owned()
+        } else {
+            "<a class=\"btn-report\" href=\"/reports/stripe-gateway-field-report-v1.md\">Download Stripe report</a>".to_owned()
+        }
+    } else if live_mode && checkout_price.is_some() {
+        direct_checkout(
+            "Continue directly to Stripe Checkout",
+            &format!(
+                "This starts a real one-time purchase for {}. Stripe will display the final payment screen.",
+                rullst::html::escape_str(checkout_price.unwrap_or_default())
+            ),
+        )
+    } else if production_prelaunch {
+        "<a class=\"btn-report\" href=\"/pricing\">View production launch status</a>".to_owned()
+    } else if checkout_price.is_some() {
+        direct_checkout(
+            "Open Stripe test checkout",
+            &format!(
+                "This opens Stripe Test Mode for {} and creates no real charge.",
+                rullst::html::escape_str(checkout_price.unwrap_or_default())
+            ),
+        )
+    } else {
+        "<p class=\"muted small\">Checkout is temporarily unavailable.</p>".to_owned()
+    };
+    let certificate_action = certificate_public_id.map_or_else(
+        || {
+            if has_stripe_report {
+                "<p class=\"muted small\">Certificate issuance is still being reconciled.</p>"
+                    .to_owned()
+            } else if production_prelaunch {
+                "<p class=\"muted small\">Production Checkout is disabled; no purchase certificate can be issued yet.</p>"
+                    .to_owned()
+            } else {
+                "<p class=\"muted small\">Complete the verified sandbox checkout to receive a privacy-preserving tester certificate.</p>"
+                    .to_owned()
+            }
+        },
+        |public_id| {
+            format!(
+                "<a class=\"btn-report btn-certificate\" href=\"/certificate\">View {} certificate</a><p class=\"muted small\">Public verification ID: {}</p>",
+                if public_id.starts_with("RST-LIVE-") { "Founding Customer" } else { "Sandbox Pioneer" },
+                rullst::html::escape_str(public_id)
+            )
+        },
+    );
+    let refund_action = if live_mode && has_stripe_report {
+        match refund_status {
+            Some("requested" | "processing") => {
+                "<a class=\"btn-report btn-refund\" href=\"/refund\">Refund requested</a>"
+                    .to_owned()
+            }
+            Some("completed") => {
+                "<p class=\"muted small\">Stripe confirmed the refund.</p>".to_owned()
+            }
+            _ => {
+                format!(
+                    "<a class=\"btn-report btn-refund\" href=\"/refund\">Request refund</a><p class=\"muted small refund-note\">This opens a refund request; it is not a bank dispute and does not move money immediately. Online requests are available for {} calendar days after purchase.</p>",
+                    crate::controllers::legal_controller::refund_window_days()
+                )
+            }
+        }
+    } else {
+        String::new()
+    };
+    let terms_label = if live_mode {
+        "Purchase terms"
+    } else if production_prelaunch {
+        "Pre-launch terms"
+    } else {
+        "Sandbox terms"
+    };
+    let entitlement_description = if live_mode {
+        "Access is granted only after a verified live Stripe event. Refunds and disputes revoke access after provider confirmation."
+    } else if production_prelaunch {
+        "Real-money Checkout is disabled during production readiness validation."
+    } else {
+        "Access is granted only after a verified, replay-protected provider test event."
+    };
+    Html(r#"<!DOCTYPE html><html lang="en" class="dark"><head>
+         <meta charset="utf-8" />
+         <link rel="icon" type="image/png" href="/static/rullst.png" />
+         <title>Dashboard — Rullst SaaS</title>
+         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+         <style nonce="__RULLST_CSP_NONCE__">
+         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+         body { background: #0b0f19; color: #f3f4f6; min-height: 100vh; padding: 2rem; }
+         .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; max-width: 1200px; margin: 0 auto 3rem auto; }
+         .topbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+         .logo { font-size: 1.5rem; font-weight: 800; color: #10b981; }
+         .container { max-width: 1200px; margin: 0 auto; }
+         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+         .card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; padding: 2rem; }
+         .btn-logout { background: #ef4444; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.9rem; border: 0; cursor: pointer; }
+         .logout-form { display: inline; }
+         .btn-nexus { background: #1e293b; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; font-size: 0.9rem; border: 1px solid #374151; }
+         .btn-report { display: inline-block; margin-top: 1rem; background: #10b981; color: #03120c; padding: 0.65rem 0.9rem; border-radius: 0.5rem; text-decoration: none; font-weight: 750; }
+         .btn-certificate { margin-left: 0.5rem; background: #f97316; color: #fff; }
+         .dashboard-checkout { margin-top: 1rem; padding: 1rem; border: 1px solid #334155; border-radius: .75rem; background: rgba(2,6,23,.45); }
+         .purchase-authority { display: flex; gap: .65rem; align-items: flex-start; margin-top: .8rem; color: #cbd5e1; font-size: .88rem; line-height: 1.5; }
+         .purchase-authority input { flex: 0 0 auto; margin-top: .2rem; }
+         .dashboard-checkout .btn-report { width: 100%; border: 0; cursor: pointer; font: inherit; }
+         .refund-note { max-width: 48rem; line-height: 1.5; }
+         .muted { color: #9ca3af; margin-top: 0.5rem; }
+         .small { font-size: 0.85rem; }
+         .metric { font-size: 1.5rem; font-weight: 700; }
+         .card h3 { margin-bottom: 0.5rem; }
+         .subscription { color: #10b981; }
+         .performance { color: #38bdf8; }
+         .security { color: #a855f7; }
+         @media (max-width: 700px) { body { padding: 1rem; } .topbar { align-items: stretch; flex-direction: column; gap: 1rem; margin-bottom: 2rem; } .topbar-actions { align-items: stretch; flex-direction: column; } .btn-nexus, .btn-logout, .btn-report { display: block; width: 100%; text-align: center; } .btn-certificate { margin-left: 0; } .logout-form { display: block; } .card { padding: 1.25rem; } }
+         </style></head><body>
+         <div class="topbar">
+           <div class="logo">⚡ Rullst SaaS Dashboard</div>
+           <div class="topbar-actions">
+             <a href="/privacy" class="btn-nexus">Privacy</a>
+             <a href="/account/data-export" class="btn-nexus">Export my data</a>
+             <a href="/terms" class="btn-nexus">__RULLST_TERMS_LABEL__</a>
+             <a href="/nexus" class="btn-nexus">⚙️ Nexus CMS</a>
+             <form method="post" action="/logout" class="logout-form"><input type="hidden" name="_token" value="__RULLST_CSRF_TOKEN__" /><button type="submit" class="btn-logout">Logout</button></form>
+           </div>
+         </div>
+         <div class="container">
+           <h1>Welcome, __RULLST_USER_NAME__</h1>
+           <p class="muted">This starter authenticates passwords with Argon2id and stores the user ID in an encrypted session cookie.</p>
+           <div class="grid">
+             <div class="card">
+               <h3 class="subscription">💳 Stripe report</h3>
+               <p class="metric">Webhook-derived access</p>
+               <p class="muted small">__RULLST_ENTITLEMENT_DESCRIPTION__</p>
+               __RULLST_REPORT_ACTION__
+               __RULLST_CERTIFICATE_ACTION__
+               __RULLST_REFUND_ACTION__
+             </div>
+             <div class="card">
+               <h3 class="performance">⚡ Performance</h3>
+               <p class="metric">Server-rendered UI</p>
+               <p class="muted small">Measure latency in your own deployment; this starter makes no universal timing claim.</p>
+             </div>
+             <div class="card">
+               <h3 class="security">🛡️ Security Guard</h3>
+               <p class="metric">CSRF + secure headers</p>
+               <p class="muted small">Production still requires TLS termination, secret management and provider sandbox validation.</p>
+             </div>
+           </div>
+          </div></body></html>"#
+        .replace("__RULLST_CSP_NONCE__", &nonce)
+        .replace("__RULLST_CSRF_TOKEN__", &csrf_token)
+        .replace("__RULLST_REPORT_ACTION__", &report_action)
+        .replace("__RULLST_CERTIFICATE_ACTION__", &certificate_action)
+        .replace("__RULLST_REFUND_ACTION__", &refund_action)
+        .replace("__RULLST_TERMS_LABEL__", terms_label)
+        .replace(
+            "__RULLST_ENTITLEMENT_DESCRIPTION__",
+            entitlement_description,
+        )
+        .replace("__RULLST_USER_NAME__", &user_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DashboardPurchaseState, dashboard_page, register_page};
+
+    #[test]
+    fn registration_requires_permanent_certificate_name_acknowledgement() {
+        let page = register_page("csrf", None, "nonce").0;
+        assert!(page.contains("Permanent certificate name"));
+        assert!(page.contains("It cannot be changed after registration"));
+        assert!(page.contains("name=\"certificate_name_acknowledgement\""));
+        assert!(page.contains("value=\"permanent_certificate_name\""));
+    }
+
+    #[test]
+    fn dashboard_posts_directly_to_live_stripe_checkout() {
+        let page = dashboard_page(
+            "Account Holder",
+            "csrf",
+            "nonce",
+            DashboardPurchaseState {
+                has_stripe_report: false,
+                certificate_public_id: None,
+                live_mode: true,
+                refund_status: None,
+                checkout_price: Some("BRL 1.00"),
+            },
+        )
+        .0;
+        assert!(page.contains("action=\"/billing/checkout\""));
+        assert!(page.contains("Continue directly to Stripe Checkout"));
+        assert!(page.contains("BRL 1.00"));
+        assert!(!page.contains(">Open one-time checkout</a>"));
+    }
+
+    #[test]
+    fn dashboard_explains_refund_request_before_navigation() {
+        let page = dashboard_page(
+            "Account Holder",
+            "csrf",
+            "nonce",
+            DashboardPurchaseState {
+                has_stripe_report: true,
+                certificate_public_id: Some("RST-LIVE-0123456789ABCDEF0123456789ABCDEF"),
+                live_mode: true,
+                refund_status: None,
+                checkout_price: Some("BRL 1.00"),
+            },
+        )
+        .0;
+        assert!(page.contains("not a bank dispute"));
+        assert!(page.contains("14 calendar days"));
+    }
+}

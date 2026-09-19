@@ -1,0 +1,369 @@
+# Rullst SaaS blueprint: audited test and live checkout
+
+This Rullst 12.0.0 example separates three concerns that the public Showcase
+must not blur:
+
+- the Showcase is a public, deterministic adapter catalogue;
+- this SaaS application is the deployable integration target; and
+- accepting real money is a later operational decision, not a demo feature.
+
+The permanent **staging** environment uses Stripe Test Mode, while the separate
+production environment can sell one low-value digital guide through Stripe
+live mode. Both use persistent PostgreSQL, private Nexus credentials and no
+production Studio process. Live mode is fail-closed unless every required
+credential, legal field, private artifact and reconciliation control is valid.
+
+After a signed Stripe event is reconciled, staging grants the bundled
+downloadable sandbox field-report summary and a test-only `Rullst Sandbox
+Pioneer` certificate. Production grants the private, versioned Stripe field
+report plus sanitized implementation tutorial stored in Azure Blob; every
+reconciled live purchase also receives a `Rullst Founding Customer`
+certificate. There is no quantity limit for that certificate. Refunds and
+disputes revoke both artifact and certificate access after provider
+confirmation. A persistent transactional outbox sends each reconciled buyer a
+purchase confirmation with authenticated certificate, guide and dashboard
+links plus the public Rullst, source repository and Discord community links.
+
+The production offer also shows a privacy-preserving aggregate of distinct
+active Founding Customers. Only reconciled live Stripe entitlements with active
+live certificates are counted; refunded, disputed, revoked and sandbox records
+are excluded. No buyer name, email, amount or provider identifier is exposed.
+
+## Published environments
+
+| Environment | Public URL | Payment boundary | Data boundary |
+| --- | --- | --- | --- |
+| Staging | `https://saas-staging.rullst.win` | Permanent Stripe sandbox; test payment methods only; no real charge | Separate Neon PostgreSQL project, Stripe sandbox objects, webhook secret and private Nexus credentials |
+| Production | `https://saas.rullst.win` | Customer-facing Stripe live checkout; a click can create a real charge | Separate Neon PostgreSQL project, Stripe live objects, webhook secret, merchant disclosure and private Nexus credentials |
+
+Both deployments are intentionally retained. Staging is not a second public
+product: it is the permanent release gate where every payment, webhook,
+artifact, refund, email and deployment change is verified with Stripe test
+data before the exact commit is promoted. Production is never a substitute for
+provider sandbox testing. The environments must not share databases, Stripe
+keys, Price IDs, webhook secrets, application keys or administrator
+credentials. The authoritative environment rationale and current operational
+status are maintained in
+[`docs/DEPLOYMENT_PROFILE.md`](docs/DEPLOYMENT_PROFILE.md); the live launch gate
+is maintained in
+[`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md).
+
+## Adapter inventory
+
+Rullst Capital 12.0.0 exports 10 incoming billing adapters and one outgoing
+payout adapter. Exported does not mean production-ready.
+
+| Adapter | Audited v12 status | Important constraint |
+| --- | --- | --- |
+| Stripe | One-time test and application-owned live path implemented | Test and live data, keys, webhooks, databases and Price IDs remain separate. |
+| Razorpay | Report/roadmap only | Its exported v12 path is recurring and needs a separate one-time contract. |
+| Lemon Squeezy | Framework fix required | The v12 adapter hard-codes store ID `1`. |
+| Paddle | Framework fix required | The v12 payload does not match the current transaction contract. |
+| Polar | Framework fix required | The v12 request uses the former price-based checkout shape. |
+| InfinitePay | No plan-only live checkout in v12 | The operation returns `UnsupportedOperation`. |
+| Mercado Pago | No plan-only live checkout in v12 | The operation and body-only live webhook verifier are unavailable. |
+| Coinbase Commerce | No plan-only live checkout in v12 | The operation returns `UnsupportedOperation`. |
+| PicPay | No plan-only live checkout in v12 | The operation returns `UnsupportedOperation`. |
+| Alipay | No live checkout in v12 | RSA2 checkout signing and live webhook verification are disabled. |
+| Wise | Payout only | Wise sends funds; it is not an incoming SaaS checkout gateway. |
+
+The full evidence is tracked in
+[`../../saas-improvements-needed.md`](../../saas-improvements-needed.md).
+The one-time report products, private-by-default badges and provider rollout
+order are defined in [`docs/GATEWAY_REPORTS.md`](docs/GATEWAY_REPORTS.md). All
+personal-data handling is subject to the repository
+[`global privacy baseline`](../../docs/GLOBAL_PRIVACY_BASELINE.md).
+The confirmed public launch settings and staging split are recorded in
+[`docs/DEPLOYMENT_PROFILE.md`](docs/DEPLOYMENT_PROFILE.md). The first immutable,
+buyer-independent artifact is
+[`reports/stripe-gateway-field-report-v1.md`](reports/stripe-gateway-field-report-v1.md).
+
+## Payment modes
+
+`PAYMENTS_MODE` accepts exactly:
+
+- `disabled`: fail-closed default; no provider checkout or webhook processing;
+- `test`: requires Stripe sandbox credentials and enables a one-time
+  `mode=payment` Checkout with test data;
+- `live`: accepts real money only with an `sk_live_...` key, explicit live
+  acknowledgement, signed webhook secret, private artifact, merchant notice
+  fields and a strong reconciliation token.
+
+Test and live credentials cannot be mixed: Stripe sandbox mode requires an
+`sk_test_...` key and live mode requires an `sk_live_...` key. A deployed
+redirect must use HTTPS; plain HTTP is accepted only for localhost in test
+mode.
+
+The browser supplies only a fixed local offer identifier and an adult-or-
+guardian purchaser attestation. The server owns the Stripe Price ID, expected
+amount and currency, fetches that Price immediately before checkout, and
+requires an exact active one-time Price match. An authenticated unpaid buyer's
+dashboard posts directly to this checkout operation; it does not send the
+buyer back through the public offer page. A return-page redirect never grants
+access. The signed webhook is replay-protected in PostgreSQL, the paid Checkout
+Session and line item are re-read from Stripe, and only then is a versioned
+report entitlement created. The same database transaction issues a test-only
+`Rullst Sandbox Pioneer` certificate or, for every reconciled live purchase, a
+`Rullst Founding Customer` certificate and queues the transactional purchase
+confirmation. Full refunds and disputes revoke the entitlement and certificate
+after provider verification.
+
+The authenticated certificate page may show the account holder's name and can
+be printed or saved as PDF. Its public `/verify/{public_id}` page uses a random
+122-bit identifier and shows only badge type, issue date, environment and
+validity. It omits the holder's name, email and all provider/payment IDs. The
+identifier is not listed publicly; the holder decides whether to share it. The
+registration form explicitly identifies the account holder name as the
+permanent certificate name and requires acknowledgement that it cannot be
+changed after registration.
+
+The public `/privacy` and `/terms` pages disclose the staging data boundary,
+international hosting path, essential cookies, data-rights contact, minors
+policy and the fact that sandbox activity is not a real purchase. Registration
+links to both notices without treating the privacy notice as optional marketing
+consent. Automated self-service export/deletion remains a production blocker;
+staging requests are handled through the documented privacy contact.
+
+## Persistent database
+
+The blueprint uses Rullst's strict PostgreSQL backend. Azure Container Apps
+container filesystems are ephemeral, so a SQLite file inside the container is
+not the deployment database.
+
+Use a managed PostgreSQL service and store its TLS connection string as an
+Azure Container Apps secret mapped to `DATABASE_URL`:
+
+1. **Azure Database for PostgreSQL Flexible Server** is the preferred staging
+   location when the owner's active Azure for Students subscription currently
+   includes enough free-service allowance or credit. Eligibility, duration,
+   region and remaining credit must be confirmed in that subscription's portal
+   before provisioning; do not assume the database is permanently free.
+2. **Neon Free** is the no-cost fallback for staging/demo. The current staging
+   workflow uses one URL for runtime and migrations, so use Neon's direct
+   connection string (the host must not contain `-pooler`) with
+   `sslmode=require`. An idle compute may scale to zero, but persisted database
+   storage is separate from the disposable application container. A future
+   high-concurrency deployment can split direct migration and pooled runtime
+   URLs explicitly.
+
+Firebase Firestore is not a drop-in option: it is a document database and would
+require replacing Rullst ORM models, SQL migrations and transactional billing
+persistence. Firebase Data Connect uses PostgreSQL behind another application
+contract, but it is also not a direct replacement for this server's managed
+`DATABASE_URL` path.
+
+The production showcase may also use a separate Neon Free project to avoid
+cash spending. That plan has no application availability or recovery SLA and
+may suspend idle compute, so the site must not promise uninterrupted access.
+The repository compensates with a daily logical dump to a private Azure Blob
+container, but a dump is useful only after a restore drill. Upgrade the
+database/storage plan before offering contractual availability or serving a
+material sales volume.
+
+## Password recovery
+
+Account recovery is implemented as an application-owned integration between
+Rullst Auth, Rullst Mail and PostgreSQL. It is disabled by default and never
+pretends that a message was sent when no provider is configured.
+
+The flow returns the same public response for existing and unknown addresses,
+uses keyed address fingerprints for request throttling, stores only a hash of
+the one-time reset code, expires it after 15 minutes and atomically revokes all
+account sessions after a successful password change. A PostgreSQL outbox keeps
+delivery retryable without storing the complete code. The browser receives the
+code in a URL fragment, removes it from history and submits it only in the
+CSRF-protected reset form. This is also the v12 workaround for the confirmed
+Rullst Mail `token=` sanitizer defect documented as `RULLST-005`.
+
+To enable Resend for one environment:
+
+1. Verify an environment-specific sending domain in Resend. Keep staging and
+   production API keys separate and restrict each key to sending from its own
+   domain when the provider account supports that restriction.
+2. Store the key in the protected GitHub environment as
+   `SAAS_STAGING_RESEND_API_KEY` or `SAAS_PRODUCTION_RESEND_API_KEY`.
+3. Set `PASSWORD_RESET_MODE=resend`, the exact public origin in
+   `ACCOUNT_PUBLIC_BASE_URL`, and a verified bare sender address in
+   `ACCOUNT_MAIL_FROM`. Do not put a display name in that variable.
+4. Deploy the migration before testing. Existing encrypted cookies predate the
+   new PostgreSQL session registry and will require one fresh login after this
+   release; that one-time logout is intentional.
+5. Test the complete request, delivered link, one-use behavior, expiration and
+   old-session rejection in staging before enabling production recovery.
+
+The deployment workflows keep recovery disabled unless their explicit
+`password_reset_mode` input is set to `resend`. The provider receives the
+recipient address and deterministic security-message content; no marketing
+tracking is added. The privacy notice describes this processor boundary.
+
+The same provider configuration delivers purchase confirmations from a
+PostgreSQL outbox. Delivery is retried with bounded attempts, survives process
+restarts and is cancelled if the associated entitlement or certificate is no
+longer active. A migration queues one confirmation for each existing active
+entitlement, so buyers reconciled before this feature are not silently omitted.
+The email contains authenticated links rather than attaching the private paid
+guide, and it contains no tracking pixel or click tracker.
+
+## Local setup
+
+1. Start a local PostgreSQL database named `rullst_saas` or supply another
+   PostgreSQL URL.
+2. Copy `.env.example` to `.env` and generate a unique `APP_KEY`.
+3. Set private Nexus credentials; do not reuse the public Showcase password.
+4. Leave `PAYMENTS_MODE=disabled` for the first migration and startup.
+5. Run:
+
+```console
+cargo rullst db:migrate
+cargo run
+```
+
+The application is available at `http://localhost:3000`. Nexus is mounted at
+`/nexus`. Studio is compiled and started only in debug builds and is absent
+from the release container. Do not set `NEXUS_TRUSTED_TLS_TERMINATION` for a
+direct local HTTP listener: release-mode Basic Auth must fail closed unless a
+reviewed deployment boundary has actually terminated TLS.
+
+## Stripe staging setup
+
+1. In the Stripe Dashboard account picker, select **Switch to sandbox** and
+   create a sandbox named `Rullst SaaS Staging` if one does not exist.
+2. In that sandbox, open **Product catalogue**, create an active **one-time**
+   BRL 1.00 Price, and copy its `price_...` identifier. The product page's
+   `Trials (Preview)` section is unrelated to sandbox mode and may remain
+   `No trials`.
+3. Create a sandbox webhook endpoint at
+   `https://saas-staging.rullst.win/billing/webhook` for
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `checkout.session.async_payment_failed` and `checkout.session.expired`.
+4. Put the sandbox secret key, webhook signing secret and Price ID in the Azure
+   secret manager. Never commit or paste them into chat.
+5. Configure:
+
+```dotenv
+PAYMENTS_MODE=test
+BILLING_PROVIDER=stripe
+BILLING_PRICE_ID=price_1UGen0CWTlr9100lrR2hLPXG
+BILLING_EXPECTED_CURRENCY=BRL
+BILLING_EXPECTED_AMOUNT_MINOR=100
+BILLING_REDIRECT_URL=https://saas-staging.rullst.win/dashboard
+```
+
+6. Run migrations once from a trusted deployment job, then start the release
+   container.
+7. Use only Stripe's documented test cards. Do **not** enter a real card in
+   live mode to test the integration.
+8. After the reconciled webhook completes, open the dashboard to view the
+   private Sandbox Pioneer certificate and its privacy-preserving verification
+   link. A Checkout success redirect by itself cannot issue the certificate.
+
+## Stripe live setup
+
+Live mode is a genuine sale, not an integration test. Stripe's sandbox remains
+the place for operator testing; do not use the operator's own real card to
+simulate a customer.
+
+1. Create a separate production PostgreSQL project and a protected GitHub
+   environment named `saas-production`.
+2. Create an active Stripe **live**, one-time BRL Price. Start with BRL 1.00
+   (`100` minor units). To move to BRL 10.00, create a new Price and rerun the
+   live workflow with the new Price ID and `1000`; never edit only one side.
+3. Configure the live webhook endpoint
+   `https://saas.rullst.win/billing/webhook` for
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `checkout.session.async_payment_failed`, `checkout.session.expired`,
+   `charge.refunded` and `charge.dispute.created`.
+4. Upload the paid Markdown guide to a private Azure Blob container. Assign the
+   Container App managed identity `Storage Blob Data Reader` on that container,
+   configure the query-free Blob URL and calculate the exact file SHA-256.
+5. Run `Prepare SaaS Production (Checkout Disabled)` with the full staging
+   commit SHA. Verify TLS, private Nexus, backup and restore while checkout is
+   still disabled.
+6. Run `Enable SaaS Live Checkout` with the reviewed live Price ID and exact
+   amount. Startup rejects mixed test/live objects and incomplete settings. The
+   workflow also asks the running application to retrieve and verify the paid
+   artifact with its own managed identity before enabling sales; a GitHub OIDC
+   identity being able to read the blob is not sufficient runtime evidence.
+7. Keep the scheduled reconciliation and daily backup workflows enabled.
+
+An authenticated buyer may submit a refund request within 14 calendar days of
+the reconciled purchase. This application request is not a card-network or bank
+dispute and does not move money automatically: the operator reviews it in
+private Nexus and creates the full refund in Stripe. Stripe generally does not
+return the original payment-processing fee to the merchant, and exceptions can
+apply by payment method or account; therefore a refund must never be described
+as guaranteeing zero merchant cost. Stripe says an approved refund normally
+appears to the customer in 5–10 business days. The signed `charge.refunded`
+webhook, or scheduled provider reconciliation if that webhook is delayed,
+marks the request complete and revokes guide and certificate access. A dispute
+is a separate bank/card-network process and can carry a dispute fee; it revokes
+access immediately, and restoration after a won dispute requires manual review.
+
+## Manual Azure staging workflow
+
+`.github/workflows/deploy-saas-staging.yml` never deploys on an ordinary push.
+Run it manually against the protected `saas-staging` GitHub environment only
+after configuring these secrets:
+
+- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` for the
+  environment-scoped GitHub OIDC identity (no stored Azure client secret);
+- `SAAS_STAGING_DATABASE_URL`;
+- `SAAS_STAGING_APP_KEY` (at least 32 random characters);
+- `SAAS_STAGING_NEXUS_USERNAME` and `SAAS_STAGING_NEXUS_PASSWORD`;
+- `STRIPE_TEST_SECRET_KEY`; and
+- `STRIPE_TEST_WEBHOOK_SECRET`; and
+- `SAAS_STAGING_RESEND_API_KEY` only when the workflow's
+  `password_reset_mode` is `resend`.
+
+The target Container App `rullst-saas-staging` must already exist in
+`rullst-rg`. The staging workflow constrains it to one replica, runs migrations
+before server startup, explicitly asserts the reviewed Azure Container Apps TLS
+terminator for Nexus and checks `/healthz`. The marker is a deployment trust
+assertion and must not be copied to a direct HTTP deployment. Select `disabled`
+for the first revision. Select `test` only after the custom domain is healthy
+and the Stripe sandbox webhook points to
+`https://saas-staging.rullst.win/billing/webhook`.
+
+## Publishing the link in Showcase
+
+After the SaaS staging URL is healthy, set the GitHub Actions repository
+variable `SAAS_BLUEPRINT_URL` to its HTTPS URL and redeploy Showcase. The
+Showcase renders the callout only when this value is a valid HTTPS URL, so an
+unfinished deployment never creates a broken public link. Its wording clearly
+labels the destination as Stripe Test Mode with no real charge.
+
+## Paid tutorial boundary
+
+The production downloadable product includes a detailed, sanitized
+implementation tutorial in addition to the gateway field report. The complete paid bytes must
+live in private application storage and be streamed only after authentication
+and entitlement checks. Committing those bytes to this public repository, or
+embedding them in a public GHCR image, would make the route paywall cosmetic.
+
+Azure Blob requests authorized by the Container App's managed identity include
+an explicit supported `x-ms-version` header. The live activation workflow uses
+the protected read-only `GET /billing/artifact-ready` operation to exercise
+that same runtime path before checkout can be enabled. It requires the private
+reconciliation bearer token, is marked `private, no-store`, and exposes only
+readiness; it does not return the artifact, token, URL or digest.
+
+The repository may retain a public summary, schema and loader mechanism. The
+private artifact record should contain a version, media type, immutable
+SHA-256 digest, status and body. It must contain no purchaser data, secrets,
+merchant IDs or copied provider documentation.
+
+## Remaining operational boundary
+
+The application now contains signed refund/dispute handling, scheduled
+reconciliation, private paid-artifact delivery and backup automation. The
+operator must still provision production resources, test a backup restore,
+configure monitoring/alerts, review the actual public seller identity and
+document the operator process for correction/closure/deletion requests. The
+authenticated dashboard already provides a private JSON data export. Rullst 12.0.0 still
+lacks a typed one-time Capital contract, so this Stripe integration remains
+application-owned and must not be presented as proof that every exported
+gateway is live-ready.
+
+The live `Rullst Founding Customer` certificate is issued to every reconciled
+live purchase without a quantity cap. Sandbox certificates are never upgraded
+or relabelled as customer purchases.

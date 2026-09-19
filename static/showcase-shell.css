@@ -252,3 +252,6 @@
     .sandbox-sub-banner { padding: 8px 12px; }
     .showcase-footer { padding: 32px 20px 100px; }
 }
+
+.sandbox-credentials{display:flex;flex-wrap:wrap;gap:.5rem 1rem}.sandbox-credential{display:flex;gap:.4rem;align-items:center;min-width:0}.sandbox-credential code{overflow-wrap:anywhere;user-select:all;color:#e2e8f0}.sandbox-credential-label{color:#94a3b8;font-size:.8rem}
+@media(max-width:640px){.showcase-ai-drawer .ai-input,.showcase-ai-drawer .ai-submit-btn{min-height:44px}.showcase-ai-drawer .ai-close-btn{width:44px;height:44px}}

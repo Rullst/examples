@@ -1,0 +1,7 @@
+# Rullst compiler configuration.
+#
+# Do not force `/DEBUG:FASTLINK` here. Current MSVC linkers report that the
+# option is unsupported and silently fall back to `/DEBUG:FULL`.
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "split-debuginfo=unpacked"]

@@ -175,7 +175,7 @@ pub async fn security_page(Query(query): Query<SecurityTestQuery>) -> impl IntoR
                 <script src="/static/htmx.js"></script>
                 <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>"Rullst Security - RASP & Zero-Trust Threat Protection"</title>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style>{ rullst::html::RawHtml(styles) }</style>

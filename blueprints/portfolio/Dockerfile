@@ -7,24 +7,26 @@
 # Stage 1: Cargo Chef Base
 # ------------------------------------------------------------------------------
 FROM lukemathwalker/cargo-chef:latest-rust-1.98-bookworm AS chef
-WORKDIR /app
+WORKDIR /app/blueprints/portfolio
 
 # ------------------------------------------------------------------------------
 # Stage 2: Recipe Planner (Dependency Skeleton)
 # ------------------------------------------------------------------------------
 FROM chef AS planner
-COPY . .
+COPY . /app
 RUN cargo chef prepare --recipe-path recipe.json
 
 # ------------------------------------------------------------------------------
 # Stage 3: Dependency Cooker (Cached Layer)
 # ------------------------------------------------------------------------------
 FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
+COPY --from=planner /app/blueprints/portfolio/recipe.json recipe.json
+# The standalone shared crate is not part of cargo-chef's blueprint recipe.
+COPY crates/blueprint-ai /app/crates/blueprint-ai
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build the application source code
-COPY . .
+COPY . /app
 RUN cargo build --release --bin portfolio
 
 # ------------------------------------------------------------------------------
@@ -41,11 +43,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy compiled binary from builder
-COPY --from=builder /app/target/release/portfolio /app/portfolio
+COPY --from=builder /app/blueprints/portfolio/target/release/portfolio /app/portfolio
 
 # Copy assets and static resources
-COPY static /app/static
-COPY Rullst.toml /app/Rullst.toml
+COPY blueprints/portfolio/static /app/static
+COPY blueprints/portfolio/Rullst.toml /app/Rullst.toml
 
 RUN chown -R 1000:1000 /app
 

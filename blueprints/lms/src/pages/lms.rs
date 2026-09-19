@@ -102,7 +102,15 @@ pub fn index_page(
                     .card h2 { margin: 0 0 .75rem; font-size: 1.35rem; }
                     .card p { flex: 1; margin: 0 0 1.25rem; color: #cbd5e1; line-height: 1.6; }
                     .empty { grid-column: 1 / -1; border: 1px dashed #64748b; border-radius: 1rem; padding: 2rem; text-align: center; }
-                    @media (max-width: 48rem) { header { flex-direction: column; } .search { grid-template-columns: 1fr; } }
+                    .community-callout { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1.25rem; margin: 0 0 2rem; padding: 1.35rem 1.5rem; border: 1px solid rgba(88, 101, 242, .5); border-radius: 1.25rem; background: linear-gradient(135deg, rgba(88, 101, 242, .2), rgba(15, 23, 42, .96) 58%, rgba(52, 211, 153, .13)); box-shadow: 0 18px 50px rgba(0, 0, 0, .28); }
+                    .community-callout-mark { display: grid; width: 3.25rem; height: 3.25rem; place-items: center; border-radius: 1rem; background: linear-gradient(145deg, #5865f2, #34d399); color: #fff; font-size: 1.4rem; font-weight: 900; box-shadow: 0 10px 28px rgba(88, 101, 242, .35); }
+                    .community-callout h2, .community-callout p { margin: 0; }
+                    .community-callout h2 { margin: .1rem 0 .25rem; font-size: clamp(1.2rem, 3vw, 1.55rem); }
+                    .community-callout-copy > p:not(.community-callout-eyebrow) { color: #cbd5e1; line-height: 1.55; }
+                    .community-callout-eyebrow { color: #a5b4fc; font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+                    .community-callout a { min-width: max-content; padding: .8rem 1rem; border: 1px solid rgba(255, 255, 255, .16); border-radius: .8rem; background: #5865f2; color: #fff; font-weight: 800; text-align: center; text-decoration: none; transition: transform 160ms ease, background 160ms ease; }
+                    .community-callout a:hover { background: #4752c4; transform: translateY(-2px); }
+                    @media (max-width: 48rem) { header { flex-direction: column; } .search { grid-template-columns: 1fr; } .community-callout { grid-template-columns: auto minmax(0, 1fr); padding: 1.15rem; } .community-callout a { grid-column: 1 / -1; width: 100%; } }
                     @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
                     "
                 </style>
@@ -180,7 +188,7 @@ pub fn course_detail_page(
         <html lang="en" class="dark">
             <head>
                 <meta charset="UTF-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
                 <title>{&course.title}" — Rullst Academy"</title>
                 <link rel="icon" type="image/x-icon" href="/favicon.ico" />
                 <script src="/static/htmx.js"></script>
@@ -345,7 +353,7 @@ pub fn lesson_player_page(
         <html lang="en" class="dark">
             <head>
                 <meta charset="UTF-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
                 <title>{title}</title>
                 <link rel="icon" type="image/x-icon" href="/favicon.ico" />
                 <style nonce={csp_nonce}>
@@ -491,6 +499,7 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         width: 420px;
         max-width: calc(100vw - 32px);
         height: 590px;
+        height: min(590px, calc(100dvh - 110px));
         max-height: calc(100vh - 110px);
         background: rgba(15, 23, 42, 0.96);
         border: 1px solid rgba(52, 211, 153, 0.3);
@@ -515,13 +524,14 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-shrink: 0;
     }
     .lms-close-btn {
         background: rgba(255, 255, 255, 0.06);
         border: 1px solid #334155;
         color: #94a3b8;
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
         border-radius: 8px;
         display: flex;
         align-items: center;
@@ -533,16 +543,20 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
     .lms-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.15); }
     .lms-chat-messages {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 16px;
         display: flex;
         flex-direction: column;
         gap: 12px;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
     .chat-bubble {
         display: flex;
         flex-direction: column;
         max-width: 90%;
+        min-width: 0;
         animation: bubbleFadeIn 0.2s ease;
     }
     @keyframes bubbleFadeIn {
@@ -564,6 +578,9 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         border-radius: 12px;
         font-size: 0.86rem;
         line-height: 1.55;
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
     .chat-bubble-user .chat-bubble-body {
         background: #047857;
@@ -580,6 +597,16 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         background: rgba(239, 68, 68, 0.15);
         border-color: rgba(239, 68, 68, 0.4);
         color: #fca5a5;
+    }
+    .chat-bubble-body .rullst-ai-prose { min-width: 0; max-width: 100%; }
+    .chat-bubble-body .rullst-ai-prose > :first-child { margin-top: 0; }
+    .chat-bubble-body .rullst-ai-prose > :last-child { margin-bottom: 0; }
+    .chat-bubble-body .rullst-ai-prose pre,
+    .chat-bubble-body .rullst-ai-prose table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .lms-badge-footer {
         margin-top: 8px;
@@ -651,9 +678,11 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
         display: flex;
         gap: 8px;
         align-items: center;
+        flex-shrink: 0;
     }
     .lms-input {
         flex: 1;
+        min-width: 0;
         background: #080b11;
         border: 1px solid #334155;
         border-radius: 10px;
@@ -676,7 +705,11 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
     }
     .lms-submit-btn:hover { background: #065f46; }
     @media (max-width: 640px) {
-        .lms-crab-launcher { bottom: 16px; right: 16px; gap: 8px; }
+        .lms-crab-launcher {
+            bottom: max(16px, env(safe-area-inset-bottom));
+            right: max(16px, env(safe-area-inset-right));
+            gap: 8px;
+        }
         .lms-crab-avatar { width: 48px; height: 48px; }
         .lms-crab-bubble { font-size: 0.76rem; padding: 6px 10px; }
         .lms-ai-drawer {
@@ -685,12 +718,39 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
             left: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
-            height: 80vh !important;
-            max-height: 85vh !important;
+            height: 92vh !important;
+            height: 92dvh !important;
+            max-height: 100vh !important;
+            max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
             border-radius: 20px 20px 0 0 !important;
             border-bottom: none !important;
             box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.85) !important;
         }
+        .lms-drawer-header { padding: 10px 12px; }
+        .lms-close-btn { width: 44px; height: 44px; font-size: 24px; }
+        .lms-chat-messages { padding: 12px; gap: 10px; }
+        .chat-bubble { max-width: 100%; }
+        .chat-bubble-body { padding: 10px 12px; font-size: 0.95rem; }
+        .lms-prompt-suggestions {
+            flex-wrap: nowrap;
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .lms-pill-btn { min-height: 40px; padding: 8px 12px; flex-shrink: 0; }
+        .lms-ai-form { padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+        .lms-input { min-height: 44px; font-size: 16px; padding: 10px 12px; }
+        .lms-submit-btn { min-width: 72px; min-height: 44px; font-size: 0.9rem; }
+    }
+    @media (max-width: 380px) {
+        .lms-crab-bubble { display: none; }
+        .lms-drawer-header > div > div:last-child { min-width: 0; }
+    }
+    @media (max-height: 500px) and (orientation: landscape) {
+        .lms-ai-drawer { height: 100vh !important; height: 100dvh !important; max-height: 100vh !important; max-height: 100dvh !important; border-radius: 0 !important; }
+        .lms-prompt-suggestions { display: none; }
     }
     </style>
 
@@ -792,9 +852,11 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
             if (isOpen) {
                 drawer.style.display = 'none';
                 if (launcher) launcher.style.display = 'flex';
+                document.body.style.overflow = '';
             } else {
                 drawer.style.display = 'flex';
                 if (launcher) launcher.style.display = 'none';
+                if (window.innerWidth <= 640) document.body.style.overflow = 'hidden';
                 var input = document.getElementById('lms-message-input');
                 if (input) setTimeout(function() { input.focus(); }, 150);
                 scrollLmsToBottom();

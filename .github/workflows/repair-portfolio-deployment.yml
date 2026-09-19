@@ -1,0 +1,36 @@
+name: Finish approved Portfolio AI deployment
+
+# Deliberately manual: never synchronize administrator passwords on pushes.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Explicitly authorize copying only the Showcase admin password to Portfolio
+        required: true
+        type: choice
+        options:
+          - reuse-showcase-password
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repair-portfolio-deployment
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'reuse-showcase-password'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test restricted recovery operation
+        run: python3 -B -m unittest discover -s scripts -p 'test_*.py'
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Configure approved secret and deploy previously tested image
+        run: python3 -B scripts/repair-portfolio-deployment.py --reuse-showcase-password
+      - name: Verify live public, Nexus and Studio AI
+        run: python3 -B scripts/verify-deployment.py rullst-portfolio --image ghcr.io/rullst/portfolio:f1159fc4f04bb7b65dd429441b2affb98cc57d4e

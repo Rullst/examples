@@ -21,6 +21,8 @@ fn render_external_links(links: &[(&str, &str)]) -> String {
         })
         .collect()
 }
+const PUBLIC_DEMO_USERNAME: &str = "rullst_demo";
+const PUBLIC_DEMO_PASSWORD: &str = "RullstDemoAccess2026!";
 
 /// Renders the universal Sovereign Showcase Header with navigation buttons.
 pub fn render_showcase_nav(active_route: &str) -> String {
@@ -182,7 +184,10 @@ pub fn render_showcase_nav(active_route: &str) -> String {
         <div id="sandbox-notice-banner" class="sandbox-sub-banner">
             <div class="sandbox-sub-banner-content">
                 <strong class="sandbox-badge">"Sandbox access"</strong>
-                <span>"Try Studio and Nexus · User: " <strong>"admin"</strong> " · Password: " <strong>"SovereignShowcase2026!"</strong></span>
+                <div class="sandbox-credentials" role="group" aria-label="Public Nexus and Studio credentials">
+                    <span class="sandbox-credential"><span class="sandbox-credential-label">"Username"</span><code>{PUBLIC_DEMO_USERNAME}</code></span>
+                    <span class="sandbox-credential"><span class="sandbox-credential-label">"Password"</span><code>{PUBLIC_DEMO_PASSWORD}</code></span>
+                </div>
             </div>
             <button type="button" class="sandbox-dismiss-btn" onclick="document.getElementById('sandbox-notice-banner').hidden=true" aria-label="Dismiss sandbox notice">"×"</button>
         </div>
@@ -291,7 +296,7 @@ fn render_floating_ai_copilot() -> String {
             <div class="chat-bubble chat-bubble-assistant">
                 <div class="chat-bubble-sender">Showcase Copilot</div>
                 <div class="chat-bubble-body">
-                    Hello! I am the <strong>Sovereign Showcase AI Copilot</strong>. Ask me anything about Rullst's 5 Web Paradigms, LiveView, Wasm, Security WAF, or the Nexus & Studio cockpits! (Você também pode perguntar em português!)
+                    Hello! I am the <strong>Sovereign Showcase AI Copilot</strong>. Ask me anything about Rullst's 5 Web Paradigms, LiveView, Wasm, Security WAF, or the Nexus & Studio cockpits!
                 </div>
             </div>
         </div>
@@ -335,7 +340,7 @@ fn render_floating_ai_copilot() -> String {
             if (msgs) {
                 var errDiv = document.createElement('div');
                 errDiv.className = 'chat-bubble chat-bubble-assistant';
-                errDiv.innerHTML = '<div class="chat-bubble-sender">Showcase Copilot</div><div class="chat-bubble-body" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">⚠️ Não foi possível conectar ao Copilot (HTTP ' + (evt.detail.xhr ? evt.detail.xhr.status : 'erro') + '). Tente novamente.</div>';
+                errDiv.innerHTML = '<div class="chat-bubble-sender">Showcase Copilot</div><div class="chat-bubble-body" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5;">⚠️ Could not connect to the Copilot (HTTP ' + (evt.detail.xhr ? evt.detail.xhr.status : 'error') + '). Please try again.</div>';
                 msgs.appendChild(errDiv);
                 scrollDrawerToBottom();
             }
@@ -408,7 +413,7 @@ fn render_floating_ai_copilot() -> String {
             if (msgs) {
                 var bubble = document.createElement('div');
                 bubble.className = 'chat-bubble chat-bubble-user';
-                bubble.innerHTML = '<div class="chat-bubble-sender">Você</div><div class="chat-bubble-body">' + 
+                bubble.innerHTML = '<div class="chat-bubble-sender">You</div><div class="chat-bubble-body">' +
                     msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
                 msgs.appendChild(bubble);
                 scrollDrawerToBottom();
@@ -537,6 +542,11 @@ pub fn render_shared_styles() -> String {
         .container { padding: 1.25rem 0.85rem !important; }
         .card { padding: 1.2rem !important; margin-bottom: 1rem !important; }
         .card-title { font-size: 1.15rem !important; }
+        .sandbox-sub-banner { align-items: flex-start; padding: 0.75rem; }
+        .sandbox-sub-banner-content { align-items: stretch; width: 100%; }
+        .sandbox-credentials { display: grid; width: 100%; }
+        .sandbox-credential { display: grid; grid-template-columns: 72px minmax(0, 1fr); }
+        .sandbox-reset-note { line-height: 1.45; }
     }
 
     /* == Floating Crab Mascot Launcher == */
@@ -650,6 +660,7 @@ pub fn render_shared_styles() -> String {
         width: 420px;
         max-width: calc(100vw - 32px);
         height: 560px;
+        height: min(560px, calc(100dvh - 120px));
         max-height: calc(100vh - 120px);
         background: rgba(13, 18, 31, 0.97);
         border: 1px solid #1e293b;
@@ -675,6 +686,7 @@ pub fn render_shared_styles() -> String {
         padding: 12px 16px;
         background: rgba(15, 23, 42, 0.95);
         border-bottom: 1px solid #1e293b;
+        flex-shrink: 0;
     }
     .ai-close-btn {
         width: 32px;
@@ -687,7 +699,9 @@ pub fn render_shared_styles() -> String {
         font-size: 20px;
         cursor: pointer;
         line-height: 1;
-        padding: 4px;
+        width: 36px;
+        height: 36px;
+        padding: 0;
     }
     .ai-close-btn:hover { color: #fff; }
 
@@ -700,11 +714,14 @@ pub fn render_shared_styles() -> String {
         display: flex;
         flex-direction: column;
         gap: 12px;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
     .chat-bubble {
         display: flex;
         flex-direction: column;
         max-width: 90%;
+        min-width: 0;
         animation: bubbleFadeIn 0.2s ease;
     }
     @keyframes bubbleFadeIn {
@@ -726,6 +743,9 @@ pub fn render_shared_styles() -> String {
         border-radius: 12px;
         font-size: 0.85rem;
         line-height: 1.5;
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
     }
     .chat-bubble-user .chat-bubble-body {
         background: #0284c7;
@@ -737,6 +757,16 @@ pub fn render_shared_styles() -> String {
         border: 1px solid #334155;
         color: #e2e8f0;
         border-bottom-left-radius: 2px;
+    }
+    .chat-bubble-body .rullst-ai-prose { min-width: 0; max-width: 100%; }
+    .chat-bubble-body .rullst-ai-prose > :first-child { margin-top: 0; }
+    .chat-bubble-body .rullst-ai-prose > :last-child { margin-bottom: 0; }
+    .chat-bubble-body .rullst-ai-prose pre,
+    .chat-bubble-body .rullst-ai-prose table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* == Prompt Suggestion Pills == */
@@ -787,6 +817,8 @@ pub fn render_shared_styles() -> String {
         border-top: 1px solid #1e293b;
         display: flex;
         gap: 6px;
+        align-items: center;
+        flex-shrink: 0;
     }
     .ai-input {
         flex: 1;
@@ -820,8 +852,8 @@ pub fn render_shared_styles() -> String {
     /* == Mobile AI Drawer Bottom-Sheet Adaptation == */
     @media (max-width: 640px) {
         .showcase-crab-launcher {
-            bottom: 16px;
-            right: 16px;
+            bottom: max(16px, env(safe-area-inset-bottom));
+            right: max(16px, env(safe-area-inset-right));
             gap: 8px;
         }
         .showcase-crab-avatar {
@@ -850,5 +882,5 @@ pub fn render_shared_styles() -> String {
         .showcase-ai-drawer .ai-chat-messages { padding: 10px; gap: 8px; }
     }
     "#
-    .to_string() + include_str!("../static/showcase-shell.css")
+    .to_string() + include_str!("../static/showcase-shell.css") + blueprint_ai::STYLES
 }

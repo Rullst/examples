@@ -3036,6 +3036,7 @@ mod tests {
         assert!(youtube.contains("data-video-src="));
         assert!(youtube.contains("Load YouTube video"));
         assert!(!youtube.contains("<iframe"));
+        assert!(!rendered_catalog.contains("rel=\"stylesheet\" href=\"https://"));
 
         let rendered_video = crate::pages::lms::lesson_player_page(
             "Memory safety <essentials>",

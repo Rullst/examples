@@ -36,8 +36,8 @@ In production on **Azure Container Apps**, this threat is fundamentally mitigate
                       └────────────────────────────────────────┘
 ```
 
-### Why Public Writes & Admin Portals are 100% Safe:
-1. **Container Ephemerality (Scale-to-Zero):** Azure Container Apps automatically scales the replica to zero when idle. Whenever a new visitor connects, a fresh container spawns with clean seed data. Any modified, deleted, or injected records are discarded.
+### Why Public Writes Are Bounded in This Demo:
+1. **Container Ephemerality (Scale-to-Zero):** This deployment uses container-scoped SQLite with no persistent volume. Changes remain visible while the current container is running, then disappear when that container shuts down or restarts. A new container initializes clean seed data. This is a demo-specific safety boundary, not a production authorization pattern.
 2. **Rootless Sandbox Isolation:** The container runs under an unprivileged user (`UID 1000`) without Docker socket mounts, host disk access, or root privileges.
 3. **Automated FIFO Pruning:** To prevent SQLite file bloat, publishing automatically retains the 50 most recent stories, purging older entries.
 4. **Input Sanitization:** Titles and bodies are strictly length-bounded (120 chars / 5,000 chars) and HTML-escaped to prevent Stored XSS.
@@ -50,11 +50,11 @@ Both the **Nexus Admin CMS** and **Studio Dev Cockpit** are fully accessible to 
 
 | Portal | Route | Role | Default Sandbox Credentials |
 | :--- | :--- | :--- | :--- |
-| **🛡️ Nexus Admin CMS** | `/nexus` | Active Record Data Management | **User:** `admin`<br>**Password:** `SovereignShowcase2026!` |
-| **🚀 Studio Cockpit** | `/studio` | Developer AST, Cache & Route Profiler | **User:** `admin`<br>**Password:** `SovereignShowcase2026!` |
+| **🛡️ Nexus Admin CMS** | `/nexus` | Active Record Data Management | `rullst_demo` / `RullstDemoAccess2026!` |
+| **🚀 Studio Cockpit** | `/studio` | Developer AST, Cache & Route Profiler | `rullst_demo` / `RullstDemoAccess2026!` |
 
 > [!NOTE]
-> Environment variables `NEXUS_ADMIN_USERNAME` and `NEXUS_ADMIN_PASSWORD` can be set in Azure Container Apps to override these defaults if required.
+> These are intentionally public demo credentials, not a security boundary. Nexus changes can affect what other visitors see until the active container resets. Private deployments must replace both values and must not publish them.
 
 ---
 

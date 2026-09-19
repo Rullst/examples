@@ -76,7 +76,10 @@ mod tests {
     #[tokio::test]
     async fn public_privacy_pages_use_the_verified_contact_and_disable_html_storage() {
         use tower::ServiceExt;
-        let app = crate::router().unwrap().into_axum();
+        let policy =
+            rullst_nexus::NexusAuthPolicy::basic("privacy-test", "test-only-long-password")
+                .unwrap();
+        let app = crate::router_with_nexus_auth(policy).unwrap().into_axum();
         for path in ["/privacy", "/cookies"] {
             let response = app
                 .clone()

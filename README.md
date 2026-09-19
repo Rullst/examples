@@ -23,12 +23,25 @@
 
 ## 🌟 Overview
 
+AI chat rendering and authenticated Nexus/Studio assistants are documented in
+[AI panels](docs/ai-panels.md). Framework findings are tracked in
+[rullst-errors.md](rullst-errors.md). The Capital/SaaS payment audit and
+required framework updates are tracked separately in
+[saas-improvements-needed.md](saas-improvements-needed.md). Every deployable
+example is also governed by the engineering
+[global privacy baseline](docs/GLOBAL_PRIVACY_BASELINE.md).
+
 Welcome to the official showcase and blueprints repository for the **Rullst Framework (`12.0.0`)**. This repository demonstrates how to architect, build, and deploy production-grade, sovereign web applications in pure Rust without JavaScript framework lock-in.
 
-This monorepository contains three live cloud applications:
+This monorepository contains four live cloud applications, with the SaaS
+blueprint deliberately split into staging and production deployments:
 1. **🌐 Rullst Showcase App:** Demonstrates the **5 Frontend Paradigms**, Active Record ORM, WAF security layers, Prompt Injection Shield, and Omni cross-platform capabilities.
 2. **🎓 Rullst Academy (LMS Blueprint):** A full-featured, real-world educational platform with 13 SQLite migrations, course catalog, Argon2 authentication, monotonic lesson progress tracking, quizzes, certifications, and integrated **Nexus Admin CMS** + **Studio Dev Cockpit**.
 3. **💼 Rullst Portfolio Blueprint:** An ultra-fast, modern developer portfolio featuring dark glassmorphic UI, HTMX SSR, project showcase, experience timeline, skills matrix, and **Nexus Admin CMS**.
+4. **Rullst SaaS Blueprint:** An audited one-time Stripe checkout with separate
+   sandbox and live databases, provider objects, secrets, entitlements,
+   downloadable artifacts, certificates, transactional email, refunds and
+   reconciliation.
 
 ---
 
@@ -36,11 +49,19 @@ This monorepository contains three live cloud applications:
 
 Explore all four public Rullst showcases below. The three applications in this repository run in **Microsoft Azure Container Apps** on the **Azure for Students** plan using the Serverless Consumption Tier (Scale-to-Zero).
 
+> [!NOTE]
+> **Cold-start behavior:** these demos can scale to zero after being idle. The
+> first visit then has to wake a new Azure replica, so the page may load slowly
+> or briefly appear unavailable. Wait a few seconds and reload once. Persistent
+> failures should be checked in Azure revision and container logs. Keeping
+> `minReplicas = 1` avoids scale-to-zero wakeups at the cost of idle usage. See
+> the [Azure Container Apps deployment guide](docs/AZURE_CONTAINER_APPS.md#scale-to-zero-cold-start-notice).
+
 | Application | Live Public URL | Key Features | Admin / Cockpit |
 | :--- | :--- | :--- | :--- |
-| **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://showcase.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://showcase.rullst.win/studio)<br>*(Sandbox User: `admin` / Pass: `SovereignShowcase2026!`)*<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |
+| **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://showcase.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://showcase.rullst.win/studio)<br>*(Sandbox User: `rullst_demo` / Pass: `RullstDemoAccess2026!`)*<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |
 | **🎓 LMS Academy** | [lms.rullst.win](https://lms.rullst.win) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://lms.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://lms.rullst.win/studio)<br>*(Uses the same platform login; public demo tools show a read-only catalog preview)* |
-| **💼 Portfolio** | [portfolio.rullst.win](https://portfolio.rullst.win/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://portfolio.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://portfolio.rullst.win/studio)<br>*(Sandbox User: `admin` / Pass: `SovereignPortfolio2026!`)*<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
+| **💼 Portfolio** | [portfolio.rullst.win](https://portfolio.rullst.win/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://portfolio.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://portfolio.rullst.win/studio)<br>*(Sandbox User: `rullst_demo` / Pass: `RullstDemoAccess2026!`)*<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
 | **🚀 SaaS** | [saas.rullst.win](https://saas.rullst.win) | Rullst SaaS showcase | — |
 
 ---
@@ -84,6 +105,43 @@ The **LMS Blueprint** is a full production-grade application generated via `carg
   - 🚀 **Studio Cockpit (`/studio`):** Live telemetry, query profiler, and security radar.
   - **Access Security:** Protected by HTTP Basic Auth configured via `NEXUS_ADMIN_USERNAME` and `NEXUS_ADMIN_PASSWORD` environment variables.
 - **Pre-Flight Verification:** See the official [LMS Audit Protocol](docs/BLUEPRINT_LMS_AUDIT_PROTOCOL.md) and [LMS Audit Report](docs/BLUEPRINT_LMS_AUDIT_REPORT.md).
+
+---
+
+## 💳 The SaaS Payment Blueprint (`blueprints/saas`)
+
+The audited SaaS example is published in two deliberately isolated
+environments: a permanent Stripe sandbox and
+[customer-facing production](https://saas.rullst.win). Rullst Capital 12.0.0
+exports **10 incoming billing adapters and 1
+outgoing payout adapter**, but adapter presence is not the same as a usable
+live checkout. This example currently enables only an application-owned Stripe
+one-time path after a server-side Price check; Razorpay and the other providers
+remain report/roadmap entries until each has an audited one-time contract.
+Known Capital defects and v12 capability boundaries are shown directly in its
+UI.
+
+Payments remain disabled by default in source. Staging uses Stripe test data;
+production uses separate live credentials and can create a real charge. The two
+deployments also use separate persistent PostgreSQL databases, webhook secrets,
+Price IDs, application keys and private administration credentials. No private
+credential is included in this repository. Staging remains the permanent
+release gate: every checkout, webhook, download, certificate, email and refund
+change is validated there before the exact commit is promoted to production.
+
+The sandbox flow grants a downloadable test report and a clearly test-only
+`Rullst Sandbox Pioneer` certificate. Every reconciled production purchase
+grants the private Stripe implementation guide and a `Rullst Founding Customer`
+certificate; the certificate has no quantity limit. A persistent transactional
+outbox sends the buyer authenticated guide, certificate and dashboard links,
+plus public Rullst, source repository and Discord community links, without
+marketing tracking.
+Refunds and disputes revoke the corresponding access after provider
+confirmation.
+
+See the [SaaS blueprint guide](blueprints/saas/README.md) for setup and the
+[framework improvement report](saas-improvements-needed.md) for the full
+provider-by-provider and Rullst Mail account-lifecycle audit.
 
 ---
 
@@ -172,7 +230,7 @@ This showcase serves as the companion guide to the official scaffolds generated 
 cargo install cargo-rullst --version 12.0.0
 
 # 2. Scaffold official blueprints:
-cargo rullst new my-saas      --blueprint saas       # Multi-tenant SaaS with Billing, Stripe, and Subscriptions
+cargo rullst new my-saas      --blueprint saas       # SaaS auth, billing models and Capital adapters; audit live operations before use
 cargo rullst new my-erp       --blueprint erp        # Double-entry Accounting, Inventory, Ledger, and RBAC
 cargo rullst new my-lms       --blueprint lms        # Courses, Lessons, Quizzes, and Certifications
 cargo rullst new my-portfolio --blueprint portfolio  # Ultra-fast developer showcase with dark glassmorphic UI
@@ -220,6 +278,20 @@ cd blueprints/portfolio
 cargo run
 # Open http://127.0.0.1:3000 (Dark Glassmorphism Portfolio & Nexus CMS at /nexus)
 ```
+
+### Running the Audited SaaS Blueprint Locally
+
+```bash
+cd blueprints/saas
+cp .env.example .env
+cargo rullst db:migrate
+cargo run
+# Open http://127.0.0.1:3000; payment checkout remains disabled by default.
+```
+
+Read [the payment setup and safety checklist](blueprints/saas/README.md)
+before adding any provider secret. Use provider test data before considering a
+live charge.
 
 ---
 
@@ -284,7 +356,7 @@ Caddy will automatically obtain a valid **Let's Encrypt / ZeroSSL** certificate 
 
 - **Privacy:** [Privacy notice](https://showcase.rullst.win/privacy) · [Cookies & browser storage](https://showcase.rullst.win/cookies). Controller: **Rullst**; requests: **officialrullst@gmail.com**. Cloud AI is optional and off by default. See [privacy operations and deployment review](docs/PRIVACY_OPERATIONS.md) for implemented controls and remaining operator responsibilities under applicable laws.
 
-- **Zero-Secret Guarantee:** This repository contains **no credentials, private keys, or API tokens**. All sensitive secrets must be passed via `.env` or container environment variables.
+- **No Private Secrets:** This repository contains no private credentials, keys or API tokens. The documented Showcase/Portfolio login is intentionally public demo data; every sensitive production credential must still be supplied through `.env`, a secret store or container configuration.
 - **Audited Blueprint:** The LMS blueprint has passed the formal pre-flight integration audit ([Protocol](docs/BLUEPRINT_LMS_AUDIT_PROTOCOL.md) | [Report](docs/BLUEPRINT_LMS_AUDIT_REPORT.md)) with a **CONDITIONAL GO** verdict.
 
 ---

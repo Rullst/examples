@@ -1,0 +1,111 @@
+import importlib.util
+from pathlib import Path
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location("deployment", ROOT / "scripts/verify-deployment.py")
+deployment = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(deployment)
+
+
+class DeploymentChecks(unittest.TestCase):
+    def test_shared_crate_is_copied_before_cooking_in_every_image(self):
+        for path in ("Containerfile", "blueprints/lms/Dockerfile", "blueprints/portfolio/Dockerfile"):
+            source = (ROOT / path).read_text(encoding="utf-8")
+            self.assertLess(source.index("COPY crates/blueprint-ai /app/crates/blueprint-ai"),
+                            source.index("RUN cargo chef cook"))
+
+    def test_old_renderer_and_fallbacks_do_not_pass(self):
+        for body in ("**old response**", '<div class="rullst-ai-prose"><p>Offline assistant</p></div>',
+                     '<div class="rullst-ai-prose"><p>AI temporarily unavailable.</p></div>'):
+            with self.assertRaises(RuntimeError):
+                deployment.rendered_online(body)
+        deployment.rendered_online('<div class="rullst-ai-prose"><p><strong>Rullst</strong></p></div>')
+
+    def test_no_redirect_can_forward_credentials(self):
+        self.assertIsNone(deployment.NoRedirect().redirect_request(
+            None, None, 302, "redirect", {}, "https://invalid.example"))
+
+    def test_browser_check_never_puts_credentials_in_urls_or_output(self):
+        source = (ROOT / "scripts/browser-admin-smoke.mjs").read_text(encoding="utf-8")
+        self.assertIn("process.stdin", source)
+        self.assertIn("startLoopbackProxy", source)
+        self.assertIn("allowedOrigins", source)
+        self.assertIn("headers.set('authorization', authorization)", source)
+        self.assertNotIn("Network.setExtraHTTPHeaders", source)
+        self.assertNotIn("console.log(input", source)
+        self.assertNotIn("${input.username}@", source)
+
+    def test_all_ai_chats_keep_the_mobile_touch_and_overflow_contract(self):
+        public_chats = (
+            ROOT / "src/showcase_nav.rs",
+            ROOT / "blueprints/portfolio/src/pages/home.rs",
+            ROOT / "blueprints/lms/src/pages/lms.rs",
+        )
+        for path in public_chats:
+            source = path.read_text(encoding="utf-8")
+            if path.name == "showcase_nav.rs": source += (ROOT / "static/showcase-shell.css").read_text(encoding="utf-8")
+            with self.subTest(path=path.relative_to(ROOT)):
+                self.assertIn("dvh", source)
+                self.assertIn("font-size: 16px", source)
+                self.assertIn("min-height:44px", source.replace(" ", ""))
+                self.assertIn("overflow-wrap: anywhere", source)
+                self.assertIn("safe-area-inset-bottom", source)
+                self.assertIn("overflow-x: auto", source)
+
+        admin = (ROOT / "crates/blueprint-ai/static/admin.html").read_text(encoding="utf-8")
+        self.assertIn("min-height:100dvh", admin)
+        self.assertIn("font-size:16px", admin)
+        self.assertIn("min-height:44px", admin)
+        self.assertIn("overflow-wrap:anywhere", admin)
+        self.assertIn("safe-area-inset-bottom", admin)
+
+    def test_showcase_public_credentials_are_visually_grouped(self):
+        source = (ROOT / "src/showcase_nav.rs").read_text(encoding="utf-8")
+        self.assertIn('class="sandbox-credentials"', source)
+        self.assertIn('class="sandbox-credential-label">"Username"', source)
+        self.assertIn('class="sandbox-credential-label">"Password"', source)
+        self.assertIn('aria-label="Public Nexus and Studio credentials"', source)
+
+    def test_browser_diagnostic_only_accepts_bounded_stage_names(self):
+        safe = ("Real-browser admin verification failed during nexus AI response; "
+                "no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe), safe)
+        safe_status = ("Real-browser admin verification failed during studio page load "
+                       "(HTTP 401); no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe_status), safe_status)
+        safe_network = ("Real-browser admin verification failed during nexus page navigation "
+                        "(net::ERR_NAME_NOT_RESOLVED); no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe_network), safe_network)
+        safe_mobile = ("Real-browser admin verification failed during public mobile chat layout; "
+                       "no credentials or response bodies logged.")
+        self.assertEqual(deployment.safe_browser_diagnostic(safe_mobile), safe_mobile)
+        self.assertIsNone(deployment.safe_browser_diagnostic(
+            "Real-browser admin verification failed during password=hunter2; "
+            "no credentials or response bodies logged."))
+
+    def test_required_configuration_fails_closed(self):
+        properties = {"template": {"containers": [{"env": []}]}}
+        with self.assertRaisesRegex(RuntimeError, "NEXUS_ADMIN_PASSWORD"):
+            deployment.configuration("rullst-showcase", properties)
+        properties["template"]["containers"][0]["env"] = [
+            {"name": "NEXUS_ADMIN_PASSWORD", "value": "test-password-long-enough"},
+            {"name": "GROQ_API_KEY", "value": "mock_test"},
+        ]
+        with self.assertRaisesRegex(RuntimeError, "real server-side Groq"):
+            deployment.configuration("rullst-showcase", properties)
+
+    def test_secret_reference_is_resolved_without_writes(self):
+        properties = {"template": {"containers": [{"env": [
+            {"name": "NEXUS_ADMIN_PASSWORD", "secretRef": "admin-password"},
+            {"name": "GROQ_API_KEY", "value": "synthetic-test-only"},
+        ]}]}}
+        with patch.object(deployment, "azure", return_value="test-password-long-enough") as read:
+            user, _ = deployment.configuration("rullst-portfolio", properties)
+            self.assertEqual(user, "admin")
+            self.assertEqual(read.call_args.args[1:4], ("secret", "list", "--show-values"))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -47,6 +47,10 @@ pub fn is_staff(email: &str) -> bool {
 }
 
 fn demo_route_allowed(tool: &str, method: &Method, path: &str) -> bool {
+    let path = path.strip_prefix(&format!("/{tool}")).unwrap_or(path);
+    if matches!(path, "/copilot/query" | "/chat/query") && *method == Method::POST {
+        return true;
+    }
     if !matches!(*method, Method::GET | Method::HEAD) {
         return false;
     }
@@ -55,6 +59,9 @@ fn demo_route_allowed(tool: &str, method: &Method, path: &str) -> bool {
         .filter(|_| tool == "studio")
         .unwrap_or(path);
     if matches!(path, "" | "/") {
+        return true;
+    }
+    if matches!(path, "/chat" | "/ai" | "/copilot" | "/copilot.js") {
         return true;
     }
     if tool == "studio" && matches!(path, "/cache" | "/assets/studio.css" | "/assets/logger.js") {
@@ -108,7 +115,9 @@ pub async fn guard(State(access): State<ToolAccess>, mut req: Request, next: Nex
         let message = "<section style='padding:2rem;color:#cbd5e1;background:#0f172a;font:16px system-ui'><h1>Public showcase preview</h1><p>The demo account can explore the catalog in Nexus and Studio. Personal records, AI queries and administrative changes require an authorized staff account.</p><p><a style='color:#6ee7b7' href='/'>Back to the showcase</a></p></section>";
         let mut response = (axum::http::StatusCode::FORBIDDEN, Html(message)).into_response();
         // HTMX normally ignores 403 bodies; show the restriction inside the tool.
-        if htmx { *response.status_mut() = axum::http::StatusCode::OK; }
+        if htmx {
+            *response.status_mut() = axum::http::StatusCode::OK;
+        }
         return response;
     }
     // Ignore any client-supplied Basic identity. Nexus still validates its own
@@ -136,7 +145,6 @@ mod tests {
         for path in [
             "/table/users",
             "/table/courses/new",
-            "/chat",
             "/table/courses/1/edit",
             "/table/../users",
             "/table/%75sers",

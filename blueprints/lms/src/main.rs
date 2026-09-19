@@ -318,7 +318,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::auth::get_app_key()?;
     let (tool_access, nexus_auth) = tool_access::ToolAccess::new()?;
     let mut nexus_builder = rullst::nexus::Nexus::new()
-        .with_auth_policy(nexus_auth)
+        .with_auth_policy(nexus_auth.clone())
         .with_brand("LMS Showcase")
         .register::<models::category::Category>()
         .register::<models::course::Course>()
@@ -366,11 +366,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let nexus = nexus_builder
         .try_build()?
-        .layer(rullst::server::from_fn(nexus_mobile_patch))
-        .layer(axum::middleware::from_fn_with_state(
-            tool_access.clone(),
-            tool_access::guard,
-        ));
+        .layer(rullst::server::from_fn(nexus_mobile_patch));
 
     let public = routes![
         get("/" => controllers::lms_controller::index),
@@ -462,11 +458,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/studio/assets/logger.js",
             axum::routing::get(studio_logger_handler),
         )
-        .layer(rullst::server::from_fn(studio_tailwind_patch))
-        .layer(axum::middleware::from_fn_with_state(
-            tool_access.studio(),
-            tool_access::guard,
-        ));
+        .layer(rullst::server::from_fn(studio_tailwind_patch));
+    use blueprint_ai::admin::{Blueprint, Surface, integrate};
+    let nexus = integrate(nexus, &nexus_auth, Blueprint::Lms, Surface::Nexus)?.layer(
+        axum::middleware::from_fn_with_state(tool_access.clone(), tool_access::guard),
+    );
+    let studio_router =
+        integrate(studio_router, &nexus_auth, Blueprint::Lms, Surface::Studio)?.layer(
+            axum::middleware::from_fn_with_state(tool_access.studio(), tool_access::guard),
+        );
 
     let is_prod_or_staging = std::env::var("RULLST_ENV")
         .or_else(|_| std::env::var("APP_ENV"))

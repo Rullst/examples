@@ -148,7 +148,7 @@ pub mod app {
                 <head>
                 <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                     <title>"Rullst Sovereign SaaS Blog & Publisher"</title>
                     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                     <script src="/static/htmx.js"></script>
@@ -216,9 +216,9 @@ pub mod app {
         if !title.is_empty() && !body.is_empty() {
             let safe_title: String = title.chars().take(120).collect();
             let safe_body: String = body.chars().take(5000).collect();
-            
-            let tenant = rullst::multitenant::current_tenant_id()
-                .unwrap_or_else(|| "community".to_string());
+
+            let tenant =
+                rullst::multitenant::current_tenant_id().unwrap_or_else(|| "community".to_string());
 
             let mut post = Post {
                 id: 0,
@@ -226,7 +226,7 @@ pub mod app {
                 title: safe_title,
                 body: safe_body,
             };
-            
+
             if let Ok(_saved) = post.save().await {
                 // Auto-FIFO retention: keep the database clean and snappy (max 50 posts)
                 if let Ok(pool) = rullst_orm::Orm::pool() {
@@ -252,7 +252,7 @@ pub mod app {
             <head>
                 <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>"Rullst LiveView - Real-time WebSockets Feed"</title>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style>{ rullst::html::RawHtml(styles) }</style>
@@ -293,7 +293,7 @@ pub mod app {
             <head>
                 <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
                 <title>"Rullst Wasm Island - Client-side Reactive WebAssembly"</title>
                 <script src="/static/htmx.js"></script>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
@@ -396,7 +396,6 @@ pub mod app {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-
 const HTMX_JS: &str = include_str!("../static/htmx.js");
 
 async fn htmx_handler() -> axum::response::Response {
@@ -405,12 +404,16 @@ async fn htmx_handler() -> axum::response::Response {
     (
         axum::http::StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
             (header::CACHE_CONTROL, "public, max-age=604800"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         HTMX_JS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 const CRAB_PNG: &[u8] = include_bytes!("../static/crab.png");
@@ -426,69 +429,8 @@ async fn crab_png_handler() -> axum::response::Response {
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         CRAB_PNG,
-    ).into_response()
-}
-
-fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
-    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = Vec::new();
-    let mut buf = 0u32;
-    let mut bits = 0;
-    for &b in input.as_bytes() {
-        if b == b'=' { break; }
-        let val = TABLE.iter().position(|&x| x == b)? as u32;
-        buf = (buf << 6) | val;
-        bits += 6;
-        if bits >= 8 {
-            bits -= 8;
-            out.push((buf >> bits) as u8);
-        }
-    }
-    Some(out)
-}
-
-async fn studio_auth_guard(
-    req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let path = req.uri().path();
-    if path.ends_with(".css") || path.ends_with(".js") {
-        return next.run(req).await;
-    }
-
-    use axum::http::header;
-    use axum::response::IntoResponse;
-
-    let auth_header = req.headers().get(header::AUTHORIZATION).and_then(|v| v.to_str().ok());
-    let expected_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-    let raw_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_else(|_| "SovereignShowcase2026!".to_string());
-    let expected_pass = if raw_pass.len() >= 16 { raw_pass } else { "SovereignShowcase2026!".to_string() };
-
-    let mut is_authorized = false;
-    if let Some(auth) = auth_header {
-        if let Some(encoded) = auth.strip_prefix("Basic ") {
-            if let Some(decoded) = decode_base64_cred(encoded.trim()) {
-                if let Ok(credentials) = String::from_utf8(decoded) {
-                    if let Some((user, pass)) = credentials.split_once(':') {
-                        if (user == expected_user || user == "rullst_admin") && (pass == expected_pass || pass == "SovereignRullst2026!Key") {
-                            is_authorized = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if is_authorized {
-        next.run(req).await
-    } else {
-        let mut res = (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-        res.headers_mut().insert(
-            header::WWW_AUTHENTICATE,
-            axum::http::HeaderValue::from_static("Basic realm=\"Rullst Studio & Nexus\""),
-        );
-        res
-    }
+    )
+        .into_response()
 }
 
 const STUDIO_CSS: &str = include_str!("../static/studio.css");
@@ -506,7 +448,8 @@ async fn studio_css_handler() -> axum::response::Response {
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         STUDIO_CSS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 async fn tailwind_handler() -> axum::response::Response {
@@ -515,12 +458,16 @@ async fn tailwind_handler() -> axum::response::Response {
     (
         axum::http::StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
             (header::CACHE_CONTROL, "public, max-age=604800"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         TAILWIND_JS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 async fn studio_logger_handler() -> axum::response::Response {
@@ -529,12 +476,16 @@ async fn studio_logger_handler() -> axum::response::Response {
     (
         axum::http::StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
             (header::CACHE_CONTROL, "public, max-age=86400"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         LOGGER_JS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 async fn studio_tailwind_patch(
@@ -545,7 +496,11 @@ async fn studio_tailwind_patch(
     let res = next.run(req).await;
     let (mut parts, body) = res.into_parts();
     let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
-        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer studio body").into_response();
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to buffer studio body",
+        )
+            .into_response();
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("</head>") {
@@ -575,7 +530,11 @@ async fn nexus_mobile_patch(
         return axum::response::Response::from_parts(parts, body);
     }
     let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
-        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer nexus body").into_response();
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to buffer nexus body",
+        )
+            .into_response();
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("nexus-sidebar") {
@@ -678,25 +637,29 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 async fn manifest_handler() -> impl rullst::server::IntoResponse {
-    ([(rullst::server::header::CONTENT_TYPE, "application/manifest+json")], include_str!("../static/manifest.webmanifest"))
+    (
+        [(
+            rullst::server::header::CONTENT_TYPE,
+            "application/manifest+json",
+        )],
+        include_str!("../static/manifest.webmanifest"),
+    )
 }
 
 async fn sw_handler() -> impl rullst::server::IntoResponse {
-    ([(rullst::server::header::CONTENT_TYPE, "application/javascript")], include_str!("../static/sw.js"))
+    (
+        [(
+            rullst::server::header::CONTENT_TYPE,
+            "application/javascript",
+        )],
+        include_str!("../static/sw.js"),
+    )
 }
 
 pub fn router() -> Result<rullst::Router, Box<dyn std::error::Error>> {
     let nexus_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-    let raw_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_else(|_| "SovereignShowcase2026!".to_string());
-    let nexus_pass = if raw_pass.len() >= 16 { raw_pass } else { "SovereignShowcase2026!".to_string() };
-
-    let nexus_auth = match rullst_nexus::NexusAuthPolicy::basic(&nexus_user, &nexus_pass) {
-        Ok(policy) => policy,
-        Err(err) => {
-            eprintln!("⚠️ Nexus auth policy fallback: {err}. Using default credentials.");
-            rullst_nexus::NexusAuthPolicy::basic("admin", "SovereignShowcase2026!")?
-        }
-    };
+    let nexus_pass = std::env::var("NEXUS_ADMIN_PASSWORD")?;
+    let nexus_auth = rullst_nexus::NexusAuthPolicy::basic(&nexus_user, &nexus_pass)?;
     router_with_nexus_auth(nexus_auth)
 }
 
@@ -719,7 +682,7 @@ fn router_with_nexus_auth(
     .with_default("community")?;
 
     let nexus_router = rullst_nexus::Nexus::new()
-        .with_auth_policy(nexus_auth)
+        .with_auth_policy(nexus_auth.clone())
         .with_brand("Rullst Sovereign Publisher")
         .register::<Post>()
         .try_build()?
@@ -730,17 +693,44 @@ fn router_with_nexus_auth(
         .route("/cache", axum::routing::get(showcase_cache::studio_cache_handler))
         .route("/studio/cache", axum::routing::get(showcase_cache::studio_cache_handler))
         .route("/assets/studio.css", axum::routing::get(studio_css_handler))
-        .route("/studio/assets/studio.css", axum::routing::get(studio_css_handler))
-        .route("/assets/logger.js", axum::routing::get(studio_logger_handler))
-        .route("/studio/assets/logger.js", axum::routing::get(studio_logger_handler))
-        .layer(axum::middleware::from_fn(studio_tailwind_patch))
-        .layer(axum::middleware::from_fn(studio_auth_guard));
+        .route(
+            "/studio/assets/studio.css",
+            axum::routing::get(studio_css_handler),
+        )
+        .route(
+            "/assets/logger.js",
+            axum::routing::get(studio_logger_handler),
+        )
+        .route(
+            "/studio/assets/logger.js",
+            axum::routing::get(studio_logger_handler),
+        )
+        .layer(axum::middleware::from_fn(studio_tailwind_patch));
+
+    use blueprint_ai::admin::{Blueprint, Surface, integrate};
+    let nexus_router = integrate(
+        nexus_router,
+        &nexus_auth,
+        Blueprint::Showcase,
+        Surface::Nexus,
+    )?;
+    let studio_router = integrate(
+        studio_router,
+        &nexus_auth,
+        Blueprint::Showcase,
+        Surface::Studio,
+    )?;
 
     rullst_security::register_deception_trap("/wp-admin");
 
     let is_prod_or_staging = std::env::var("RULLST_ENV")
         .or_else(|_| std::env::var("APP_ENV"))
-        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "production" | "prod" | "staging" | "stage"))
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "production" | "prod" | "staging" | "stage"
+            )
+        })
         .unwrap_or(false);
 
     let public_routes = routes![
@@ -783,12 +773,16 @@ fn router_with_nexus_auth(
             .layer(axum::middleware::from_fn(rullst::security::csrf_middleware))
             .nest_axum("/nexus", nexus_router)
             .nest_axum("/studio", studio_router)
-            .layer(axum::Extension(rullst_nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+            .layer(axum::Extension(
+                rullst_nexus::NexusVerifiedTls::from_trusted_tls_termination(),
+            ))
     } else {
         public_routes
             .nest_axum("/nexus", nexus_router)
             .nest_axum("/studio", studio_router)
-            .layer(axum::Extension(rullst_nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+            .layer(axum::Extension(
+                rullst_nexus::NexusVerifiedTls::from_trusted_tls_termination(),
+            ))
     }
     .layer(axum::Extension(cache))
     .layer(axum::middleware::map_response(set_security_headers))
@@ -921,29 +915,61 @@ mod tests {
         let app = test_router().into_axum();
 
         // 1. Static Studio assets return 200 OK without CSRF or auth blocks
-        for asset in ["/assets/studio.css", "/static/studio.css", "/assets/logger.js", "/static/tailwind.js"] {
+        for asset in [
+            "/assets/studio.css",
+            "/static/studio.css",
+            "/assets/logger.js",
+            "/static/tailwind.js",
+        ] {
             let res = app
                 .clone()
-                .oneshot(Request::get(asset).body(Body::empty()).expect("asset request"))
+                .oneshot(
+                    Request::get(asset)
+                        .body(Body::empty())
+                        .expect("asset request"),
+                )
                 .await
                 .expect("asset response");
-            assert_eq!(res.status(), StatusCode::OK, "Asset {asset} must return 200 OK");
+            assert_eq!(
+                res.status(),
+                StatusCode::OK,
+                "Asset {asset} must return 200 OK"
+            );
         }
 
         // 2. Nexus does not return 426 Upgrade Required (thanks to NexusVerifiedTls)
         let nexus_get = app
             .clone()
-            .oneshot(Request::get("/nexus").body(Body::empty()).expect("nexus request"))
+            .oneshot(
+                Request::get("/nexus")
+                    .body(Body::empty())
+                    .expect("nexus request"),
+            )
             .await
             .expect("nexus response");
-        assert_ne!(nexus_get.status(), StatusCode::UPGRADE_REQUIRED, "Nexus must not reject with 426");
+        assert_ne!(
+            nexus_get.status(),
+            StatusCode::UPGRADE_REQUIRED,
+            "Nexus must not reject with 426"
+        );
 
         // 3. Studio challenges with 401 Basic Auth
         let studio_get = app
             .clone()
-            .oneshot(Request::get("/studio").body(Body::empty()).expect("studio request"))
+            .oneshot(
+                Request::get("/studio")
+                    .extension(ConnectInfo(
+                        "192.0.2.46:4242".parse::<SocketAddr>().unwrap(),
+                    ))
+                    .body(Body::empty())
+                    .expect("studio request"),
+            )
             .await
             .expect("studio response");
-        assert_eq!(studio_get.status(), StatusCode::UNAUTHORIZED, "Studio must challenge with 401 Basic Auth");
+        assert_eq!(
+            studio_get.status(),
+            StatusCode::UNAUTHORIZED,
+            "Studio must challenge with 401 Basic Auth"
+        );
     }
 }

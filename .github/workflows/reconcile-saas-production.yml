@@ -1,0 +1,31 @@
+name: Reconcile SaaS Production Billing
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: saas-production-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.SAAS_LIVE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: saas-production
+    permissions:
+      contents: read
+    steps:
+      - name: Reconcile delayed Stripe state
+        shell: bash
+        env:
+          RECONCILIATION_TOKEN: ${{ secrets.SAAS_PRODUCTION_RECONCILIATION_TOKEN }}
+        run: |
+          test "${#RECONCILIATION_TOKEN}" -ge 32
+          curl --fail --silent --show-error --retry 4 --retry-all-errors --max-time 90 \
+            --request POST \
+            --header "Authorization: Bearer ${RECONCILIATION_TOKEN}" \
+            --user-agent "Rullst-SaaS-Reconciliation/1.0" \
+            --output /dev/null \
+            https://saas.rullst.win/billing/reconcile

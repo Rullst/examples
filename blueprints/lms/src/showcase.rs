@@ -27,7 +27,7 @@ pub fn hero() -> String {
       <aside class="showcase-access"><h3>One login. Explore everything.</h3><p>Platform · Nexus · Studio</p>
       <dl><dt>Email</dt><dd><code>{DEMO_EMAIL}</code></dd><dt>Password</dt><dd><code>{DEMO_PASSWORD}</code></dd></dl>
       <a class="showcase-primary" href="/login">Sign in to the demo</a>
-      <p class="showcase-note">Shared public account. Use fictional data only. Nexus and Studio provide a read-only catalog preview; personal records stay private.</p></aside></section>"#
+      <p class="showcase-note">Shared public account. Use fictional data only. Nexus and Studio provide a read-only catalog preview; personal records stay private. AI guidance uses no private records.</p></aside></section>"#
     )
 }
 
@@ -93,7 +93,11 @@ pub fn footer() -> String {
 pub async fn css() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
-        include_str!("../static/showcase.css"),
+        format!(
+            "{}{}",
+            include_str!("../static/showcase.css"),
+            blueprint_ai::STYLES
+        ),
     )
 }
 pub async fn js() -> impl IntoResponse {
