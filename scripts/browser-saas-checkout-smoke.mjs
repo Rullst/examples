@@ -139,21 +139,21 @@ async function run() {
     form.elements.name.value = 'Checkout Smoke Test';
     form.elements.email.value = ${JSON.stringify(email)};
     form.elements.password.value = ${JSON.stringify(password)};
+    form.elements.certificate_name_acknowledgement.checked = true;
     form.requestSubmit();
     return true;
   })()`);
-  await waitFor("location.pathname === '/dashboard' && document.body.innerText.includes('Welcome,')", 45);
+  await waitFor("location.pathname === '/dashboard' && document.body.innerText.includes('Welcome,') && !!document.querySelector('form[action=\"/billing/checkout\"]')", 45);
 
-  stage = 'opening authenticated pricing page';
-  await evaluate(`location.assign(${JSON.stringify(`${origin}/pricing`)})`);
-  await waitFor("location.pathname === '/pricing' && !!document.querySelector('form[action=\"/billing/checkout\"]')", 45);
+  stage = 'checking direct dashboard checkout';
   const accountContext = await evaluate(`({
-    signedIn: document.body.innerText.includes('Signed in'),
-    loginLink: !!document.querySelector('.pricing-nav a[href="/login"]'),
+    signedIn: document.body.innerText.includes('Welcome,'),
+    directLabel: document.body.innerText.includes('Open Stripe test checkout'),
+    pricingDetour: !!document.querySelector('a[href="/pricing"]'),
     csrf: document.querySelector('form[action="/billing/checkout"] [name="_token"]')?.value?.length >= 16
   })`);
 
-  stage = 'submitting checkout form';
+  stage = 'submitting direct dashboard checkout';
   await evaluate(`(() => {
     const form = document.querySelector('form[action="/billing/checkout"]');
     form.elements.purchase_authority.checked = true;
@@ -168,12 +168,12 @@ async function run() {
     if (sawCspFormActionViolation) stage = 'Stripe handoff blocked by CSP form-action';
     throw new Error('Stripe navigation was not observed');
   }
-  if (!accountContext.signedIn || accountContext.loginLink || !accountContext.csrf) {
-    stage = 'authenticated pricing state';
-    throw new Error('authenticated pricing state is inconsistent');
+  if (!accountContext.signedIn || !accountContext.directLabel || accountContext.pricingDetour || !accountContext.csrf) {
+    stage = 'authenticated dashboard checkout state';
+    throw new Error('authenticated dashboard checkout state is inconsistent');
   }
 
-  console.log('SaaS staging: authenticated Chromium checkout handoff verified.');
+  console.log('SaaS staging: direct authenticated dashboard handoff to Stripe verified in Chromium.');
 }
 
 try {
