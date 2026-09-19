@@ -103,7 +103,7 @@ pub fn render_showcase_nav(active_route: &str) -> String {
         routes
             .iter()
             .filter(|(_, _, _, _, cat)| *cat == category)
-            .map(|(path, _, full_label, desc, _)| {
+            .map(|(path, label, _, desc, _)| {
                 let current = if *path == active_route {
                     "page"
                 } else {
@@ -111,9 +111,8 @@ pub fn render_showcase_nav(active_route: &str) -> String {
                 };
                 html! {
                     <li>
-                        <a href={path} class="showcase-demo-link" aria-current={current}>
-                            <span class="showcase-demo-title">{full_label}</span>
-                            <span class="showcase-demo-description">{desc}</span>
+                        <a href={path} class="showcase-demo-link" aria-current={current} title={desc}>
+                            <span class="showcase-demo-title">{label}</span>
                         </a>
                     </li>
                 }
@@ -130,50 +129,41 @@ pub fn render_showcase_nav(active_route: &str) -> String {
         <header class="showcase-banner">
             <div class="showcase-banner-inner">
                 <a href="/" class="showcase-brand" aria-label="Rullst Showcase home">
-                    <img src="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" alt="" class="showcase-brand-img" />
+                    <img src="/static/rullst.png" alt="" class="showcase-brand-img" />
                     <span class="showcase-logo">"RULLST"</span>
                     <span class="showcase-badge">"v12"</span>
                 </a>
 
-                <nav class="showcase-navigation" aria-label="Main navigation">
-                    <details class="showcase-menu" name="showcase-navigation">
-                        <summary>"Demos"</summary>
-                        <div class="showcase-menu-panel showcase-demos-panel">
-                            <div>
-                                <h2 class="showcase-menu-heading">"Web paradigms"</h2>
-                                <ul class="showcase-link-list">{ rullst::html::RawHtml(paradigms) }</ul>
-                            </div>
-                            <div>
-                                <h2 class="showcase-menu-heading">"Architecture & SaaS"</h2>
-                                <ul class="showcase-link-list">{ rullst::html::RawHtml(features) }</ul>
-                            </div>
-                        </div>
-                    </details>
-                    <details class="showcase-menu" name="showcase-navigation">
-                        <summary>"Showcases"</summary>
-                        <div class="showcase-menu-panel showcase-compact-panel">
-                            <h2 class="showcase-menu-heading">"Explore Rullst in action"</h2>
-                            <ul class="showcase-link-list">{ rullst::html::RawHtml(showcases) }</ul>
-                        </div>
-                    </details>
-                    <details class="showcase-menu" name="showcase-navigation">
-                        <summary>"Tools"</summary>
-                        <div class="showcase-menu-panel showcase-compact-panel">
-                            <h2 class="showcase-menu-heading">"Try the sandbox"</h2>
-                            <ul class="showcase-link-list">
-                                <li><a href="/studio" target="_blank" rel="noopener noreferrer">"🚀 Studio Developer Cockpit"</a></li>
-                                <li><a href="/nexus" target="_blank" rel="noopener noreferrer">"🛡️ Nexus Admin CMS"</a></li>
-                            </ul>
-                            <p class="showcase-tenant">"Active tenant: " <strong>{&tenant_id}</strong></p>
-                        </div>
-                    </details>
-                </nav>
+                <button type="button" id="showcase-nav-toggle" class="showcase-nav-toggle" aria-controls="showcase-sidebar" aria-expanded="false">
+                    <span aria-hidden="true">"☰"</span> "All features"
+                </button>
+                <span class="showcase-header-label">"Explore the Rullst framework"</span>
 
                 <a href={DISCORD_URL} class="showcase-discord-btn" target="_blank" rel="noopener noreferrer">
-                    "Join Discord" <span aria-hidden="true">"↗"</span>
+                    "Join the Rullst community on Discord" <span aria-hidden="true">"↗"</span>
                 </a>
             </div>
         </header>
+        <aside id="showcase-sidebar" class="showcase-sidebar" aria-label="Rullst features">
+            <div class="showcase-sidebar-header">
+                <a href="/" class="showcase-brand" aria-label="Rullst Showcase home">
+                    <img src="/static/rullst.png" alt="" class="showcase-brand-img" />
+                    <span class="showcase-logo">"RULLST"</span><span class="showcase-badge">"v12"</span>
+                </a>
+                <button type="button" id="showcase-nav-close" aria-label="Close feature navigation">"×"</button>
+            </div>
+            <nav class="showcase-navigation" aria-label="All framework features">
+                <div class="showcase-sidebar-group"><h2 class="showcase-menu-heading">"Web paradigms"</h2><ul class="showcase-link-list">{ rullst::html::RawHtml(paradigms) }</ul></div>
+                <div class="showcase-sidebar-group"><h2 class="showcase-menu-heading">"Architecture & SaaS"</h2><ul class="showcase-link-list">{ rullst::html::RawHtml(features) }</ul></div>
+                <div class="showcase-sidebar-group"><h2 class="showcase-menu-heading">"Developer tools"</h2><ul class="showcase-link-list">
+                    <li><a href="/studio" target="_blank" rel="noopener noreferrer">"🚀 Studio Cockpit ↗"</a></li>
+                    <li><a href="/nexus" target="_blank" rel="noopener noreferrer">"🛡️ Nexus Admin CMS ↗"</a></li>
+                </ul></div>
+                <div class="showcase-sidebar-group"><h2 class="showcase-menu-heading">"Explore the showcases"</h2><ul class="showcase-link-list">{ rullst::html::RawHtml(showcases) }</ul></div>
+                <p class="showcase-tenant">"Active tenant: "<strong>{&tenant_id}</strong></p>
+            </nav>
+        </aside>
+        <button type="button" id="showcase-nav-backdrop" class="showcase-nav-backdrop" aria-label="Close feature navigation" tabindex="-1" hidden="true"></button>
         <script>{ rullst::html::RawHtml(include_str!("../static/showcase-nav.js").to_string()) }</script>
 
         <div class="showcase-framework-banner">

@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     id: 0,
                     tenant_id: "community".to_string(),
                     title: "Welcome to The Sovereign SaaS Blog & Publisher".to_string(),
-                    body: "Welcome to The Sovereign SaaS Blog & Publisher. Explore the top navigation bar to test the available front-end foundations, the Hybrid ORM, local Rullst Studio (http://127.0.0.1:5555), Nexus CMS (/nexus), Capital Billing, and Security RASP demonstrations.\n\nThe example uses task-local tenant scoping as a development fixture. Production applications must derive membership from authenticated identity and keep cross-tenant negative tests in their own authorization model.".to_string(),
+                    body: "Welcome to The Sovereign SaaS Blog & Publisher. Explore the feature sidebar to test the available front-end foundations, the Hybrid ORM, local Rullst Studio (http://127.0.0.1:5555), Nexus CMS (/nexus), Capital Billing, and Security RASP demonstrations.\n\nThe example uses task-local tenant scoping as a development fixture. Production applications must derive membership from authenticated identity and keep cross-tenant negative tests in their own authorization model.".to_string(),
                 };
                 let _ = post1.save().await;
             }

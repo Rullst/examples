@@ -1,30 +1,62 @@
 (() => {
     try { localStorage.removeItem('htmx-history-cache'); } catch (_) { /* Storage can be disabled. */ }
-    const menus = [...document.querySelectorAll('.showcase-menu')];
-    const closeMenus = (except) => menus.forEach((menu) => {
-        if (menu !== except) menu.open = false;
+    const sidebar = document.getElementById('showcase-sidebar');
+    const toggle = document.getElementById('showcase-nav-toggle');
+    const close = document.getElementById('showcase-nav-close');
+    const backdrop = document.getElementById('showcase-nav-backdrop');
+    if (!sidebar || !toggle || !close || !backdrop) return;
+    const mobile = matchMedia('(max-width: 1000px)');
+    let previousOverflow = '';
+    const inertState = new Map();
+    function setOpen(open, returnFocus = false) {
+        open = open && mobile.matches;
+        const wasOpen = sidebar.classList.contains('is-open');
+        sidebar.classList.toggle('is-open', open);
+        sidebar.inert = mobile.matches && !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        backdrop.hidden = !open;
+        if (open) {
+            sidebar.setAttribute('role', 'dialog');
+            sidebar.setAttribute('aria-modal', 'true');
+            if (!wasOpen) {
+                previousOverflow = document.body.style.overflow;
+                for (const child of document.body.children) {
+                    if (child === sidebar || child === backdrop || child.tagName === 'SCRIPT') continue;
+                    inertState.set(child, child.inert);
+                    child.inert = true;
+                }
+                document.body.style.overflow = 'hidden';
+                close.focus();
+            }
+        } else {
+            sidebar.removeAttribute('role');
+            sidebar.removeAttribute('aria-modal');
+            for (const [element, wasInert] of inertState) element.inert = wasInert;
+            inertState.clear();
+            if (wasOpen) document.body.style.overflow = previousOverflow;
+            if (returnFocus) toggle.focus();
+        }
+    }
+    document.documentElement.setAttribute('data-showcase-nav-ready', 'true');
+    setOpen(false);
+    toggle.addEventListener('click', () => setOpen(true));
+    close.addEventListener('click', () => setOpen(false, true));
+    backdrop.addEventListener('click', () => setOpen(false, true));
+    sidebar.addEventListener('click', event => {
+        if (event.target.closest('a') && mobile.matches) setOpen(false, true);
     });
-
-    menus.forEach((menu) => {
-        menu.addEventListener('toggle', () => {
-            if (menu.open) closeMenus(menu);
-        });
-        menu.addEventListener('click', (event) => {
-            if (event.target.closest('a')) menu.open = false;
-        });
-    });
-    document.addEventListener('click', (event) => {
-        if (!event.target.closest('.showcase-menu')) closeMenus();
-    });
-    document.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape') return;
-        const openMenu = menus.find((menu) => menu.open);
-        if (openMenu) {
-            openMenu.open = false;
-            openMenu.querySelector('summary').focus();
+    document.addEventListener('keydown', event => {
+        if (!sidebar.classList.contains('is-open')) return;
+        if (event.key === 'Escape') setOpen(false, true);
+        if (event.key === 'Tab') {
+            const items = [...sidebar.querySelectorAll('a,button')].filter(el => el.getClientRects().length);
+            const first = items[0], last = items[items.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault(); last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault(); first.focus();
+            }
         }
     });
-    document.addEventListener('focusin', (event) => {
-        closeMenus(event.target.closest('.showcase-menu'));
-    });
+    mobile.addEventListener('change', () => setOpen(false));
 })();
