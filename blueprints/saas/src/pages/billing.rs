@@ -341,6 +341,7 @@ window.addEventListener('pageshow', reset);
                 <title>"SaaS payments - Rullst"</title>
                 <link rel="icon" type="image/png" href="/static/rullst.png" />
                 <link rel="stylesheet" href="/static/rullst.css" />
+                <link rel="stylesheet" href="/static/showcase.css" />
             </head>
             <body>
                 <div class="glow-bg"></div>
@@ -348,7 +349,8 @@ window.addEventListener('pageshow', reset);
                 <main class="container">
                     { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in, live, state.production_deployment)) }
                     <header class="header">
-                        <span class="badge">"Rullst SaaS Blueprint"</span>
+                        <span class="badge">"Rullst SaaS Showcase"</span>
+                        <p class="framework-credit">"Built entirely with Rullst v12"</p>
                         <h1>{heading}</h1>
                         <p class="subtitle">{subtitle}</p>
                     </header>
@@ -373,6 +375,7 @@ window.addEventListener('pageshow', reset);
                         </aside>
                     </div>
                     { rullst::html::RawHtml(gateway_matrix()) }
+                    { rullst::html::RawHtml(super::community::footer()) }
                 </main>
                 { rullst::html::RawHtml(checkout_script) }
             </body>

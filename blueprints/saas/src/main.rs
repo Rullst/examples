@@ -28,7 +28,18 @@ async fn healthz() -> Response {
 }
 
 async fn staging_headers(request: Request, next: Next) -> Response {
+    let asset = request.uri().path().starts_with("/static/");
     let mut response = next.run(request).await;
+    if !asset {
+        response.headers_mut().insert(
+            rullst::server::header::CACHE_CONTROL,
+            rullst::server::HeaderValue::from_static("private, no-store"),
+        );
+    }
+    response.headers_mut().insert(
+        rullst::server::header::REFERRER_POLICY,
+        rullst::server::HeaderValue::from_static("no-referrer"),
+    );
     if std::env::var("DEPLOYMENT_TIER").is_ok_and(|value| value.eq_ignore_ascii_case("staging")) {
         response.headers_mut().insert(
             rullst::server::header::HeaderName::from_static("x-robots-tag"),
@@ -61,6 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         get("/healthz" => healthz),
         get("/pricing" => controllers::billing_controller::pricing_view),
         get("/privacy" => controllers::legal_controller::privacy_notice),
+        get("/cookies" => controllers::legal_controller::cookies_notice),
         get("/terms" => controllers::legal_controller::sandbox_terms),
         get("/login" => controllers::auth_controller::login_view),
         post("/login" => controllers::auth_controller::login_submit),

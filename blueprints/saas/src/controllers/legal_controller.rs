@@ -199,6 +199,19 @@ pub async fn sandbox_terms(
     }
 }
 
+pub async fn cookies_notice(
+    csp_nonce: Option<Extension<rullst::security::CspNonce>>,
+) -> rullst::response::Html<String> {
+    if live_mode() {
+        match live_merchant_notice() {
+            Ok(merchant) => legal::cookies_notice_page(nonce(&csp_nonce), Some(&merchant), true),
+            Err(_) => legal::configuration_unavailable_page(nonce(&csp_nonce)),
+        }
+    } else {
+        legal::cookies_notice_page(nonce(&csp_nonce), None, production_deployment())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{valid_brazilian_tax_id, valid_public_field};

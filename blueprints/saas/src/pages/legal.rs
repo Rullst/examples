@@ -3,10 +3,58 @@ use rullst::response::Html;
 use crate::controllers::legal_controller::MerchantNotice;
 
 const EFFECTIVE_DATE: &str = "2026-09-19";
-const VERSION: &str = "1.4";
+const VERSION: &str = "1.5";
+
+fn with_community(Html(document): Html<String>) -> Html<String> {
+    Html(
+        document
+            .replace(
+                "</head>",
+                "<link rel=\"stylesheet\" href=\"/static/showcase.css\"></head>",
+            )
+            .replace("</main>", &format!("{}</main>", super::community::footer())),
+    )
+}
+
+fn privacy_content(title: &str, content: &str) -> String {
+    if title.to_ascii_lowercase().contains("privacy") {
+        format!("{content}{REGIONAL_PRIVACY}")
+    } else {
+        content.to_owned()
+    }
+}
+
+const REGIONAL_PRIVACY: &str = r#"
+<section><h2>Legal grounds and regional rights</h2><p>Where a legal basis is required, requested account and purchase services rely on performance of a contract or steps you request before a contract; proportionate fraud prevention and security rely on legitimate interests, subject to applicable balancing requirements; accounting and statutory records rely on legal obligations. Any future optional tracking or marketing that requires consent must remain off until you choose it. This site currently uses no advertising or analytics trackers.</p>
+<p>Depending on your location and the applicable law, you may request confirmation of processing, access, correction, deletion, portability, restriction, objection, information about sharing, or review of a decision. This includes applicable rights under Brazil's LGPD, the EU GDPR, UK GDPR, and California's CCPA/CPRA. Where applicable, Canada's PIPEDA, Australia's Privacy Act, and Singapore's PDPA also provide access and correction rights, subject to their local requirements and exceptions. Other regional laws may provide additional rights. You may withdraw consent for future processing that relies on consent, without affecting processing already lawfully performed.</p>
+<p>Rullst does not sell personal information or share it for cross-context behavioral advertising through this showcase. Exercising a privacy right does not result in discriminatory treatment. Essential account, payment, security, and legally required processing are separate from optional consent.</p></section>
+<section><h2>Exercise your rights</h2><p>Rullst's privacy contact is <a href="mailto:officialrullst@gmail.com">officialrullst@gmail.com</a>. Use the email associated with your account and describe your request. Do not send passwords, full card numbers, reset codes, or unnecessary identity documents. We verify identity proportionately, assess applicable exceptions, and respond within the deadline required by the applicable law. A name that cannot be edited in the demo interface can still be the subject of a correction request.</p><div class="privacy-actions"><a href="/account/data-export">Download account data (sign-in required)</a><a href="mailto:officialrullst@gmail.com?subject=Privacy%20request">Request access, correction, or deletion</a><a href="/cookies">Cookies and privacy choices</a></div>
+<p>Deletion may require restricted retention of purchase, tax, dispute, or security evidence. We will explain any applicable exception. A privacy request is separate from a refund request. You may complain to the <a href="https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados" rel="noreferrer">ANPD</a> or your local data protection authority; where applicable, you may also request a review or appeal.</p></section>
+<section><h2>Providers and international processing</h2><p>The existing notice identifies the providers used for your environment. Their roles and safeguards depend on the service and the applicable agreement. See the <a href="https://stripe.com/privacy" rel="noreferrer">Stripe privacy notice</a>, <a href="https://resend.com/legal/privacy-policy" rel="noreferrer">Resend privacy policy</a>, <a href="https://neon.com/privacy-policy" rel="noreferrer">Neon privacy policy</a>, and <a href="https://privacy.microsoft.com/en-us/privacystatement" rel="noreferrer">Microsoft privacy statement</a>. Contact us for information about transfers, safeguards, or retention applicable to your records. Following external community links opens services with their own privacy practices.</p><p>These notices and controls provide a privacy baseline. Applicable obligations depend on the actual operation and audience; this site does not claim universal legal certification.</p></section>
+"#;
+
+pub fn cookies_notice_page(
+    csp_nonce: &str,
+    merchant: Option<&MerchantNotice>,
+    production: bool,
+) -> Html<String> {
+    let title = "Cookies and storage";
+    let subtitle =
+        "Essential security storage and the choices available on the Rullst SaaS showcase.";
+    let content = r#"<section><h2>Essential cookies</h2><p>This application uses essential authentication and security cookies. It does not install advertising, analytics, or personalization trackers. There is no optional tracking category to enable.</p><table class="privacy-table"><thead><tr><th>Cookie</th><th>Purpose and duration</th></tr></thead><tbody><tr><td><code>rullst_session</code></td><td>Encrypted authentication session, with a maximum lifetime of 30 days. Signing out revokes the current session and removes its cookie. Password reset revokes existing sessions.</td></tr><tr><td><code>rullst_csrf</code></td><td>Protects forms from forged requests. Session cookie; browser session restoration settings can affect when it is removed.</td></tr></tbody></table></section>
+        <section><h2>Payment services and community links</h2><p>Stripe Checkout opens only after you choose to proceed with checkout. Stripe controls storage on its own payment pages; see <a href="https://stripe.com/cookie-settings" rel="noreferrer">Stripe's cookie information and settings</a>. Community links do not embed social media trackers into this page. Following them connects to the selected service.</p></section>
+        <section><h2>Your controls</h2><p>Use Sign out to end the current account session. Your browser's site-data settings can remove cookies and cached files; this may interrupt authentication or form submission. Clearing browser storage does not delete account, purchase, payment-provider, or legally retained records.</p><div class="privacy-actions"><a href="/privacy">Read the privacy notice</a><a href="/account/data-export">Download account data (sign-in required)</a><a href="mailto:officialrullst@gmail.com?subject=Privacy%20request">Request correction or deletion</a></div></section>"#;
+    if let Some(merchant) = merchant {
+        production_page(title, subtitle, content, &merchant.support_email, csp_nonce)
+    } else if production {
+        prelaunch_page(title, subtitle, content, csp_nonce)
+    } else {
+        page(title, subtitle, content, csp_nonce)
+    }
+}
 
 fn page(title: &str, subtitle: &str, content: &str, csp_nonce: &str) -> Html<String> {
-    Html(format!(
+    with_community(Html(format!(
         "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex,nofollow,noarchive\"><title>{}</title><link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\"><style nonce=\"{}\">{}</style></head><body><main><nav><a href=\"/\">SaaS blueprint</a><a href=\"/privacy\">Privacy notice</a><a href=\"/terms\">Sandbox terms</a></nav><header><p class=\"eyebrow\">Rullst SaaS staging</p><h1>{}</h1><p class=\"subtitle\">{}</p><p class=\"version\">Effective {} · Version {}</p></header>{}<footer><p>Privacy and support contact: <a href=\"mailto:officialrullst@gmail.com\">officialrullst@gmail.com</a></p><p>This engineering notice is not a claim that the staging example automatically complies with every law in every country.</p></footer></main></body></html>",
         rullst::html::escape_str(title),
         rullst::html::escape_str(csp_nonce),
@@ -15,8 +63,8 @@ fn page(title: &str, subtitle: &str, content: &str, csp_nonce: &str) -> Html<Str
         rullst::html::escape_str(subtitle),
         EFFECTIVE_DATE,
         VERSION,
-        content,
-    ))
+        privacy_content(title, content),
+    )))
 }
 
 pub fn privacy_notice_page(csp_nonce: &str) -> Html<String> {
@@ -53,7 +101,7 @@ pub fn sandbox_terms_page(csp_nonce: &str) -> Html<String> {
 }
 
 fn prelaunch_page(title: &str, subtitle: &str, content: &str, csp_nonce: &str) -> Html<String> {
-    Html(format!(
+    with_community(Html(format!(
         "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"noindex,nofollow,noarchive\"><title>{}</title><link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\"><style nonce=\"{}\">{}</style></head><body><main><nav><a href=\"/\">SaaS blueprint</a><a href=\"/privacy\">Privacy notice</a><a href=\"/terms\">Pre-launch terms</a></nav><header><p class=\"eyebrow\">Rullst SaaS production pre-launch</p><h1>{}</h1><p class=\"subtitle\">{}</p><p class=\"version\">Effective {} &middot; Version {}</p></header>{}<footer><p>Privacy and support contact: <a href=\"mailto:officialrullst@gmail.com\">officialrullst@gmail.com</a></p><p>Real-money Checkout is disabled. These pre-launch notices do not replace the seller disclosure and purchase terms required before launch.</p></footer></main></body></html>",
         rullst::html::escape_str(title),
         rullst::html::escape_str(csp_nonce),
@@ -62,8 +110,8 @@ fn prelaunch_page(title: &str, subtitle: &str, content: &str, csp_nonce: &str) -
         rullst::html::escape_str(subtitle),
         EFFECTIVE_DATE,
         VERSION,
-        content,
-    ))
+        privacy_content(title, content),
+    )))
 }
 
 pub fn prelaunch_privacy_notice_page(csp_nonce: &str) -> Html<String> {
@@ -101,7 +149,7 @@ fn production_page(
     support_email: &str,
     csp_nonce: &str,
 ) -> Html<String> {
-    Html(format!(
+    with_community(Html(format!(
         "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"robots\" content=\"index,follow\"><title>{}</title><link rel=\"icon\" type=\"image/png\" href=\"/static/rullst.png\"><style nonce=\"{}\">{}</style></head><body><main><nav><a href=\"/\">SaaS blueprint</a><a href=\"/privacy\">Privacy notice</a><a href=\"/terms\">Purchase and refund terms</a></nav><header><p class=\"eyebrow\">Rullst SaaS live showcase</p><h1>{}</h1><p class=\"subtitle\">{}</p><p class=\"version\">Effective {} &middot; Version {}</p></header>{}<footer><p>Privacy, refunds and support: <a href=\"mailto:{}\">{}</a></p><p>This notice does not replace rights that cannot lawfully be excluded in the customer's jurisdiction.</p></footer></main></body></html>",
         rullst::html::escape_str(title),
         rullst::html::escape_str(csp_nonce),
@@ -110,10 +158,10 @@ fn production_page(
         rullst::html::escape_str(subtitle),
         EFFECTIVE_DATE,
         VERSION,
-        content,
+        privacy_content(title, content),
         rullst::html::escape_str(support_email),
         rullst::html::escape_str(support_email),
-    ))
+    )))
 }
 
 pub fn production_privacy_notice_page(merchant: &MerchantNotice, csp_nonce: &str) -> Html<String> {
@@ -216,7 +264,7 @@ mod tests {
 
         assert!(page.contains("aggregate count of distinct accounts"));
         assert!(page.contains("Refunded, disputed, revoked and sandbox records are excluded"));
-        assert!(page.contains("Version 1.4"));
+        assert!(page.contains("Version 1.5"));
     }
 
     fn merchant_notice() -> MerchantNotice {
@@ -236,5 +284,24 @@ mod tests {
         assert!(page.contains("production application is online"));
         assert!(page.contains("Checkout is disabled"));
         assert!(!page.contains("Rullst SaaS staging"));
+    }
+
+    #[test]
+    fn cookie_notice_preserves_the_payment_environment_boundary() {
+        let merchant = merchant_notice();
+        let live = super::cookies_notice_page("nonce", Some(&merchant), true).0;
+        assert!(live.contains("Purchase and refund terms"));
+        assert!(!live.contains("Checkout is disabled"));
+        assert!(!live.contains("Rullst SaaS staging"));
+        let prelaunch = super::cookies_notice_page("nonce", None, true).0;
+        assert!(prelaunch.contains("Pre-launch terms"));
+        let sandbox = super::cookies_notice_page("nonce", None, false).0;
+        assert!(sandbox.contains("Sandbox terms"));
+        for document in [live, prelaunch, sandbox] {
+            assert!(document.contains("rullst_session"));
+            assert!(document.contains("rullst_csrf"));
+            assert!(document.contains("30 days"));
+            assert!(document.contains("Clearing browser storage does not delete"));
+        }
     }
 }
