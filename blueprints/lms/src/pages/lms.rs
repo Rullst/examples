@@ -1,8 +1,8 @@
 // Frontend Engine: Zero-Bundle HTMX
-use rullst::html;
 use crate::models::category::Category;
 use crate::models::course::Course;
 use crate::models::lesson::Lesson;
+use rullst::html;
 
 pub fn index_page(
     categories: Vec<Category>,
@@ -67,7 +67,7 @@ pub fn index_page(
             <head>
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <title>"Rullst Academy — Course catalog"</title>
+                <title>"Rullst LMS Showcase — Built with Rullst v12"</title>
                 <link rel="manifest" href="/manifest.webmanifest" />
                 <meta name="theme-color" content="#080b11" />
                 <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -112,20 +112,17 @@ pub fn index_page(
                 <div class="container">
                     <header>
                         <div>
-                            <h1>"Rullst Academy"</h1>
-                            <p class="sub">"A server-rendered starter catalog with bounded search."</p>
-                            <p class="summary" style="margin-top: 0.5rem; font-size: 0.875rem; color: #94a3b8;">
-                                "💡 Live Blueprint Showcase: Fully functional sandbox. Feel free to sign up, log in, and test course progression."
-                            </p>
+                            <h1>"Rullst LMS Showcase"</h1>
+                            <p class="sub">"Explore a learning platform powered by the Rullst framework."</p>
                         </div>
                         <nav class="actions" aria-label="Developer tools">
                             <a class="button secondary" href="/apps" style="border-color:#10b981;color:#34d399">"📱 Apps & PWA"</a>
                             <a class="button secondary" href="/login">"Login"</a>
-                            <a class="button" href="/register">"Sign Up"</a>
-                            <a class="button secondary" href="/nexus" target="_blank">"🛡️ Nexus Admin"</a>
-                            <a class="button secondary" href="/studio" target="_blank">"🚀 Studio Cockpit"</a>
+                            <a class="button secondary" href="/nexus">"🛡️ Nexus Admin"</a>
+                            <a class="button secondary" href="/studio">"🚀 Studio Cockpit"</a>
                         </nav>
                     </header>
+                    {rullst::html::RawHtml(crate::showcase::hero())}
                     <main id="catalog-results">
                         <form class="search" method="get" action="/" role="search">
                             <label for="catalog-query">"Search course titles"</label>
@@ -145,7 +142,7 @@ pub fn index_page(
                 </div>
                 {rullst::html::RawHtml(render_lms_ai_widget(csrf_token))}
                 <script nonce={csp_nonce}>
-                    "if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(console.error)); }"
+                    "// Offline assets are enabled only from /cookies."
                 </script>
             </body>
         </html>
@@ -166,13 +163,15 @@ pub fn course_detail_page(
     } else {
         lessons
             .iter()
-            .map(|lesson| html! {
-                <li>
-                    <a class="lesson" href={format!("/lessons/{}/play", lesson.id)}>
-                        <span>{&lesson.title}</span>
-                        <small>{lesson.duration.to_string()}" minutes"</small>
-                    </a>
-                </li>
+            .map(|lesson| {
+                html! {
+                    <li>
+                        <a class="lesson" href={format!("/lessons/{}/play", lesson.id)}>
+                            <span>{&lesson.title}</span>
+                            <small>{lesson.duration.to_string()}" minutes"</small>
+                        </a>
+                    </li>
+                }
             })
             .collect::<Vec<_>>()
             .join("")
@@ -244,7 +243,6 @@ pub fn course_detail_page(
     }
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LessonMediaError {
     InvalidKind,
@@ -257,7 +255,9 @@ pub enum LessonMediaError {
 fn valid_media_source(value: &str) -> bool {
     if value.is_empty()
         || value.len() > 2_048
-        || value.bytes().any(|byte| byte.is_ascii_control() || byte == b'\\')
+        || value
+            .bytes()
+            .any(|byte| byte.is_ascii_control() || byte == b'\\')
     {
         return false;
     }
@@ -266,9 +266,11 @@ fn valid_media_source(value: &str) -> bool {
     };
     match uri.scheme_str() {
         Some("https") => uri.authority().is_some(),
-        None => uri.authority().is_none()
-            && uri.path().starts_with('/')
-            && !uri.path().starts_with("//"),
+        None => {
+            uri.authority().is_none()
+                && uri.path().starts_with('/')
+                && !uri.path().starts_with("//")
+        }
         Some(_) => false,
     }
 }
@@ -276,7 +278,9 @@ fn valid_media_source(value: &str) -> bool {
 fn valid_language_tag(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= 35
-        && value.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
 pub fn lesson_player_page(
@@ -302,19 +306,16 @@ pub fn lesson_player_page(
     if transcript.is_empty() || transcript.len() > 65_536 {
         return Err(LessonMediaError::InvalidTranscript);
     }
-    let is_youtube = media_url.contains("youtube.com") || media_url.contains("youtube-nocookie.com") || media_kind == "youtube";
+    let is_youtube = media_url.contains("youtube.com")
+        || media_url.contains("youtube-nocookie.com")
+        || media_kind == "youtube";
     let media_player = if is_youtube {
         html! {
-            <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:1rem;border:1px solid #334155;background:#000;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5);">
-                <iframe
-                    src={media_url}
-                    title={title}
-                    credentialless="true"
-                    style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerpolicy="strict-origin-when-cross-origin"
-                    allowfullscreen="true">
-                </iframe>
+            <div class="showcase-media-consent" data-video-src={media_url} data-video-title={title}>
+                <strong>"External lesson video"</strong>
+                <p>"Loading this video connects to YouTube, which receives connection and playback information. You can read the transcript below without loading the video."</p>
+                <button type="button">"Load YouTube video"</button>
+                <a href="/privacy">"Privacy notice"</a>
             </div>
         }
     } else {
@@ -744,7 +745,8 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
             <span style="font-size: 0.72rem; color: #a1a1aa; margin-left: 6px;">Copilot is thinking...</span>
         </div>
 
-        <form id="lms-chat-form" class="lms-ai-form"
+        <div class="lms-cloud-choice"><label><input type="checkbox" name="cloud_ai" value="yes" form="lms-chat-form" autocomplete="off">Send this message to Groq for a cloud AI reply (optional).</label><a href="/privacy">Privacy details</a> · Leave unchecked for a local reply. Do not send personal data.</div>
+        <form id="lms-chat-form" class="lms-ai-form" method="post" action="/api/lms-chat"
               hx-post="/api/lms-chat"
               hx-target="#lms-chat-messages"
               hx-swap="beforeend"
@@ -863,4 +865,3 @@ fn render_lms_ai_widget(csrf_token: &str) -> String {
     </script>
     "##.replace("__CSRF_TOKEN__", &rullst::html::escape_str(csrf_token))
 }
-

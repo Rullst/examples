@@ -7,11 +7,15 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![OCI Container Ready](https://img.shields.io/badge/container-cargo--chef-blueviolet.svg?style=flat-square&logo=podman)](Containerfile)
 [![Caddy SSL](https://img.shields.io/badge/proxy-caddy_auto_https-00ADD8.svg?style=flat-square&logo=caddy)](Caddyfile)
-[![Live Showcase](https://img.shields.io/badge/live_showcase-azure_container_apps-0078D4.svg?style=flat-square&logo=microsoftazure)](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/)
-[![Live LMS Academy](https://img.shields.io/badge/live_lms-azure_container_apps-047857.svg?style=flat-square&logo=microsoftazure)](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/)
-[![Live Portfolio](https://img.shields.io/badge/live_portfolio-azure_container_apps-7C3AED.svg?style=flat-square&logo=microsoftazure)](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/)
+[![Live Showcase](https://img.shields.io/badge/live_showcase-azure_container_apps-0078D4.svg?style=flat-square&logo=microsoftazure)](https://showcase.rullst.win/)
+[![Live LMS Academy](https://img.shields.io/badge/live_lms-azure_container_apps-047857.svg?style=flat-square&logo=microsoftazure)](https://lms.rullst.win/)
+[![Live Portfolio](https://img.shields.io/badge/live_portfolio-azure_container_apps-7C3AED.svg?style=flat-square&logo=microsoftazure)](https://portfolio.rullst.win/)
 
-**The Sovereign SaaS, Full-Stack & Edge/IoT Showcase built with Rullst.**
+**Rullst Showcase — Built entirely with Rullst v12.**
+
+[![Join Discord](https://img.shields.io/badge/Join_our_community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/2ntKFtsSjw)
+
+[Showcase](https://showcase.rullst.win) · [LMS Academy](https://lms.rullst.win) · [Portfolio](https://portfolio.rullst.win) · [SaaS](https://saas.rullst.win)
 
 </div>
 
@@ -28,15 +32,16 @@ This monorepository contains three live cloud applications:
 
 ---
 
-## ☁️ Live Cloud Deployments (Azure Container Apps)
+## ☁️ Live Showcases
 
-All applications run in **Microsoft Azure Container Apps** on the **Azure for Students** plan using the Serverless Consumption Tier (Scale-to-Zero):
+Explore all four public Rullst showcases below. The three applications in this repository run in **Microsoft Azure Container Apps** on the **Azure for Students** plan using the Serverless Consumption Tier (Scale-to-Zero).
 
 | Application | Live Public URL | Key Features | Admin / Cockpit |
 | :--- | :--- | :--- | :--- |
-| **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-showcase.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Sandbox User: `admin` / Pass: `SovereignShowcase2026!`)*<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |
-| **🎓 LMS Academy** | [lms.rullst.win](https://lms.rullst.win) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Protected by HTTP Basic Auth configured via container environment variables)* |
-| **💼 Portfolio** | [portfolio.rullst.win](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/nexus)<br>🚀 **Studio:** [/studio](https://rullst-portfolio.redpond-24d9228d.eastus.azurecontainerapps.io/studio)<br>*(Sandbox User: `admin` / Pass: `SovereignPortfolio2026!`)*<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
+| **🌐 Rullst Showcase** | [showcase.rullst.win](https://showcase.rullst.win) | 5 Web Paradigms, WAF Defense, LiveView, Active Record, Groq AI Copilot | 🛡️ **Nexus Admin:** [/nexus](https://showcase.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://showcase.rullst.win/studio)<br>*(Sandbox User: `admin` / Pass: `SovereignShowcase2026!`)*<br>🤖 **Groq AI:** GPT-OSS 120B & Prompt Shield<br>📖 [Showcase Guide](docs/showcase-nexus-studio-ai-guide.md) |
+| **🎓 LMS Academy** | [lms.rullst.win](https://lms.rullst.win) | Courses, Real Argon2 Auth, Lesson Player, Quizzes, Certificates | 🛡️ **Nexus Admin:** [/nexus](https://lms.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://lms.rullst.win/studio)<br>*(Uses the same platform login; public demo tools show a read-only catalog preview)* |
+| **💼 Portfolio** | [portfolio.rullst.win](https://portfolio.rullst.win/) | Dark Glassmorphic UI, HTMX SSR, Project Showcase, Experience Timeline | 🛡️ **Nexus Admin:** [/nexus](https://portfolio.rullst.win/nexus)<br>🚀 **Studio:** [/studio](https://portfolio.rullst.win/studio)<br>*(Sandbox User: `admin` / Pass: `SovereignPortfolio2026!`)*<br>📖 [Portfolio Guide](docs/BLUEPRINT_PORTFOLIO.md) |
+| **🚀 SaaS** | [saas.rullst.win](https://saas.rullst.win) | Rullst SaaS showcase | — |
 
 ---
 
@@ -62,7 +67,11 @@ All applications run in **Microsoft Azure Container Apps** on the **Azure for St
 
 > [!TIP]
 > **Live Interactive Showcase (Open Sandbox):**  
-> This deployment is an active demonstration of the production LMS blueprint. It is 100% real and fully functional: visitors are welcome to [Sign Up](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/register) for a test account, [Log In](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/login) with real Argon2id password encryption, explore courses, and track lesson progress.
+> **A simple showcase, built entirely with Rullst v12.** For lessons dedicated 100% to Rullst and Rust for children and adults, visit the real [Rullst Academy](https://academy.rullst.win).
+
+Use **demo@rullst.dev** / **RullstAcademy2026!** to [sign in](https://lms.rullst.win/login) once for the platform, Nexus and Studio. This is a shared public account; use fictional data only. Tool access previews the catalog without exposing personal records.
+
+Deployment requires a private persistent `APP_KEY` in Azure. See [LMS deployment and privacy operations](blueprints/lms/PRIVACY_AND_DEPLOYMENT.md) for the GitHub Actions trigger, required secrets and privacy controls.
 
 The **LMS Blueprint** is a full production-grade application generated via `cargo rullst new --blueprint lms`:
 
@@ -108,7 +117,7 @@ graph TD
 - **Install in 1 Second:** Direct home screen / desktop shortcut installation via **Brave**, **Chrome**, **Edge**, and **Safari** (iOS & macOS).
 - **Zero App Store Fees:** No 30% revenue tax, zero developer program delays ($0 vs $99/year).
 - **Background Offline Sync:** Service Worker caches shell UI and media metadata for instant offline boot.
-- **Interactive Guide:** Visit the live [`/apps`](https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io/apps) page and click **"📖 Browser Guide"** to view step-by-step installation instructions for your specific browser.
+- **Interactive Guide:** Visit the live [`/apps`](https://lms.rullst.win/apps) page and click **"📖 Browser Guide"** to view step-by-step installation instructions for your specific browser.
 
 ### 2. 🖥️ Standalone Native Desktop Binaries (~5 MB Footprint)
 - Uses the native OS webview (**WebView2** on Windows, **WebKit** on macOS and Linux) instead of bundling a 150 MB+ Chromium/Electron runtime.
@@ -142,7 +151,7 @@ cargo rullst make:omni --platform desktop
 
 # 2. Scaffold mobile support with backend pinning:
 cargo rullst make:omni --platform android,ios \
-  --backend-url https://rullst-lms.redpond-24d9228d.eastus.azurecontainerapps.io \
+  --backend-url https://lms.rullst.win \
   --identifier dev.rullst.lms \
   --product-name "Rullst LMS"
 
@@ -195,6 +204,8 @@ Access the local showcase endpoints:
 - 🌐 **Web Showcase:** [http://127.0.0.1:3000](http://127.0.0.1:3000)
 - 🛠️ **Rullst Studio (Dev Cockpit):** [http://127.0.0.1:5555](http://127.0.0.1:5555)
 - 🛡️ **Nexus Admin CMS:** [http://127.0.0.1:3000/nexus](http://127.0.0.1:3000/nexus)
+
+The showcase's [Studio Cache Inspector](http://127.0.0.1:3000/studio/cache) displays real metrics from the template demo's shared in-memory Rullst cache. Open [`/templates-demo`](http://127.0.0.1:3000/templates-demo) twice to observe a miss followed by a hit. Entries expire after 60 seconds; the inspector refreshes every five seconds and reports live entries, hit rate, payload bytes, and remaining TTL. Payload size excludes allocator overhead, and metrics reset when the server process restarts.
 
 ### Running the LMS Blueprint Locally
 ```bash
@@ -270,6 +281,8 @@ Caddy will automatically obtain a valid **Let's Encrypt / ZeroSSL** certificate 
 ---
 
 ## 🔒 Security & Repository Lifecycle Note
+
+- **Privacy:** [Privacy notice](https://showcase.rullst.win/privacy) · [Cookies & browser storage](https://showcase.rullst.win/cookies). Controller: **Rullst**; requests: **officialrullst@gmail.com**. Cloud AI is optional and off by default. See [privacy operations and deployment review](docs/PRIVACY_OPERATIONS.md) for implemented controls and remaining operator responsibilities under applicable laws.
 
 - **Zero-Secret Guarantee:** This repository contains **no credentials, private keys, or API tokens**. All sensitive secrets must be passed via `.env` or container environment variables.
 - **Audited Blueprint:** The LMS blueprint has passed the formal pre-flight integration audit ([Protocol](docs/BLUEPRINT_LMS_AUDIT_PROTOCOL.md) | [Report](docs/BLUEPRINT_LMS_AUDIT_REPORT.md)) with a **CONDITIONAL GO** verdict.

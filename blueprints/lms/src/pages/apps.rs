@@ -653,7 +653,7 @@ pub async fn apps_page() -> impl IntoResponse {
                 <script>
                     r#"
                     if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.register('/sw.js').catch(console.error);
+                        // Optional offline assets can be enabled at /cookies.
                     }
 
                     let deferredPrompt;

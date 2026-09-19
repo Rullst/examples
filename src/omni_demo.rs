@@ -4,7 +4,7 @@
 use axum::response::{Html, IntoResponse};
 use rullst::html;
 
-use crate::showcase_nav::{render_shared_styles, render_showcase_nav};
+use crate::showcase_nav::{render_shared_styles, render_showcase_footer, render_showcase_nav};
 
 /// Handler for the Omni-Channel page (`/omni`).
 pub async fn omni_page() -> impl IntoResponse {
@@ -14,6 +14,8 @@ pub async fn omni_page() -> impl IntoResponse {
     Html(html! {
         <html lang="en">
             <head>
+                <script src="/static/htmx.js"></script>
+                <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
                     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>"Rullst Omni - Mobile Simulator & Desktop App Exporter"</title>
@@ -113,7 +115,7 @@ pub async fn omni_page() -> impl IntoResponse {
                     "#
                 </style>
             </head>
-            <body>
+            <body hx-history="false">
                 { rullst::html::RawHtml(nav) }
                 <div class="container">
                     <div class="card" style="margin-bottom: 1.5rem;">
@@ -217,6 +219,7 @@ pub async fn omni_page() -> impl IntoResponse {
                         </div>
                     </div>
                 </div>
+            { rullst::html::RawHtml(render_showcase_footer()) }
             </body>
         </html>
     })

@@ -61,6 +61,8 @@ pub fn render_pricing_page(
     html! {
         <html lang="en">
             <head>
+                <script src="/static/htmx.js"></script>
+                <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>"Rullst Capital — Connected Payment Gateways & Configuration Guide"</title>
@@ -68,7 +70,7 @@ pub fn render_pricing_page(
                 <style>{ rullst::html::RawHtml(styles) }</style>
                 <style>{ rullst::html::RawHtml(extra_styles.to_string()) }</style>
             </head>
-            <body>
+            <body hx-history="false">
                 { rullst::html::RawHtml(nav) }
                 <div class="container">
 
@@ -153,6 +155,7 @@ pub fn render_pricing_page(
                             "Select an adapter to exercise deterministic mock behavior through " <code>"rullst-capital"</code> ". This page does not contact a live payment service:"
                         </p>
 
+                        <p class="showcase-privacy-note">"Use a fictional email for this demo. External checkout links may include the entered email and plan. "<a href="/privacy">"Privacy notice"</a></p>
                         <form method="POST" action="/checkout#checkout-simulator" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto; gap: 1rem; align-items: flex-end;">
                             <input type="hidden" name="_token" value={csrf_token} />
                             <div>
@@ -241,6 +244,7 @@ pub fn render_pricing_page(
                     </div>
 
                 </div>
+                { rullst::html::RawHtml(crate::showcase_nav::render_showcase_footer()) }
             </body>
         </html>
     }

@@ -12,6 +12,8 @@ serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
+base64 = "0.22"
+getrandom = "0.4"
 rullst-orm = { version = "12.0.0", features = ["strict-sqlite"] }
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "sqlite"] }
 rullst-auth = { version = "12.0.0" }

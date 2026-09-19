@@ -55,7 +55,8 @@ ENV RULLST_ENV="production"
 ENV PORT=3000
 ENV RUST_LOG="info,rullst=info"
 ENV DATABASE_URL="sqlite:///app/db.sqlite?mode=rwc"
-ENV APP_KEY="rMjM3gkBQSYlXYmymd5HJh7EfKLJZ0d1"
+ENV LMS_SHOWCASE_MODE="true"
+# Configure a unique APP_KEY via the hosting platform secret store.
 
 EXPOSE 3000
 

@@ -16,6 +16,7 @@ pub struct RegisterDto {
 
 #[derive(Deserialize)]
 pub struct LoginDto {
+    pub next: Option<String>,
     pub email: String,
     pub password: String,
 }
@@ -55,7 +56,7 @@ fn get_csp_nonce(nonce: &Option<Extension<rullst::security::CspNonce>>) -> &str 
         .unwrap_or_default()
 }
 
-fn redirect_with_cookie(target: &'static str, cookie: &str) -> Response {
+fn redirect_with_cookie(target: &str, cookie: &str) -> Response {
     let Ok(header_value) = rullst::server::HeaderValue::from_bytes(cookie.as_bytes()) else {
         return (StatusCode::INTERNAL_SERVER_ERROR, "Invalid session cookie").into_response();
     };
@@ -66,7 +67,21 @@ fn redirect_with_cookie(target: &'static str, cookie: &str) -> Response {
     response
 }
 
+#[derive(Deserialize, Default)]
+pub struct LoginDestination {
+    pub next: Option<String>,
+}
+
+fn login_destination(next: Option<&str>) -> &str {
+    match next {
+        Some("/nexus") => "/nexus",
+        Some("/studio") => "/studio",
+        _ => "/dashboard",
+    }
+}
+
 pub async fn login_view(
+    axum::extract::Query(destination): axum::extract::Query<LoginDestination>,
     headers: HeaderMap,
     csrf: Option<Extension<rullst::security::CsrfToken>>,
     csp_nonce: Option<Extension<rullst::security::CspNonce>>,
@@ -76,7 +91,12 @@ pub async fn login_view(
         .map(|Extension(token)| token.as_str())
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| get_csrf_token(&headers));
-    auth::login_page(&token, None, get_csp_nonce(&csp_nonce))
+    auth::login_page(
+        &token,
+        None,
+        get_csp_nonce(&csp_nonce),
+        login_destination(destination.next.as_deref()),
+    )
 }
 
 pub async fn login_submit(
@@ -86,6 +106,7 @@ pub async fn login_submit(
 ) -> Response {
     let token = get_csrf_token(&headers);
     let nonce = get_csp_nonce(&csp_nonce);
+    let destination = login_destination(payload.next.as_deref());
     let email = normalize_email(&payload.email);
     let user = match User::find_by_email(&email).await {
         Ok(user) => user,
@@ -95,6 +116,7 @@ pub async fn login_submit(
                 &token,
                 Some("Authentication is temporarily unavailable"),
                 nonce,
+                destination,
             )
             .into_response();
         }
@@ -108,15 +130,21 @@ pub async fn login_submit(
     let password_valid = rullst_auth::verify_password_async(payload.password, password_hash).await;
 
     let Some(user) = user.filter(|_| password_valid) else {
-        return auth::login_page(&token, Some("Incorrect email or password"), nonce)
-            .into_response();
+        return auth::login_page(
+            &token,
+            Some("Incorrect email or password"),
+            nonce,
+            destination,
+        )
+        .into_response();
     };
 
     match rullst_auth::make_login_cookie(user.id) {
-        Ok(cookie) => redirect_with_cookie("/dashboard", &cookie),
+        Ok(cookie) => redirect_with_cookie(destination, &cookie),
         Err(error) => {
             eprintln!("Session creation failed: {error}");
-            auth::login_page(&token, Some("Error starting session"), nonce).into_response()
+            auth::login_page(&token, Some("Error starting session"), nonce, destination)
+                .into_response()
         }
     }
 }
@@ -125,13 +153,16 @@ pub async fn register_view(
     headers: HeaderMap,
     csrf: Option<Extension<rullst::security::CsrfToken>>,
     csp_nonce: Option<Extension<rullst::security::CspNonce>>,
-) -> impl IntoResponse {
+) -> Response {
+    if crate::showcase::enabled() {
+        return Redirect::to("/login").into_response();
+    }
     let token = csrf
         .as_ref()
         .map(|Extension(token)| token.as_str())
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| get_csrf_token(&headers));
-    auth::register_page(&token, None, get_csp_nonce(&csp_nonce))
+    auth::register_page(&token, None, get_csp_nonce(&csp_nonce)).into_response()
 }
 
 pub async fn register_submit(
@@ -139,6 +170,9 @@ pub async fn register_submit(
     csp_nonce: Option<Extension<rullst::security::CspNonce>>,
     Form(payload): Form<RegisterDto>,
 ) -> Response {
+    if crate::showcase::enabled() {
+        return Redirect::to("/login").into_response();
+    }
     let token = get_csrf_token(&headers);
     let nonce = get_csp_nonce(&csp_nonce);
     let email = normalize_email(&payload.email);
@@ -197,7 +231,14 @@ pub async fn register_submit(
     }
 
     if let Ok(pool) = rullst::db::Orm::pool() {
-        let membership_key = format!("sm-{}-{}", user.id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
+        let membership_key = format!(
+            "sm-{}-{}",
+            user.id,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        );
         let _ = rullst::db::sqlx::query(
             "INSERT OR IGNORE INTO school_memberships (membership_key, school_id, user_id, status, is_default, valid_from_epoch, expires_at_epoch, created_at, updated_at) VALUES (?, 1, ?, 'active', 1, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         )
@@ -221,17 +262,39 @@ pub async fn logout() -> Response {
 }
 
 pub async fn dashboard(
+    headers: HeaderMap,
     rullst::server::Extension(user_id): rullst::server::Extension<i32>,
     csp_nonce: Option<Extension<rullst::security::CspNonce>>,
 ) -> Response {
     match User::find(user_id).await {
-        Ok(Some(user)) => {
-            auth::dashboard_page(&user.name, get_csp_nonce(&csp_nonce)).into_response()
-        }
+        Ok(Some(user)) => auth::dashboard_page(
+            &user.name,
+            get_csp_nonce(&csp_nonce),
+            &get_csrf_token(&headers),
+        )
+        .into_response(),
         Ok(None) => Redirect::to("/login").into_response(),
         Err(error) => {
             eprintln!("Dashboard user query failed: {error}");
             StatusCode::SERVICE_UNAVAILABLE.into_response()
+        }
+    }
+}
+
+#[cfg(test)]
+mod login_redirect_tests {
+    use super::login_destination;
+    #[test]
+    fn only_known_local_destinations_are_accepted() {
+        assert_eq!(login_destination(Some("/studio")), "/studio");
+        assert_eq!(login_destination(Some("/nexus")), "/nexus");
+        for input in [
+            None,
+            Some("//attacker.test"),
+            Some("https://attacker.test"),
+            Some("/nexus?next=evil"),
+        ] {
+            assert_eq!(login_destination(input), "/dashboard");
         }
     }
 }

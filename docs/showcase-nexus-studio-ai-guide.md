@@ -75,6 +75,8 @@ The showcase integrates an AI Architectural Copilot powered by **Groq** (`openai
 1. **Interactive AI Lab & Pentest Arena (`/ai-assistant`)**: A dedicated interface where developers can query the framework and test adversarial prompt injection attacks against the live shield.
 2. **Global Floating Copilot Drawer**: A floating widget accessible from every page on `showcase.rullst.win`, providing quick access to architecture explanations.
 
+Both interfaces use local answers by default. Visitors must select **Use cloud AI** for each page session before their messages can be dispatched to the configured provider. Unchecking it stops future cloud submissions. Cloud prompts contain the visitor's message and framework instructions; public database posts are only used by local responses. See the [privacy operations guide](PRIVACY_OPERATIONS.md).
+
 ### 5-Layer Defense-in-Depth Model:
 
 ```
@@ -90,8 +92,8 @@ The showcase integrates an AI Architectural Copilot powered by **Groq** (`openai
                            │ (Safe Prompt)
                            ▼
 ┌────────────────────────────────────────────────────────┐
-│ Layer 2: RAG Grounding & Read-Only Context             │
-│   - Extracts live SQLite posts & architecture facts    │
+│ Layer 2: Framework Context                            │
+│   - Architecture facts; no database posts sent         │
 │   - System prompt instructs model to refuse overrides  │
 └──────────────────────────┬─────────────────────────────┘
                            │

@@ -3,6 +3,25 @@
 
 use rullst::html;
 
+const DISCORD_URL: &str = "https://discord.gg/2ntKFtsSjw";
+const SHOWCASES: &[(&str, &str)] = &[
+    ("Rullst Showcase", "https://showcase.rullst.win"),
+    ("LMS Academy", "https://lms.rullst.win"),
+    ("Portfolio", "https://portfolio.rullst.win"),
+    ("SaaS", "https://saas.rullst.win"),
+];
+
+fn render_external_links(links: &[(&str, &str)]) -> String {
+    links
+        .iter()
+        .map(|(label, url)| {
+            html! {
+                <li><a href={url} target="_blank" rel="noopener noreferrer">{label}</a></li>
+            }
+        })
+        .collect()
+}
+
 /// Renders the universal Sovereign Showcase Header with navigation buttons.
 pub fn render_showcase_nav(active_route: &str) -> String {
     let routes = [
@@ -78,156 +97,171 @@ pub fn render_showcase_nav(active_route: &str) -> String {
         ),
     ];
 
-    let desktop_buttons_html: String = routes
-        .iter()
-        .map(|(path, short_label, full_label, _desc, _cat)| {
-            let is_active = *path == active_route;
-            let active_class = if is_active {
-                "showcase-btn active"
-            } else {
-                "showcase-btn"
-            };
-            html! {
-                <a href={path} class={active_class} title={full_label}>
-                    {short_label}
-                </a>
-            }
-        })
-        .collect();
-
-    let mobile_paradigms_html: String = routes
-        .iter()
-        .filter(|(_, _, _, _, cat)| *cat == "🌐 Web Paradigms")
-        .map(|(path, _, full_label, desc, _)| {
-            let is_active = *path == active_route;
-            let active_class = if is_active {
-                "mobile-nav-item active"
-            } else {
-                "mobile-nav-item"
-            };
-            html! {
-                <a href={path} class={active_class}>
-                    <div class="mobile-nav-title">{full_label}</div>
-                    <div class="mobile-nav-sub">{desc}</div>
-                </a>
-            }
-        })
-        .collect();
-
-    let mobile_features_html: String = routes
-        .iter()
-        .filter(|(_, _, _, _, cat)| *cat == "⚙️ Architecture & SaaS")
-        .map(|(path, _, full_label, desc, _)| {
-            let is_active = *path == active_route;
-            let active_class = if is_active {
-                "mobile-nav-item active"
-            } else {
-                "mobile-nav-item"
-            };
-            html! {
-                <a href={path} class={active_class}>
-                    <div class="mobile-nav-title">{full_label}</div>
-                    <div class="mobile-nav-sub">{desc}</div>
-                </a>
-            }
-        })
-        .collect();
-
+    let render_demo_group = |category: &str| -> String {
+        routes
+            .iter()
+            .filter(|(_, _, _, _, cat)| *cat == category)
+            .map(|(path, _, full_label, desc, _)| {
+                let current = if *path == active_route {
+                    "page"
+                } else {
+                    "false"
+                };
+                html! {
+                    <li>
+                        <a href={path} class="showcase-demo-link" aria-current={current}>
+                            <span class="showcase-demo-title">{full_label}</span>
+                            <span class="showcase-demo-description">{desc}</span>
+                        </a>
+                    </li>
+                }
+            })
+            .collect()
+    };
+    let paradigms = render_demo_group("🌐 Web Paradigms");
+    let features = render_demo_group("⚙️ Architecture & SaaS");
+    let showcases = render_external_links(SHOWCASES);
     let tenant_id =
         rullst::multitenant::current_tenant_id().unwrap_or_else(|| "community".to_string());
 
     html! {
         <header class="showcase-banner">
             <div class="showcase-banner-inner">
-                <a href="/" class="showcase-brand" style="text-decoration: none; color: inherit;">
-                    <img src="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" alt="Rullst Logo" class="showcase-brand-img" />
+                <a href="/" class="showcase-brand" aria-label="Rullst Showcase home">
+                    <img src="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" alt="" class="showcase-brand-img" />
                     <span class="showcase-logo">"RULLST"</span>
-                    <span class="showcase-badge">"v12.0"</span>
+                    <span class="showcase-badge">"v12"</span>
                 </a>
 
-                <nav class="showcase-nav-rail desktop-nav" aria-label="Main Navigation">
-                    { rullst::html::RawHtml(desktop_buttons_html) }
+                <nav class="showcase-navigation" aria-label="Main navigation">
+                    <details class="showcase-menu" name="showcase-navigation">
+                        <summary>"Demos"</summary>
+                        <div class="showcase-menu-panel showcase-demos-panel">
+                            <div>
+                                <h2 class="showcase-menu-heading">"Web paradigms"</h2>
+                                <ul class="showcase-link-list">{ rullst::html::RawHtml(paradigms) }</ul>
+                            </div>
+                            <div>
+                                <h2 class="showcase-menu-heading">"Architecture & SaaS"</h2>
+                                <ul class="showcase-link-list">{ rullst::html::RawHtml(features) }</ul>
+                            </div>
+                        </div>
+                    </details>
+                    <details class="showcase-menu" name="showcase-navigation">
+                        <summary>"Showcases"</summary>
+                        <div class="showcase-menu-panel showcase-compact-panel">
+                            <h2 class="showcase-menu-heading">"Explore Rullst in action"</h2>
+                            <ul class="showcase-link-list">{ rullst::html::RawHtml(showcases) }</ul>
+                        </div>
+                    </details>
+                    <details class="showcase-menu" name="showcase-navigation">
+                        <summary>"Tools"</summary>
+                        <div class="showcase-menu-panel showcase-compact-panel">
+                            <h2 class="showcase-menu-heading">"Try the sandbox"</h2>
+                            <ul class="showcase-link-list">
+                                <li><a href="/studio" target="_blank" rel="noopener noreferrer">"🚀 Studio Developer Cockpit"</a></li>
+                                <li><a href="/nexus" target="_blank" rel="noopener noreferrer">"🛡️ Nexus Admin CMS"</a></li>
+                            </ul>
+                            <p class="showcase-tenant">"Active tenant: " <strong>{&tenant_id}</strong></p>
+                        </div>
+                    </details>
                 </nav>
 
-                <div class="showcase-actions desktop-nav">
-                    <a href="/studio" target="_blank" class="portal-btn studio-btn" title="Open Studio Developer Cockpit (Live Ephemeral Sandbox)">
-                        "🚀 Studio"
-                    </a>
-                    <a href="/nexus" target="_blank" class="portal-btn nexus-btn" title="Open Nexus Admin CMS (Live Ephemeral Sandbox)">
-                        "🛡️ Nexus"
-                    </a>
-                    <span class="tenant-badge" title="Active Multi-Tenant Context">
-                        "Tenant: " <strong>{&tenant_id}</strong>
-                    </span>
-                </div>
-
-                <div class="mobile-header-actions">
-                    <a href="/studio" target="_blank" class="portal-btn studio-btn mobile-quick-portal" title="Studio">
-                        "🚀"
-                    </a>
-                    <a href="/nexus" target="_blank" class="portal-btn nexus-btn mobile-quick-portal" title="Nexus">
-                        "🛡️"
-                    </a>
-                    <button type="button" class="hamburger-btn" onclick="toggleShowcaseDrawer()" aria-label="Toggle Navigation Menu">
-                        "☰"
-                    </button>
-                </div>
+                <a href={DISCORD_URL} class="showcase-discord-btn" target="_blank" rel="noopener noreferrer">
+                    "Join Discord" <span aria-hidden="true">"↗"</span>
+                </a>
             </div>
         </header>
+        <script>{ rullst::html::RawHtml(include_str!("../static/showcase-nav.js").to_string()) }</script>
+
+        <div class="showcase-framework-banner">
+            <span>"Rullst Showcase — Built entirely with " <strong>"Rullst v12"</strong></span>
+            <a href="https://rullst.github.io" target="_blank" rel="noopener noreferrer">"Discover the framework →"</a>
+        </div>
 
         <div id="sandbox-notice-banner" class="sandbox-sub-banner">
             <div class="sandbox-sub-banner-content">
-                <span class="sandbox-badge">"🛡️ Sandbox Ativo:"</span>
-                <span>"Nexus CMS (<code>/nexus</code>) & Studio Cockpit (<code>/studio</code>) liberados para teste. (Usuário: <strong style=\"color: #00ffcc;\">admin</strong> | Senha: <strong style=\"color: #00ffcc;\">SovereignShowcase2026!</strong>)"</span>
+                <strong class="sandbox-badge">"Sandbox access"</strong>
+                <span>"Try Studio and Nexus · User: " <strong>"admin"</strong> " · Password: " <strong>"SovereignShowcase2026!"</strong></span>
             </div>
-            <button type="button" class="sandbox-dismiss-btn" onclick="var b=document.getElementById('sandbox-notice-banner'); if(b){b.style.display='none';}" aria-label="Fechar aviso">"×"</button>
+            <button type="button" class="sandbox-dismiss-btn" onclick="document.getElementById('sandbox-notice-banner').hidden=true" aria-label="Dismiss sandbox notice">"×"</button>
         </div>
-
-        <div id="showcase-mobile-backdrop" class="showcase-mobile-backdrop" onclick="toggleShowcaseDrawer()"></div>
-        <aside id="showcase-drawer" class="showcase-mobile-drawer" role="dialog" aria-label="Menu de Navegação">
-            <div class="mobile-drawer-header">
-                <div class="showcase-brand">
-                    <img src="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" alt="Rullst Logo" class="showcase-brand-img" />
-                    <span class="showcase-logo">"RULLST"</span>
-                    <span class="showcase-badge">"v12.0"</span>
-                </div>
-                <button type="button" class="mobile-close-btn" onclick="toggleShowcaseDrawer()" aria-label="Fechar menu">"×"</button>
-            </div>
-
-            <div class="mobile-drawer-scroll">
-                <div class="mobile-section-heading">"🌐 5 Paradigmas Web"</div>
-                <div class="mobile-nav-list">
-                    { rullst::html::RawHtml(mobile_paradigms_html) }
-                </div>
-
-                <div class="mobile-section-heading">"⚙️ Arquitetura & Recursos"</div>
-                <div class="mobile-nav-list">
-                    { rullst::html::RawHtml(mobile_features_html) }
-                </div>
-
-                <div class="mobile-section-heading">"🚀 Cockpits de Administração (Sandbox)"</div>
-                <div class="mobile-portals-box">
-                    <a href="/studio" target="_blank" class="portal-btn studio-btn" style="padding: 0.65rem 1rem; justify-content: center;">
-                        "🚀 Studio Developer Cockpit"
-                    </a>
-                    <a href="/nexus" target="_blank" class="portal-btn nexus-btn" style="padding: 0.65rem 1rem; justify-content: center;">
-                        "🛡️ Nexus Admin CMS"
-                    </a>
-                </div>
-
-                <div class="mobile-tenant-info">
-                    <div>"Tenant Ativo: " <strong>{&tenant_id}</strong></div>
-                    <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 4px;">"Credenciais: admin / SovereignShowcase2026!"</div>
-                </div>
-            </div>
-        </aside>
 
         { rullst::html::RawHtml(render_floating_ai_copilot()) }
     }
 }
 
+/// Shared footer for every public showcase demo.
+pub fn render_showcase_footer() -> String {
+    let showcases = render_external_links(SHOWCASES);
+    let framework = render_external_links(&[
+        ("Website", "https://rullst.github.io"),
+        ("GitHub", "https://github.com/Rullst"),
+    ]);
+    let reading = render_external_links(&[
+        ("Blogspot", "https://rullst.blogspot.com"),
+        ("Daily.dev", "https://daily.dev/squads/rullst"),
+        ("Dev.to", "https://dev.to/venelouis"),
+        ("Hashnode", "https://rullst.hashnode.dev"),
+        ("Substack", "https://substack.com/@rullst"),
+    ]);
+    let community = render_external_links(&[
+        ("Discord", DISCORD_URL),
+        ("Bluesky", "https://bsky.app/profile/rullst.bsky.social"),
+        ("BiliBili", "https://www.bilibili.tv/en/space/1436672033"),
+        ("Instagram", "https://instagram.com/rullst_official"),
+        ("LinkedIn", "https://www.linkedin.com/company/rullst"),
+        ("Reddit", "https://www.reddit.com/r/rullst"),
+        ("Telegram", "https://t.me/rullst"),
+        ("TikTok", "https://tiktok.com/@venelouis"),
+        ("YouTube", "https://youtube.com/@Rullst_Official"),
+        ("X", "https://x.com/venelouis"),
+    ]);
+
+    html! {
+        <footer class="showcase-footer" aria-label="Rullst links and community">
+            <div class="showcase-footer-inner">
+                <div class="showcase-footer-intro">
+                    <div>
+                        <a href="https://rullst.github.io" class="showcase-footer-brand" target="_blank" rel="noopener noreferrer">"RULLST"</a>
+                        <p>"Rullst Showcase — Built entirely with " <strong>"Rullst v12"</strong></p>
+                        <p class="showcase-footer-invite">"Build with Rust. Share what you create. Meet the community."</p>
+                    </div>
+                    <a href={DISCORD_URL} class="showcase-discord-btn" target="_blank" rel="noopener noreferrer">
+                        "Join the Discord community" <span aria-hidden="true">"↗"</span>
+                    </a>
+                </div>
+                <nav class="showcase-footer-grid" aria-label="Explore Rullst">
+                    <div>
+                        <h2>"Live showcases"</h2>
+                        <ul class="showcase-link-list">{ rullst::html::RawHtml(showcases) }</ul>
+                    </div>
+                    <div>
+                        <h2>"Framework"</h2>
+                        <ul class="showcase-link-list">{ rullst::html::RawHtml(framework) }</ul>
+                    </div>
+                    <div>
+                        <h2>"Read & learn"</h2>
+                        <ul class="showcase-link-list">{ rullst::html::RawHtml(reading) }</ul>
+                    </div>
+                    <div class="showcase-footer-community">
+                        <h2>"Connect"</h2>
+                        <ul class="showcase-link-list">{ rullst::html::RawHtml(community) }</ul>
+                    </div>
+                </nav>
+                <p class="showcase-footer-note">"Open source. Built with the Rullst framework."</p>
+                <div class="showcase-footer-legal">
+                    <a href="/privacy">"Privacy notice"</a>
+                    <a href="/cookies">"Cookies & browser storage"</a>
+                    <a href="mailto:officialrullst@gmail.com?subject=Privacy%20request">"Privacy requests"</a>
+                </div>
+            </div>
+        </footer>
+    }
+}
+
 fn render_floating_ai_copilot() -> String {
-    r##"
+    let markup = r##"
     <div id="showcase-crab-launcher" class="showcase-crab-launcher" onclick="toggleShowcaseAiDrawer()" role="button" tabindex="0" aria-label="Ask me anything!">
         <div class="showcase-crab-bubble">
             <span class="ai-bubble-sparkle">✨</span>
@@ -274,14 +308,15 @@ fn render_floating_ai_copilot() -> String {
             <span>⚡</span> <em>Copilot is thinking...</em>
         </div>
 
-        <form id="showcase-drawer-form" class="ai-form"
+        <!-- SHOWCASE_AI_PRIVACY -->
+        <form id="showcase-drawer-form" class="ai-form" method="post" action="/api/showcase-chat"
               hx-post="/api/showcase-chat"
               hx-target="#showcase-drawer-messages"
               hx-swap="beforeend"
               hx-indicator="#showcase-drawer-typing"
               hx-on::before-request="appendDrawerUserMsg()"
               hx-on::after-request="finalizeDrawerChat()">
-            <input id="showcase-drawer-input" type="text" name="message" class="ai-input" placeholder="Ask about architecture, Rust, security..." required maxlength="600" autocomplete="off" />
+            <input id="showcase-drawer-input" type="text" name="message" class="ai-input" aria-label="Ask the showcase copilot" placeholder="Ask about architecture, Rust, security..." required maxlength="600" autocomplete="off" />
             <button type="submit" class="ai-submit-btn">Send</button>
         </form>
     </div>
@@ -306,22 +341,6 @@ fn render_floating_ai_copilot() -> String {
             }
         });
 
-        function toggleShowcaseDrawer() {
-            var drawer = document.getElementById('showcase-drawer');
-            var backdrop = document.getElementById('showcase-mobile-backdrop');
-            if (!drawer) return;
-            var isOpen = drawer.classList.contains('open');
-            if (isOpen) {
-                drawer.classList.remove('open');
-                if (backdrop) backdrop.classList.remove('open');
-                document.body.style.overflow = '';
-            } else {
-                drawer.classList.add('open');
-                if (backdrop) backdrop.classList.add('open');
-                document.body.style.overflow = 'hidden';
-            }
-        }
-
         function toggleShowcaseAiDrawer() {
             var drawer = document.getElementById('showcase-ai-drawer');
             var launcher = document.getElementById('showcase-crab-launcher');
@@ -333,17 +352,34 @@ fn render_floating_ai_copilot() -> String {
                 if (launcher) launcher.style.display = 'flex';
                 if (backdrop) backdrop.classList.remove('open');
                 document.body.style.overflow = '';
+                if (launcher) launcher.focus({ preventScroll: true });
             } else {
                 drawer.style.display = 'flex';
-                if (launcher && window.innerWidth < 640) launcher.style.display = 'none';
-                if (backdrop && window.innerWidth < 640) {
+                if (launcher && window.innerWidth <= 640) launcher.style.display = 'none';
+                if (backdrop && window.innerWidth <= 640) {
                     backdrop.classList.add('open');
                     document.body.style.overflow = 'hidden';
                 }
-                var input = document.getElementById('showcase-drawer-input');
-                if (input) setTimeout(function() { input.focus(); }, 150);
+                updateShowcaseChatViewport();
+                var focusTarget = window.innerWidth <= 640
+                    ? drawer.querySelector('.ai-close-btn')
+                    : document.getElementById('showcase-drawer-input');
+                if (focusTarget) focusTarget.focus({ preventScroll: true });
                 scrollDrawerToBottom();
             }
+        }
+
+        function updateShowcaseChatViewport() {
+            var drawer = document.getElementById('showcase-ai-drawer');
+            var viewport = window.visualViewport;
+            if (!drawer || !viewport) return;
+            drawer.style.setProperty('--showcase-viewport-height', viewport.height + 'px');
+            drawer.style.setProperty('--showcase-keyboard-offset',
+                Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) + 'px');
+        }
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', updateShowcaseChatViewport);
+            window.visualViewport.addEventListener('scroll', updateShowcaseChatViewport);
         }
 
         function scrollDrawerToBottom() {
@@ -394,10 +430,6 @@ fn render_floating_ai_copilot() -> String {
                 if (aiDrawer && aiDrawer.style.display !== 'none') {
                     toggleShowcaseAiDrawer();
                 }
-                var navDrawer = document.getElementById('showcase-drawer');
-                if (navDrawer && navDrawer.classList.contains('open')) {
-                    toggleShowcaseDrawer();
-                }
             }
         });
 
@@ -407,9 +439,12 @@ fn render_floating_ai_copilot() -> String {
             }
         });
     </script>
-    "##.to_string()
+    "##;
+    markup.replace(
+        "<!-- SHOWCASE_AI_PRIVACY -->",
+        &crate::privacy::render_ai_choice("showcase-drawer-form"),
+    )
 }
-
 
 /// Renders shared CSS stylesheet for the Showcase theme.
 pub fn render_shared_styles() -> String {
@@ -434,330 +469,6 @@ pub fn render_shared_styles() -> String {
         padding: 0;
         min-height: 100vh;
     }
-    /* == Unified Slim Sticky Navbar (56px) == */
-    .showcase-banner {
-        background: rgba(10, 14, 26, 0.88);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        height: 56px;
-        display: flex;
-        align-items: center;
-        padding: 0 1.25rem;
-    }
-    .showcase-banner-inner {
-        width: 100%;
-        max-width: 1440px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        flex-wrap: nowrap;
-    }
-    .showcase-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-shrink: 0;
-    }
-    .showcase-brand-img {
-        width: 28px;
-        height: 28px;
-        object-fit: contain;
-        flex-shrink: 0;
-        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
-    }
-    .showcase-logo {
-        font-weight: 900;
-        font-size: 1.15rem;
-        letter-spacing: 0.12em;
-        background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    .showcase-badge {
-        font-size: 0.68rem;
-        background: rgba(59, 130, 246, 0.15);
-        color: var(--accent-cyan);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        padding: 0.15rem 0.4rem;
-        border-radius: 9999px;
-        font-weight: 600;
-    }
-
-    /* == Desktop Navigation Rail (Single-line horizontal scroll) == */
-    .showcase-nav-rail {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
-        flex: 1;
-        margin: 0 0.5rem;
-    }
-    .showcase-nav-rail::-webkit-scrollbar { display: none; }
-
-    .showcase-btn {
-        color: var(--text-muted);
-        text-decoration: none;
-        font-size: 0.78rem;
-        font-weight: 600;
-        padding: 0.35rem 0.65rem;
-        border-radius: 0.45rem;
-        background: rgba(30, 41, 59, 0.4);
-        border: 1px solid transparent;
-        transition: all 0.15s ease;
-        flex-shrink: 0;
-    }
-    .showcase-btn:hover {
-        color: var(--text-main);
-        background: rgba(59, 130, 246, 0.15);
-        border-color: rgba(59, 130, 246, 0.4);
-    }
-    .showcase-btn.active {
-        color: #fff;
-        background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(59, 130, 246, 0.25));
-        border-color: var(--accent-cyan);
-        box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
-    }
-
-    /* == Desktop Header Actions == */
-    .showcase-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-shrink: 0;
-    }
-    .portal-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        padding: 0.35rem 0.7rem;
-        border-radius: 0.45rem;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-decoration: none;
-        transition: all 0.15s ease;
-        white-space: nowrap;
-    }
-    .portal-btn.studio-btn {
-        background: rgba(6, 182, 212, 0.15);
-        border: 1px solid rgba(6, 182, 212, 0.4);
-        color: #38bdf8;
-    }
-    .portal-btn.studio-btn:hover {
-        background: rgba(6, 182, 212, 0.3);
-        color: #fff;
-        transform: translateY(-1px);
-    }
-    .portal-btn.nexus-btn {
-        background: rgba(16, 185, 129, 0.15);
-        border: 1px solid rgba(16, 185, 129, 0.4);
-        color: #34d399;
-    }
-    .portal-btn.nexus-btn:hover {
-        background: rgba(16, 185, 129, 0.3);
-        color: #fff;
-        transform: translateY(-1px);
-    }
-    .tenant-badge {
-        font-size: 0.72rem;
-        background: rgba(16, 185, 129, 0.12);
-        color: var(--accent-emerald);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        padding: 0.2rem 0.5rem;
-        border-radius: 0.375rem;
-        white-space: nowrap;
-    }
-
-    /* == Dismissible Sandbox Sub-Banner (Non-sticky) == */
-    .sandbox-sub-banner {
-        background: rgba(15, 23, 42, 0.9);
-        border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-        padding: 0.45rem 1.25rem;
-        font-size: 0.8rem;
-        color: #94a3b8;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        position: relative;
-        z-index: 990;
-    }
-    .sandbox-sub-banner-content {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-    .sandbox-badge {
-        color: #38bdf8;
-        font-weight: 700;
-        white-space: nowrap;
-    }
-    .sandbox-dismiss-btn {
-        background: transparent;
-        border: none;
-        color: #64748b;
-        font-size: 1.2rem;
-        line-height: 1;
-        cursor: pointer;
-        padding: 0 4px;
-    }
-    .sandbox-dismiss-btn:hover { color: #fff; }
-
-    /* == Mobile Header Controls == */
-    .mobile-header-actions {
-        display: none;
-        align-items: center;
-        gap: 0.4rem;
-    }
-    .mobile-quick-portal {
-        padding: 0.25rem 0.55rem;
-        font-size: 0.9rem;
-    }
-    .hamburger-btn {
-        background: rgba(30, 41, 59, 0.8);
-        border: 1px solid #334155;
-        color: #fff;
-        font-size: 1.25rem;
-        padding: 0.25rem 0.6rem;
-        border-radius: 0.45rem;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        line-height: 1;
-    }
-    .hamburger-btn:hover {
-        background: rgba(59, 130, 246, 0.25);
-        border-color: #38bdf8;
-    }
-
-    /* == Mobile Off-Canvas Drawer & Backdrop == */
-    .showcase-mobile-backdrop {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        z-index: 9998;
-    }
-    .showcase-mobile-backdrop.open { display: block; }
-
-    .showcase-mobile-drawer {
-        position: fixed;
-        top: 0;
-        right: -360px;
-        width: min(340px, 85vw);
-        height: 100vh;
-        background: #0d121f;
-        border-left: 1px solid #1e293b;
-        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.8);
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .showcase-mobile-drawer.open {
-        right: 0;
-    }
-    .mobile-drawer-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid #1e293b;
-        background: rgba(15, 23, 42, 0.9);
-    }
-    .mobile-close-btn {
-        background: transparent;
-        border: none;
-        color: #94a3b8;
-        font-size: 1.5rem;
-        cursor: pointer;
-        padding: 4px;
-        line-height: 1;
-    }
-    .mobile-close-btn:hover { color: #fff; }
-    .mobile-drawer-scroll {
-        flex: 1;
-        overflow-y: auto;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.85rem;
-    }
-    .mobile-section-heading {
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-top: 0.4rem;
-    }
-    .mobile-nav-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-    .mobile-nav-item {
-        display: block;
-        padding: 0.65rem 0.85rem;
-        border-radius: 0.5rem;
-        background: rgba(30, 41, 59, 0.4);
-        border: 1px solid transparent;
-        text-decoration: none;
-        transition: all 0.15s ease;
-    }
-    .mobile-nav-item:hover {
-        background: rgba(59, 130, 246, 0.15);
-        border-color: rgba(59, 130, 246, 0.4);
-    }
-    .mobile-nav-item.active {
-        background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2));
-        border-color: var(--accent-cyan);
-    }
-    .mobile-nav-title {
-        color: #f8fafc;
-        font-size: 0.86rem;
-        font-weight: 600;
-    }
-    .mobile-nav-sub {
-        color: #94a3b8;
-        font-size: 0.72rem;
-        margin-top: 2px;
-        line-height: 1.3;
-    }
-    .mobile-portals-box {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    .mobile-tenant-info {
-        margin-top: auto;
-        padding: 0.85rem;
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid #1e293b;
-        border-radius: 0.5rem;
-        font-size: 0.78rem;
-    }
-
-    /* == Responsive Breakpoints for Navigation == */
-    @media (max-width: 1024px) {
-        .desktop-nav { display: none !important; }
-        .mobile-header-actions { display: flex !important; }
-        .showcase-banner { padding: 0 1rem; }
-    }
-
     /* == Page Container & Cards == */
     .container {
         max-width: 1100px;
@@ -957,6 +668,7 @@ pub fn render_shared_styles() -> String {
         to { opacity: 1; transform: translateY(0) scale(1); }
     }
     .ai-drawer-header {
+        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -965,6 +677,10 @@ pub fn render_shared_styles() -> String {
         border-bottom: 1px solid #1e293b;
     }
     .ai-close-btn {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        margin: 0;
         background: transparent;
         border: none;
         color: #94a3b8;
@@ -977,6 +693,8 @@ pub fn render_shared_styles() -> String {
 
     .ai-chat-messages {
         flex: 1;
+        min-height: 0;
+        overscroll-behavior: contain;
         overflow-y: auto;
         padding: 14px;
         display: flex;
@@ -1003,6 +721,7 @@ pub fn render_shared_styles() -> String {
     }
     .chat-bubble-user .chat-bubble-sender { text-align: right; color: #38bdf8; }
     .chat-bubble-body {
+        overflow-wrap: anywhere;
         padding: 10px 14px;
         border-radius: 12px;
         font-size: 0.85rem;
@@ -1037,6 +756,8 @@ pub fn render_shared_styles() -> String {
         border-radius: 3px;
     }
     .ai-pill-btn {
+        width: auto;
+        margin: 0;
         background: rgba(255,255,255,0.06);
         border: 1px solid #334155;
         color: #cbd5e1;
@@ -1059,6 +780,8 @@ pub fn render_shared_styles() -> String {
     }
 
     .ai-form {
+        flex-shrink: 0;
+        margin: 0;
         padding: 10px 12px;
         background: #0f172a;
         border-top: 1px solid #1e293b;
@@ -1067,6 +790,8 @@ pub fn render_shared_styles() -> String {
     }
     .ai-input {
         flex: 1;
+        min-width: 0;
+        margin: 0;
         background: #05070c;
         border: 1px solid #334155;
         border-radius: 8px;
@@ -1077,6 +802,9 @@ pub fn render_shared_styles() -> String {
     }
     .ai-input:focus { border-color: #38bdf8; }
     .ai-submit-btn {
+        width: auto;
+        flex-shrink: 0;
+        margin: 0;
         background: #0284c7;
         color: #fff;
         font-weight: 700;
@@ -1105,19 +833,22 @@ pub fn render_shared_styles() -> String {
             padding: 6px 10px;
         }
         .showcase-ai-drawer {
-            bottom: 0 !important;
-            right: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 80vh !important;
-            max-height: 85vh !important;
-            border-radius: 20px 20px 0 0 !important;
-            border-bottom: none !important;
-            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8) !important;
+            bottom: calc(var(--showcase-keyboard-offset, 0px) + max(12px, env(safe-area-inset-bottom)));
+            right: 12px;
+            left: auto;
+            width: min(380px, calc(100vw - 24px));
+            max-width: calc(100vw - 24px);
+            height: min(460px, 62dvh);
+            max-height: calc(var(--showcase-viewport-height, 100dvh) - 24px - env(safe-area-inset-bottom));
+            border-radius: 16px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
         }
+        .showcase-ai-drawer .ai-input { font-size: 16px; width: 0; }
+        .showcase-ai-drawer .ai-prompt-suggestions { flex-wrap: nowrap; flex-shrink: 0; overflow-x: auto; padding: 6px 10px; }
+        .showcase-ai-drawer .ai-pill-btn { width: auto; margin: 0; }
+        .showcase-ai-drawer .ai-drawer-header { padding: 10px 12px; }
+        .showcase-ai-drawer .ai-chat-messages { padding: 10px; gap: 8px; }
     }
     "#
-    .to_string()
+    .to_string() + include_str!("../static/showcase-shell.css")
 }
-

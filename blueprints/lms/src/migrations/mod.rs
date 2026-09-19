@@ -3024,7 +3024,18 @@ mod tests {
         assert!(rendered_catalog.contains("nonce=\"catalog-csp-nonce\""));
         assert!(rendered_catalog.contains("&lt;script&gt;"));
         assert!(!rendered_catalog.contains("<script>alert(1)</script>"));
-        assert!(!rendered_catalog.contains("https://"));
+        // Ordinary outbound links are intentional; rendering must not load remote assets.
+        assert!(!rendered_catalog.contains("src=\"https://"));
+        assert!(!rendered_catalog.contains("<iframe"));
+
+        let youtube = crate::pages::lms::lesson_player_page(
+            "Rust lesson", "youtube", "https://www.youtube.com/embed/5C_HPTJg5ek", "",
+            "Read the lesson transcript without contacting YouTube.", "en", 1, 1, 0,
+            "csrf-token", "video-consent-key", "player-csp-nonce",
+        ).expect("YouTube placeholder");
+        assert!(youtube.contains("data-video-src="));
+        assert!(youtube.contains("Load YouTube video"));
+        assert!(!youtube.contains("<iframe"));
 
         let rendered_video = crate::pages::lms::lesson_player_page(
             "Memory safety <essentials>",

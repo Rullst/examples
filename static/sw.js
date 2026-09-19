@@ -1,54 +1,41 @@
-// Rullst Lightweight PWA Service Worker
-const CACHE_NAME = 'rullst-shell-v1';
-const PRECACHE_URLS = [
-  '/',
+// Cache only public static assets, never pages, credentials or user content.
+const CACHE_NAME = 'rullst-shell-v2';
+const STATIC_ASSETS = new Set([
   '/manifest.webmanifest',
   '/static/icon-192.png',
-  '/static/icon-512.png'
-];
+  '/static/icon-512.png',
+  '/static/crab.png',
+  '/static/htmx.js',
+  '/static/tailwind.js'
+]);
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_URLS).catch(() => {});
-    }).then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then((names) => Promise.all(
+      names.filter((name) => name.startsWith('rullst-shell-') && name !== CACHE_NAME)
+        .map((name) => caches.delete(name))
+    )).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin ||
+      !STATIC_ASSETS.has(url.pathname) || url.search || request.headers.has('Authorization')) return;
 
-  // Network-first with cache fallback for HTML pages; Cache-first for static assets
-  if (event.request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const cloned = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
-          return response;
-        })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
-    );
-  } else if (url.pathname.startsWith('/static/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.js')) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        return cached || fetch(event.request).then((response) => {
-          const cloned = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
-          return response;
-        });
-      })
-    );
-  }
+  event.respondWith(caches.open(CACHE_NAME).then(async (cache) => {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    const response = await fetch(request);
+    if (response.ok && response.type === 'basic' &&
+        !/no-store|private/i.test(response.headers.get('Cache-Control') || '')) {
+      await cache.put(request, response.clone());
+    }
+    return response;
+  }));
 });

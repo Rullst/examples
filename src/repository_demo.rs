@@ -7,7 +7,7 @@ use rullst_orm::Orm;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 
-use crate::showcase_nav::{render_shared_styles, render_showcase_nav};
+use crate::showcase_nav::{render_shared_styles, render_showcase_footer, render_showcase_nav};
 
 /// Domain entity representing author publishing metrics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,13 +140,15 @@ pub async fn repository_page() -> impl IntoResponse {
     Html(html! {
         <html lang="en">
             <head>
+                <script src="/static/htmx.js"></script>
+                <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
                     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>"Rullst ORM - Repository & Data Mapper Pattern"</title>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style>{ rullst::html::RawHtml(styles) }</style>
             </head>
-            <body>
+            <body hx-history="false">
                 { rullst::html::RawHtml(nav) }
                 <div class="container">
                     <div class="card">
@@ -213,6 +215,7 @@ pub async fn repository_page() -> impl IntoResponse {
                         </div>
                     </div>
                 </div>
+            { rullst::html::RawHtml(render_showcase_footer()) }
             </body>
         </html>
     })

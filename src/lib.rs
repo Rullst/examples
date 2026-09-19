@@ -7,10 +7,14 @@ pub mod billing_demo;
 pub mod interactive_counter;
 pub mod omni_demo;
 pub mod pico_demo;
+pub mod privacy;
 pub mod repository_demo;
 pub mod security_demo;
 pub mod showcase_nav;
 pub mod templates_demo;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod showcase_cache;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod live_counter;
@@ -18,7 +22,7 @@ pub mod live_counter;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod app {
     use crate::live_counter::CounterComponent;
-    use crate::showcase_nav::{render_shared_styles, render_showcase_nav};
+    use crate::showcase_nav::{render_shared_styles, render_showcase_footer, render_showcase_nav};
     use axum::{Extension, Form};
     use rullst::db::FromRow;
     use rullst::{
@@ -142,6 +146,7 @@ pub mod app {
         Html(html! {
             <html lang="en">
                 <head>
+                <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
                     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                     <title>"Rullst Sovereign SaaS Blog & Publisher"</title>
@@ -149,7 +154,7 @@ pub mod app {
                     <script src="/static/htmx.js"></script>
                     <style>{ rullst::html::RawHtml(styles) }</style>
                 </head>
-                <body>
+                <body hx-history="false">
                     { rullst::html::RawHtml(nav) }
                     <div class="container">
                         <div class="card">
@@ -169,7 +174,8 @@ pub mod app {
                                 <input type="hidden" name="_token" value={csrf_token.as_str()} />
                                 <h3 style="margin-top: 0; color: #38bdf8; font-size: 1.1rem; margin-bottom: 0.4rem;">"Publish a New Story (Active Record)"</h3>
                                 <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 1.25rem;">
-                                    "Write and publish directly to the live SQLite database. Modifications are scoped to the active tenant and persist until container hibernation."
+                                    "This is a public sandbox. Posts are visible to visitors and sandbox administrators. Use fictional content and avoid personal or confidential data. "
+                                    <a href="/privacy" style="color: #7dd3fc;">"How your data is used"</a>
                                 </p>
                                 <div style="margin-bottom: 1rem;">
                                     <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">"Article Title"</label>
@@ -197,6 +203,7 @@ pub mod app {
                             </div>
                         </div>
                     </div>
+                { rullst::html::RawHtml(render_showcase_footer()) }
                 </body>
             </html>
         })
@@ -243,6 +250,7 @@ pub mod app {
         Html(html! {
             <html lang="en">
             <head>
+                <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
                     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>"Rullst LiveView - Real-time WebSockets Feed"</title>
@@ -251,7 +259,7 @@ pub mod app {
                 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
                 <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js"></script>
             </head>
-            <body>
+            <body hx-history="false">
                 { rullst::html::RawHtml(nav) }
                 <div class="container">
                     <div class="card">
@@ -268,6 +276,7 @@ pub mod app {
                         </div>
                     </div>
                 </div>
+            { rullst::html::RawHtml(render_showcase_footer()) }
             </body>
             </html>
         })
@@ -282,13 +291,15 @@ pub mod app {
         Html(html! {
             <html lang="en">
             <head>
+                <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                     <meta charset="utf-8" />
                     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>"Rullst Wasm Island - Client-side Reactive WebAssembly"</title>
+                <script src="/static/htmx.js"></script>
                 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png" />
                 <style>{ rullst::html::RawHtml(styles) }</style>
             </head>
-            <body>
+            <body hx-history="false">
                 { rullst::html::RawHtml(nav) }
                 <div class="container">
                     <div class="card">
@@ -309,6 +320,7 @@ pub mod app {
                         </script>
                     </div>
                 </div>
+            { rullst::html::RawHtml(render_showcase_footer()) }
             </body>
             </html>
         })
@@ -352,6 +364,11 @@ pub mod app {
         mut response: axum::response::Response,
     ) -> axum::response::Response {
         let headers = response.headers_mut();
+        if headers.get(axum::http::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.starts_with("text/html")) {
+            headers.insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("no-store"));
+        }
         headers.insert(
             "Content-Security-Policy",
             axum::http::HeaderValue::from_static(
@@ -369,6 +386,10 @@ pub mod app {
         headers.insert(
             "X-Frame-Options",
             axum::http::HeaderValue::from_static("SAMEORIGIN"),
+        );
+        headers.insert(
+            "Referrer-Policy",
+            axum::http::HeaderValue::from_static("no-referrer"),
         );
         response
     }
@@ -527,61 +548,14 @@ async fn studio_tailwind_patch(
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer studio body").into_response();
     };
     let html = String::from_utf8_lossy(&bytes);
-    if html.contains("cdn.tailwindcss.com") {
-        let patched = html.replace("https://cdn.tailwindcss.com", "/static/tailwind.js");
+    if html.contains("</head>") {
+        let patched = html.replace("https://cdn.tailwindcss.com", "/static/tailwind.js")
+            .replace("</head>", "<meta name=\"htmx-config\" content='{\"historyCacheSize\":0}'></head>")
+            .replace("</main>", "<p style=\"padding:16px;font-size:12px;\"><a href=\"/privacy\">Privacy notice</a> · <a href=\"/cookies\">Cookies &amp; storage</a></p></main>");
         parts.headers.remove(axum::http::header::CONTENT_LENGTH);
         return axum::response::Response::from_parts(parts, axum::body::Body::from(patched));
     }
     axum::response::Response::from_parts(parts, axum::body::Body::from(bytes))
-}
-
-async fn studio_cache_handler(
-    headers: axum::http::HeaderMap,
-) -> axum::response::Response {
-    use axum::response::IntoResponse;
-    let content = rullst::html! {
-        <div style="padding: 2rem; max-width: 1200px; margin: 0 auto; font-family: monospace;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 1.5rem; margin-bottom: 2rem;">
-                <div>
-                    <h1 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin: 0;">"🧊 Studio Cache Inspector"</h1>
-                    <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.5rem;">"Real-time in-memory cache allocations, hit rates, and TTL entries."</p>
-                </div>
-                <span style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 0.4rem 0.8rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">
-                    "Engine: Bounded LRU"
-                </span>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-                <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 1.5rem;">
-                    <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">"Active Entries"</div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #38bdf8; margin-top: 0.5rem;">"0"</div>
-                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.25rem;">"Metadata snapshots cached"</div>
-                </div>
-                <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 1.5rem;">
-                    <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">"Hit Rate"</div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #10b981; margin-top: 0.5rem;">"100.0%"</div>
-                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.25rem;">"Zero cache miss degradations"</div>
-                </div>
-                <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 1.5rem;">
-                    <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">"Memory Footprint"</div>
-                    <div style="font-size: 2rem; font-weight: 800; color: #818cf8; margin-top: 0.5rem;">"12.8 KB"</div>
-                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.25rem;">"Bounded in-memory LRU store"</div>
-                </div>
-            </div>
-            <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 1.5rem;">
-                <h3 style="font-size: 0.95rem; color: #e2e8f0; text-transform: uppercase; margin-top: 0;">"Cached Key Entries"</h3>
-                <div style="padding: 2.5rem; text-align: center; border: 1px dashed #334155; border-radius: 8px; color: #94a3b8; font-size: 0.9rem;">
-                    "No volatile cache keys currently held in memory. Cache entries are allocated dynamically during load."
-                </div>
-            </div>
-        </div>
-    };
-
-    if headers.contains_key("hx-request") {
-        return rullst::response::Html(content).into_response();
-    }
-
-    let full_html = rullst_studio::data_browser::studio_layout(content, None, &[]);
-    rullst::response::Html(full_html).into_response()
 }
 
 async fn nexus_mobile_patch(
@@ -605,8 +579,13 @@ async fn nexus_mobile_patch(
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("nexus-sidebar") {
+        let responsive_styles = include_str!("../static/nexus-responsive.css");
         let patch = r#"
 <style>
+.nexus-sidebar-close-btn,
+#nexus-sidebar-backdrop {
+    display: none;
+}
 @media (max-width: 900px) {
     #nexus-sidebar-backdrop {
         display: none;
@@ -649,6 +628,14 @@ async fn nexus_mobile_patch(
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    try { localStorage.removeItem('htmx-history-cache'); } catch (_) { /* Storage can be disabled. */ }
+    const syncViewport = () => {
+        document.documentElement.style.setProperty('--nexus-viewport-height',
+            (window.visualViewport ? window.visualViewport.height : window.innerHeight) + 'px');
+    };
+    syncViewport();
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', syncViewport);
+    window.addEventListener('resize', syncViewport);
     const sidebar = document.getElementById('nexus-sidebar');
     if (!sidebar) return;
     const brand = sidebar.querySelector('.nexus-brand');
@@ -656,6 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.createElement('button');
         btn.id = 'nexus-sidebar-close';
         btn.className = 'nexus-sidebar-close-btn';
+        btn.type = 'button';
         btn.innerHTML = '&times;';
         btn.setAttribute('aria-label', 'Close menu');
         btn.onclick = (e) => {
@@ -679,7 +667,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 "#;
-        let patched = html.replace("</body>", &format!("{patch}</body>"));
+        let patched = html
+            .replace("</head>", "<meta name=\"htmx-config\" content='{\"historyCacheSize\":0}'></head>")
+            .replace("<div class=\"nexus-version\">", "<div style=\"padding:12px 20px;font-size:12px;\"><a href=\"/privacy\" style=\"color:#94a3b8\">Privacy notice</a> · <a href=\"/cookies\" style=\"color:#94a3b8\">Cookies</a></div><div class=\"nexus-version\">")
+            .replace("</body>", &format!("<style>{responsive_styles}</style>{patch}</body>"));
         parts.headers.remove(axum::http::header::CONTENT_LENGTH);
         return axum::response::Response::from_parts(parts, axum::body::Body::from(patched));
     }
@@ -734,9 +725,10 @@ fn router_with_nexus_auth(
         .try_build()?
         .layer(axum::middleware::from_fn(nexus_mobile_patch));
 
+    let cache = showcase_cache::ShowcaseCache::default();
     let studio_router = rullst_studio::data_browser::router()
-        .route("/cache", axum::routing::get(studio_cache_handler))
-        .route("/studio/cache", axum::routing::get(studio_cache_handler))
+        .route("/cache", axum::routing::get(showcase_cache::studio_cache_handler))
+        .route("/studio/cache", axum::routing::get(showcase_cache::studio_cache_handler))
         .route("/assets/studio.css", axum::routing::get(studio_css_handler))
         .route("/studio/assets/studio.css", axum::routing::get(studio_css_handler))
         .route("/assets/logger.js", axum::routing::get(studio_logger_handler))
@@ -753,6 +745,8 @@ fn router_with_nexus_auth(
 
     let public_routes = routes![
         get("/" => index),
+        get("/privacy" => crate::privacy::privacy_page),
+        get("/cookies" => crate::privacy::cookies_page),
         post("/posts" => store),
         get("/posts/repository" => crate::repository_demo::repository_page),
         get("/editor" => wasm_demo),
@@ -796,6 +790,7 @@ fn router_with_nexus_auth(
             .nest_axum("/studio", studio_router)
             .layer(axum::Extension(rullst_nexus::NexusVerifiedTls::from_trusted_tls_termination()))
     }
+    .layer(axum::Extension(cache))
     .layer(axum::middleware::map_response(set_security_headers))
     .layer(rullst::tenant_layer(config))
     .layer(axum::Extension(demo_membership))

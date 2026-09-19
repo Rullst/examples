@@ -1,6 +1,4 @@
-async fn studio_cache_handler(
-    headers: rullst::server::HeaderMap,
-) -> rullst::server::Response {
+async fn studio_cache_handler(headers: rullst::server::HeaderMap) -> rullst::server::Response {
     use rullst::server::IntoResponse;
     let content = rullst::html! {
         <div class="space-y-6">
@@ -10,12 +8,12 @@ async fn studio_cache_handler(
                         <span>"🧊"</span> "Cache Inspector"
                     </h1>
                     <p class="text-sm text-slate-400 mt-1">
-                        "Inspect real-time in-memory cache allocations, hit rates, and TTL entries."
+                        "This LMS does not currently register an application cache for inspection."
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        "Engine: In-Memory LRU"
+                        "Application cache: not configured"
                     </span>
                 </div>
             </div>
@@ -28,12 +26,12 @@ async fn studio_cache_handler(
                 </div>
                 <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
                     <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">"Hit Rate"</p>
-                    <p class="text-3xl font-extrabold text-emerald-400 mt-2">"100.0%"</p>
-                    <p class="text-xs text-slate-500 mt-1">"Zero cache miss degradations"</p>
+                    <p class="text-3xl font-extrabold text-emerald-400 mt-2">"Not instrumented"</p>
+                    <p class="text-xs text-slate-500 mt-1">"No application cache metrics registered"</p>
                 </div>
                 <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-lg">
                     <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">"Memory Footprint"</p>
-                    <p class="text-3xl font-extrabold text-indigo-400 mt-2">"14.2 KB"</p>
+                    <p class="text-3xl font-extrabold text-indigo-400 mt-2">"Not instrumented"</p>
                     <p class="text-xs text-slate-500 mt-1">"Bounded LRU store"</p>
                 </div>
             </div>
@@ -41,7 +39,7 @@ async fn studio_cache_handler(
             <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-lg">
                 <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">"Cached Key Entries"</h3>
                 <div class="p-8 text-center border border-dashed border-slate-800 rounded-lg">
-                    <p class="text-sm text-slate-400">"No volatile cache keys currently held in memory. Values are cached dynamically during high-load traffic."</p>
+                    <p class="text-sm text-slate-400">"No application cache is configured. Unmeasured hit rates and memory usage are not reported as real metrics."</p>
                 </div>
             </div>
         </div>
@@ -55,41 +53,16 @@ async fn studio_cache_handler(
     rullst::response::Html(full_html).into_response()
 }
 
-use rullst::{routes, Server};
+use rullst::{Server, routes};
 
-pub mod migrations;
-pub mod models;
 pub mod controllers;
 pub mod middlewares;
+pub mod migrations;
+pub mod models;
 pub mod pages;
 pub mod services;
-
-
-fn decode_base64_cred(input: &str) -> Option<Vec<u8>> {
-    let mut out = Vec::new();
-    let mut buf = 0u32;
-    let mut bits = 0;
-    for &b in input.as_bytes() {
-        let val = match b {
-            b'A'..=b'Z' => b - b'A',
-            b'a'..=b'z' => b - b'a' + 26,
-            b'0'..=b'9' => b - b'0' + 52,
-            b'+' => 62,
-            b'/' => 63,
-            b'=' => break,
-            _ if b.is_ascii_whitespace() => continue,
-            _ => return None,
-        };
-        buf = (buf << 6) | u32::from(val);
-        bits += 6;
-        if bits >= 8 {
-            bits -= 8;
-            out.push((buf >> bits) as u8);
-        }
-    }
-    Some(out)
-}
-
+mod showcase;
+mod tool_access;
 
 async fn coep_policy_patch(
     req: rullst::server::Request,
@@ -110,8 +83,8 @@ const STUDIO_CSS: &str = include_str!("../static/studio.css");
 const LOGGER_JS: &str = r#"document.addEventListener("DOMContentLoaded",()=>{const target=document.getElementById("studio-request-stream");if(!target||typeof EventSource==="undefined")return;const source=new EventSource("/studio/requests/stream");source.onmessage=(event)=>{const row=document.createElement("div");row.innerHTML=event.data;while(row.lastChild)target.prepend(row.lastChild);};window.addEventListener("beforeunload",()=>source.close(),{once:true});});"#;
 
 async fn studio_css_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
@@ -120,44 +93,53 @@ async fn studio_css_handler() -> rullst::server::Response {
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         STUDIO_CSS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 async fn studio_logger_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
             (header::CACHE_CONTROL, "public, max-age=86400"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         LOGGER_JS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 const HTMX_JS: &str = include_str!("../static/htmx-1.9.12.min.js");
 
 async fn htmx_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "application/javascript; charset=utf-8"),
+            (
+                header::CONTENT_TYPE,
+                "application/javascript; charset=utf-8",
+            ),
             (header::CACHE_CONTROL, "public, max-age=604800"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         HTMX_JS,
-    ).into_response()
+    )
+        .into_response()
 }
 
 const CRAB_PNG: &[u8] = include_bytes!("../static/crab.png");
 
 async fn crab_png_handler() -> rullst::server::Response {
-    use rullst::server::header;
     use rullst::server::IntoResponse;
+    use rullst::server::header;
     (
         rullst::server::StatusCode::OK,
         [
@@ -166,7 +148,8 @@ async fn crab_png_handler() -> rullst::server::Response {
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
         CRAB_PNG,
-    ).into_response()
+    )
+        .into_response()
 }
 
 async fn studio_tailwind_patch(
@@ -175,9 +158,21 @@ async fn studio_tailwind_patch(
 ) -> rullst::server::Response {
     use rullst::server::IntoResponse;
     let res = next.run(req).await;
+    if !res
+        .headers()
+        .get(rullst::server::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.contains("text/html"))
+    {
+        return res;
+    }
     let (mut parts, body) = res.into_parts();
     let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
-        return (rullst::server::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer studio body").into_response();
+        return (
+            rullst::server::StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to buffer studio body",
+        )
+            .into_response();
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("cdn.tailwindcss.com") {
@@ -205,12 +200,17 @@ async fn nexus_mobile_patch(
         return rullst::server::Response::from_parts(parts, body);
     }
     let Ok(bytes) = axum::body::to_bytes(body, 2 * 1024 * 1024).await else {
-        return (rullst::server::StatusCode::INTERNAL_SERVER_ERROR, "Failed to buffer nexus body").into_response();
+        return (
+            rullst::server::StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to buffer nexus body",
+        )
+            .into_response();
     };
     let html = String::from_utf8_lossy(&bytes);
     if html.contains("nexus-sidebar") {
         let patch = r#"
 <style>
+.nexus-sidebar-close-btn { display: none; }
 @media (max-width: 900px) {
     #nexus-sidebar-backdrop {
         display: none;
@@ -290,125 +290,97 @@ document.addEventListener('DOMContentLoaded', () => {
     rullst::server::Response::from_parts(parts, axum::body::Body::from(bytes))
 }
 
-async fn studio_auth_guard(
-    req: rullst::server::Request,
-    next: rullst::server::Next,
-) -> rullst::server::Response {
-    let path = req.uri().path();
-    if path.ends_with(".css") || path.ends_with(".js") {
-        return next.run(req).await;
-    }
-    use rullst::server::header;
-    use rullst::server::{HeaderValue, IntoResponse, StatusCode};
-
-    let auth_header = req.headers().get(header::AUTHORIZATION).and_then(|v| v.to_str().ok());
-    let expected_user = std::env::var("NEXUS_ADMIN_USERNAME").ok();
-    let expected_pass = std::env::var("NEXUS_ADMIN_PASSWORD").ok();
-
-    let mut is_authorized = false;
-    if let (Some(exp_user), Some(exp_pass)) = (expected_user, expected_pass) {
-        if !exp_user.trim().is_empty() && !exp_pass.trim().is_empty() {
-            if let Some(auth) = auth_header {
-                if let Some(encoded) = auth.strip_prefix("Basic ") {
-                    if let Some(decoded) = decode_base64_cred(encoded.trim()) {
-                        if let Ok(credentials) = String::from_utf8(decoded) {
-                            if let Some((user, pass)) = credentials.split_once(':') {
-                                if user == exp_user && pass == exp_pass {
-                                    is_authorized = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if is_authorized {
-        next.run(req).await
-    } else {
-        let mut res = (StatusCode::UNAUTHORIZED, "Unauthorized").into_response();
-        res.headers_mut().insert(
-            header::WWW_AUTHENTICATE,
-            HeaderValue::from_static("Basic realm=\"Rullst Studio & Nexus\""),
-        );
-        res
-    }
-}
-
-
 async fn manifest_handler() -> impl rullst::server::IntoResponse {
-    ([(rullst::server::header::CONTENT_TYPE, "application/manifest+json")], include_str!("../static/manifest.webmanifest"))
+    (
+        [(
+            rullst::server::header::CONTENT_TYPE,
+            "application/manifest+json",
+        )],
+        include_str!("../static/manifest.webmanifest"),
+    )
 }
 
 async fn sw_handler() -> impl rullst::server::IntoResponse {
-    ([(rullst::server::header::CONTENT_TYPE, "application/javascript")], include_str!("../static/sw.js"))
+    (
+        [(
+            rullst::server::header::CONTENT_TYPE,
+            "application/javascript",
+        )],
+        include_str!("../static/sw.js"),
+    )
 }
 
 #[rullst::runtime::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     rullst::artisan!(crate::migrations::get_migrations());
 
-    let nexus_user = std::env::var("NEXUS_ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
-    let nexus_pass = std::env::var("NEXUS_ADMIN_PASSWORD").unwrap_or_default();
-    let nexus_auth = if nexus_pass.len() >= 16 {
-        rullst::nexus::NexusAuthPolicy::basic(nexus_user, nexus_pass)?
-    } else {
-        eprintln!("⚠️ NEXUS_ADMIN_PASSWORD environment variable not set or under 16 characters. Generating ephemeral secret.");
-        let ephemeral_pass = format!("ephemeral_{:x}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
-        rullst::nexus::NexusAuthPolicy::basic(nexus_user, ephemeral_pass)?
-    };
-let nexus = rullst::nexus::Nexus::new()
+    // Fail early if the deployment has no private session encryption key.
+    rullst::auth::get_app_key()?;
+    let (tool_access, nexus_auth) = tool_access::ToolAccess::new()?;
+    let mut nexus_builder = rullst::nexus::Nexus::new()
         .with_auth_policy(nexus_auth)
-        .with_brand("LMS Admin")
+        .with_brand("LMS Showcase")
         .register::<models::category::Category>()
         .register::<models::course::Course>()
-        .register::<models::course_module::CourseModule>()
-        .register::<models::course_version::CourseVersion>()
-        .register::<models::publication_rollback::PublicationRollback>()
-        .register::<models::course_completion::CourseCompletion>()
-        .register::<models::certificate::Certificate>()
-        .register::<models::role_assignment::RoleAssignment>()
-        .register::<models::domain_event::DomainEvent>()
-        .register::<models::lesson::Lesson>()
-        .register::<models::user::User>()
-        .register::<models::enrollment::Enrollment>()
-        .register::<models::lesson_progress::LessonProgress>()
-        .register::<models::lesson_progress_event::LessonProgressEvent>()
-        .register::<models::lesson_release_rule::LessonReleaseRule>()
-        .register::<models::notification::Notification>()
-        .register::<models::notification_preference::NotificationPreference>()
-        .register::<models::scheduler_lease::SchedulerLease>()
-        .register::<models::quiz::Quiz>()
-        .register::<models::quiz_question::QuizQuestion>()
-        .register::<models::quiz_option::QuizOption>()
-        .register::<models::quiz_attempt::QuizAttempt>()
-        .register::<models::quiz_attempt_session::QuizAttemptSession>()
-        .register::<models::quiz_answer::QuizAnswer>()
-        .register::<models::activity::Activity>()
-        .register::<models::activity_attempt::ActivityAttempt>()
-        .register::<models::activity_review_policy::ActivityReviewPolicy>()
-        .register::<models::activity_review_state::ActivityReviewState>()
-        .register::<models::assignment::Assignment>()
-        .register::<models::rubric_criterion::RubricCriterion>()
-        .register::<models::assignment_submission::AssignmentSubmission>()
-        .register::<models::assignment_grade::AssignmentGrade>()
-        .register::<models::assignment_grade_correction::AssignmentGradeCorrection>()
-        .register::<models::rubric_score::RubricScore>()
-        .register::<models::achievement::Achievement>()
-        .register::<models::leaderboard_entry::LeaderboardEntry>()
-        .register::<models::automation_rule::AutomationRule>()
-        .register::<models::automation_execution::AutomationExecution>()
-        .register::<models::user_achievement::UserAchievement>()
-        .register::<models::score_event::ScoreEvent>()
-        .register::<models::score_correction::ScoreCorrection>()
+        .register::<models::lesson::Lesson>();
+    if !showcase::enabled() {
+        nexus_builder = nexus_builder
+            .register::<models::course_module::CourseModule>()
+            .register::<models::course_version::CourseVersion>()
+            .register::<models::publication_rollback::PublicationRollback>()
+            .register::<models::course_completion::CourseCompletion>()
+            .register::<models::certificate::Certificate>()
+            .register::<models::role_assignment::RoleAssignment>()
+            .register::<models::domain_event::DomainEvent>()
+            .register::<models::user::User>()
+            .register::<models::enrollment::Enrollment>()
+            .register::<models::lesson_progress::LessonProgress>()
+            .register::<models::lesson_progress_event::LessonProgressEvent>()
+            .register::<models::lesson_release_rule::LessonReleaseRule>()
+            .register::<models::notification::Notification>()
+            .register::<models::notification_preference::NotificationPreference>()
+            .register::<models::scheduler_lease::SchedulerLease>()
+            .register::<models::quiz::Quiz>()
+            .register::<models::quiz_question::QuizQuestion>()
+            .register::<models::quiz_option::QuizOption>()
+            .register::<models::quiz_attempt::QuizAttempt>()
+            .register::<models::quiz_attempt_session::QuizAttemptSession>()
+            .register::<models::quiz_answer::QuizAnswer>()
+            .register::<models::activity::Activity>()
+            .register::<models::activity_attempt::ActivityAttempt>()
+            .register::<models::activity_review_policy::ActivityReviewPolicy>()
+            .register::<models::activity_review_state::ActivityReviewState>()
+            .register::<models::assignment::Assignment>()
+            .register::<models::rubric_criterion::RubricCriterion>()
+            .register::<models::assignment_submission::AssignmentSubmission>()
+            .register::<models::assignment_grade::AssignmentGrade>()
+            .register::<models::assignment_grade_correction::AssignmentGradeCorrection>()
+            .register::<models::rubric_score::RubricScore>()
+            .register::<models::achievement::Achievement>()
+            .register::<models::leaderboard_entry::LeaderboardEntry>()
+            .register::<models::automation_rule::AutomationRule>()
+            .register::<models::automation_execution::AutomationExecution>()
+            .register::<models::user_achievement::UserAchievement>()
+            .register::<models::score_event::ScoreEvent>()
+            .register::<models::score_correction::ScoreCorrection>();
+    }
+    let nexus = nexus_builder
         .try_build()?
-        .layer(rullst::server::from_fn(nexus_mobile_patch));
+        .layer(rullst::server::from_fn(nexus_mobile_patch))
+        .layer(axum::middleware::from_fn_with_state(
+            tool_access.clone(),
+            tool_access::guard,
+        ));
 
     let public = routes![
         get("/" => controllers::lms_controller::index),
         get("/favicon.ico" => controllers::lms_controller::favicon_handler),
         get("/apps" => pages::apps::apps_page),
+        get("/privacy" => showcase::privacy),
+        get("/cookies" => showcase::cookies),
+        get("/static/showcase.css" => showcase::css),
+        get("/static/showcase.js" => showcase::js),
+        get("/static/tailwind.js" => showcase::tailwind),
         get("/manifest.webmanifest" => manifest_handler),
         get("/sw.js" => sw_handler),
         get("/static/htmx.js" => htmx_handler),
@@ -478,33 +450,57 @@ let nexus = rullst::nexus::Nexus::new()
         .route("/cache", axum::routing::get(studio_cache_handler))
         .route("/studio/cache", axum::routing::get(studio_cache_handler))
         .route("/assets/studio.css", axum::routing::get(studio_css_handler))
-        .route("/studio/assets/studio.css", axum::routing::get(studio_css_handler))
-        .route("/assets/logger.js", axum::routing::get(studio_logger_handler))
-        .route("/studio/assets/logger.js", axum::routing::get(studio_logger_handler))
+        .route(
+            "/studio/assets/studio.css",
+            axum::routing::get(studio_css_handler),
+        )
+        .route(
+            "/assets/logger.js",
+            axum::routing::get(studio_logger_handler),
+        )
+        .route(
+            "/studio/assets/logger.js",
+            axum::routing::get(studio_logger_handler),
+        )
         .layer(rullst::server::from_fn(studio_tailwind_patch))
-        .layer(rullst::server::from_fn(studio_auth_guard));
+        .layer(axum::middleware::from_fn_with_state(
+            tool_access.studio(),
+            tool_access::guard,
+        ));
 
     let is_prod_or_staging = std::env::var("RULLST_ENV")
         .or_else(|_| std::env::var("APP_ENV"))
-        .map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "production" | "prod" | "staging" | "stage"))
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "production" | "prod" | "staging" | "stage"
+            )
+        })
         .unwrap_or(false);
 
     let router = if !is_prod_or_staging {
         public
             .merge_axum(learning.into_axum())
             .layer(rullst::server::from_fn(rullst::security::csrf_middleware))
-            .layer(rullst::server::from_fn(rullst::security::headers_middleware))
+            .layer(rullst::server::from_fn(
+                rullst::security::headers_middleware,
+            ))
             .nest_axum("/nexus", nexus)
             .nest_axum("/studio", studio_router)
-            .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+            .layer(rullst::server::Extension(
+                rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination(),
+            ))
     } else {
         public
             .merge_axum(learning.into_axum())
             .nest_axum("/nexus", nexus)
             .nest_axum("/studio", studio_router)
-            .layer(rullst::server::Extension(rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination()))
+            .layer(rullst::server::Extension(
+                rullst::nexus::NexusVerifiedTls::from_trusted_tls_termination(),
+            ))
     }
-    .layer(rullst::server::from_fn(coep_policy_patch));
+    .layer(rullst::server::from_fn(coep_policy_patch))
+    .layer(rullst::server::from_fn(showcase::shell));
 
     #[cfg(debug_assertions)]
     {
@@ -515,7 +511,8 @@ let nexus = rullst::nexus::Nexus::new()
         });
         println!("📊 Rullst Studio running on http://127.0.0.1:5555");
     }
-    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:///app/db.sqlite?mode=rwc".to_string());
+    let db_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "sqlite:///app/db.sqlite?mode=rwc".to_string());
     println!("📦 Connecting to database: {db_url}");
     match rullst::db::Orm::init(&db_url).await {
         Ok(_) => {
@@ -527,15 +524,23 @@ let nexus = rullst::nexus::Nexus::new()
             }
             println!("✅ Database migrations applied successfully!");
             if let Ok(pool) = rullst::db::Orm::pool() {
-                // Seed permanent demo learner account
-                if let Ok(demo_hash) = rullst::auth::hash_password_async("RullstAcademy2026!".to_string()).await {
-                    let _ = rullst::db::sqlx::query(
-                        "INSERT OR IGNORE INTO users (id, name, email, password_hash, created_at, updated_at) VALUES (100, 'Demo Learner', 'demo@rullst.dev', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                    ).bind(&demo_hash).execute(pool).await;
-
-                    let _ = rullst::db::sqlx::query(
-                        "INSERT OR IGNORE INTO school_memberships (school_id, user_id, role, membership_key, status, created_at, updated_at) VALUES (1, 100, 'student', 'sm-demo-100', 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                    ).execute(pool).await;
+                if showcase::enabled() {
+                    if let Some(existing) = models::user::User::find(100).await? {
+                        if existing.email != showcase::DEMO_EMAIL {
+                            return Err(
+                                "Demo account ID is already assigned to another user".into()
+                            );
+                        }
+                    }
+                    let demo_hash =
+                        rullst::auth::hash_password_async(showcase::DEMO_PASSWORD.to_string())
+                            .await?;
+                    rullst::db::sqlx::query(
+                        "INSERT INTO users (id, name, email, password_hash, created_at, updated_at) VALUES (100, 'Demo Learner', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET password_hash = excluded.password_hash"
+                    ).bind(showcase::DEMO_EMAIL).bind(&demo_hash).execute(pool).await?;
+                    rullst::db::sqlx::query(
+                        "INSERT OR IGNORE INTO school_memberships (school_id, user_id, membership_key, status, is_default, valid_from_epoch, expires_at_epoch, created_at, updated_at) VALUES (1, 100, 'sm-demo-100', 'active', 1, 1, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    ).execute(pool).await?;
                 }
 
                 // Seed Course 2 scope for default demo school so all learners can enroll
@@ -544,11 +549,11 @@ let nexus = rullst::nexus::Nexus::new()
                 ).execute(pool).await;
 
                 // Remove prerequisite blocking from Lesson 2 so all showcase lessons are playable
-            let _ = rullst::db::sqlx::query(
+                let _ = rullst::db::sqlx::query(
                 "UPDATE lesson_release_rules SET prerequisite_lesson_id = 0, required_progress_percent = 0 WHERE lesson_id = 2"
             ).execute(pool).await;
 
-            // Seed real YouTube video lessons for Rust & Web Development
+                // Seed real YouTube video lessons for Rust & Web Development
                 let _ = rullst::db::sqlx::query(
                     "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/5C_HPTJg5ek', title = 'Introduction to Memory Safety in Rust', transcript = 'Rust achieves memory safety without a garbage collector through its ownership model. In this lesson, we explore how ownership, borrowing, and lifetimes guarantee that references always point to valid data.' WHERE id = 1"
                 ).execute(pool).await;
@@ -564,14 +569,19 @@ let nexus = rullst::nexus::Nexus::new()
                 let _ = rullst::db::sqlx::query(
                     "UPDATE lessons SET media_kind = 'youtube', media_url = 'https://www.youtube.com/embed/r-GSGH2RxJs', title = 'Building Interactive UIs with HTMX', transcript = 'HTMX gives you access to AJAX, CSS Transitions, and Server-Sent Events directly in HTML. Pair HTMX with Rust server-side rendering for rich, dynamic user interfaces without heavy JavaScript bundle complexity.' WHERE id = 4"
                 ).execute(pool).await;
-                println!("🎥 Educational YouTube video lessons and open course scopes initialized!");
+                println!(
+                    "🎥 Educational YouTube video lessons and open course scopes initialized!"
+                );
             }
         }
         Err(err) => {
             eprintln!("❌ Database connection error: {err}");
         }
     }
-    println!("🚀 LMS server starting on port 3000...");
-    Server::new(router).run(3000).await?;
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "3000".into())
+        .parse::<u16>()?;
+    println!("🚀 LMS server starting on port {port}...");
+    Server::new(router).run(port).await?;
     Ok(())
 }

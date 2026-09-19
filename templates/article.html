@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
+    <meta name="htmx-config" content='{"historyCacheSize":0}'>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} — Rullst Template Engine</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Rullst/Rullst/main/Rullst.png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/tailwind.js"></script>
+    <script src="/static/htmx.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         {{ shared_styles | safe }}
@@ -13,7 +15,7 @@
         .mono { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
-<body>
+<body hx-history="false">
     {{ nav_html | safe }}
 
     <div class="max-w-4xl mx-auto px-6 py-12">
@@ -62,5 +64,6 @@
             </p>
         </div>
     </div>
+    {{ footer_html | safe }}
 </body>
 </html>

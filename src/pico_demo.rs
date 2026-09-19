@@ -2,7 +2,7 @@
 //! Demonstrates classless, semantic HTML styling with Pico.css v2 with 0 KB JavaScript,
 //! zero NPM/Node.js dependencies, automatic OS Dark/Light theme detection, and pure Rust server-side rendering.
 
-use crate::showcase_nav::{render_shared_styles, render_showcase_nav};
+use crate::showcase_nav::{render_shared_styles, render_showcase_footer, render_showcase_nav};
 use axum::response::Html;
 use rullst::html;
 
@@ -14,6 +14,8 @@ pub async fn render_pico_demo_page() -> Html<String> {
     let page_html = html! {
         <html lang="en" data-theme="dark">
             <head>
+                <script src="/static/htmx.js"></script>
+                <meta name="htmx-config" content={r#"{"historyCacheSize":0}"#} />
                 <meta charset="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>"Pico.css &mdash; Zero-Build Semantic CSS Engine"</title>
@@ -56,7 +58,7 @@ pub async fn render_pico_demo_page() -> Html<String> {
                     "
                 </style>
             </head>
-            <body>
+            <body hx-history="false">
                 { rullst::html::RawHtml(showcase_nav) }
 
                 <div class="pico-container">
@@ -147,6 +149,7 @@ pub async fn render_pico_demo_page() -> Html<String> {
                         </article>
                     </div>
                 </div>
+            { rullst::html::RawHtml(render_showcase_footer()) }
             </body>
         </html>
     };
