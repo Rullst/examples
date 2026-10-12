@@ -1,5 +1,9 @@
-//! Audited view of the adapters exported by `rullst-capital` 12.0.0.
+//! Audited view of the adapters exported by `rullst-capital` 12.3.0.
 //!
+//! Note on framework lifecycle:
+//! In Rullst 12.3.0, 9 out of 11 adapters (Paddle, Lemon Squeezy, Polar, Razorpay,
+//! Mercado Pago, Alipay, Coinbase Commerce, PicPay, Wise) and NFS-e are deprecated.
+//! In Rullst 13.0 (alpha 1+), they are completely removed, keeping ONLY Stripe and InfinitePay.
 //! "Exported" is deliberately not synonymous with "safe live checkout".
 //! The status text below records the operation boundary used by this example.
 

@@ -1592,9 +1592,9 @@ dependencies = [
 
 [[package]]
 name = "jsonschema"
-version = "0.53.0"
+version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca2ea2207f8ccb34b6d4d041fe9deb08fff3cbc43750012caa2c3d1e860188e4"
+checksum = "b6a806f80c1f5560431009ce5ec29b59d38f950e0cd7db5f1b8925e6d8104e21"
 dependencies = [
  "ahash",
  "bytecount",
@@ -1620,18 +1620,18 @@ dependencies = [
 
 [[package]]
 name = "jsonschema-regex"
-version = "0.53.0"
+version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5426a01d944d044c9c5e459f603419d1b539358f5496b1041df45a7a86d2d38f"
+checksum = "cb862addfa7782108933abcf842fe25334523a9df5b89ea4d9620e3dd7b42181"
 dependencies = [
  "regex-syntax",
 ]
 
 [[package]]
 name = "jsonschema-value"
-version = "0.53.0"
+version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65b6ec7deaeaab6320efc3084d8a9e91d5b4985ee36ffffef45dbff9516ff7a8"
+checksum = "a05cd404c5ff6e2731dbbf7e290a27417750acfb59e329560a1d0af384c93fb0"
 dependencies = [
  "ahash",
  "bytecount",
@@ -1671,7 +1671,6 @@ version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1"
 dependencies = [
- "cc",
  "pkg-config",
  "vcpkg",
 ]
@@ -2355,9 +2354,9 @@ dependencies = [
 
 [[package]]
 name = "referencing"
-version = "0.53.0"
+version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb406ba984c08d1b91781d7507d103296cf6dec3256c33c388b468957f4b43bb"
+checksum = "a3b4a92fac7e28c27de3ad26df2ecb9e652f227b258e845af034052e5b22c96c"
 dependencies = [
  "ahash",
  "fluent-uri",
@@ -2469,9 +2468,9 @@ dependencies = [
 
 [[package]]
 name = "rullst"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74116caab10cdfeeb35a86e2be63583fa0a51a25b21b383b78ed8e33773d6f9e"
+checksum = "abb766871e75c5d8b978ef9361dacf2eef41c1d143eb1b54daff7c1349f9fc64"
 dependencies = [
  "async-trait",
  "axum",
@@ -2509,9 +2508,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-ai"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d258620a5739b4ffed9b1b4db8fe1414153b0dee6c0525360ac23bae1d9a6cd"
+checksum = "74dd16b4582498a7727da9c6cdb43808aad2da402295a48d1aa198ebbcc45880"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2530,9 +2529,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-auth"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31c151f6447f2e7b6a346b69d2d0f09626aa8981d4caa137754854559283770b"
+checksum = "e325e33e386cc4994cdbb061ebbb3422878e84439f2560e1f64d4c7c777e0622"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -2553,13 +2552,14 @@ dependencies = [
  "tokio",
  "tower",
  "url",
+ "zeroize",
 ]
 
 [[package]]
 name = "rullst-capital"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc18385d2325b6e108c842f949180c9e55e1d191e3454e928164b44d810d6f1c"
+checksum = "9962e96709634eede7b86cc2da7bd653484feb0c2186accf7e59bcda7e0de69d"
 dependencies = [
  "async-trait",
  "axum",
@@ -2579,9 +2579,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-core"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "491b1d316663e727d6efb12ff001e10b3ecd00f5aac1982ccdccf3c84ed0e89f"
+checksum = "4b9df8f1ec32e262e0efba20a482986cb12e935b18e40b75715fbf9368d8a970"
 dependencies = [
  "async-trait",
  "axum",
@@ -2593,6 +2593,7 @@ dependencies = [
  "dotenvy",
  "getrandom 0.4.3",
  "http",
+ "http-body",
  "js-sys",
  "libloading",
  "rand 0.10.2",
@@ -2624,9 +2625,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-macros"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a4e90ae7cc826d24dd26e539d66908b685bb94a4d32eaa77d6e0b41af72d95e"
+checksum = "770b25ed0204cee56182bd0dcf289eac55d47d2911ac5b8debe1e03cc5ca883c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2635,14 +2636,15 @@ dependencies = [
 
 [[package]]
 name = "rullst-mail"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c27b4bd1e3dd7bd2436d9035cc5e8630783cb65a81a394ef921e4c184141c95"
+checksum = "ee09489b11b90feca78d2934bfc5be371f29916f7c5fbcfc54613e9b72ea5f6e"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
  "chrono",
  "hmac",
+ "idna",
  "reqwest",
  "rullst-core",
  "secrecy",
@@ -2655,9 +2657,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-nexus"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e0192331e13958d3ba3979d0f6fa5055cb5158d6bf513e83f57c9c9987e267f"
+checksum = "2206ad609e8d0ecfbabf77fe202f5a4ec31c305f7798373215c95dcaf13cfb0d"
 dependencies = [
  "ammonia",
  "axum",
@@ -2679,9 +2681,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-orm"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b351b2bf9a71d067bd43a893ee970174e7a695425a08643d0be56f82e83b53f"
+checksum = "17ed69a93f18a654d79d571a221d0e31fd431662080fa89f51adcc2c64adf7e8"
 dependencies = [
  "aes-gcm",
  "async-stream",
@@ -2693,6 +2695,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "sqlx-core",
  "syn 3.0.5",
  "thiserror",
  "tinyvec",
@@ -2705,9 +2708,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-orm-macros"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baea599f8c1ca7e36310f136d3e271f52fa152f54125825370c023a22dc8cd51"
+checksum = "ed35916db4142eae95052f70229d18fc47aa36029bd50164bcfe929e51c902da"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2716,9 +2719,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-security"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5da56486b846ce8f1d9e8d2d6edb6112d3cd7651287e7dc4e8b275c4f9a96be3"
+checksum = "d8e612f468fa71f5f622853c04694f6c8c8c905b61dfac8d95c34eb434e9e6d3"
 dependencies = [
  "aes-gcm",
  "ammonia",
@@ -2748,9 +2751,9 @@ dependencies = [
 
 [[package]]
 name = "rullst-studio"
-version = "12.0.0"
+version = "12.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bbbb0deb750db319a735fb8c1121ac2a497a6108e9ef086d99d011c9bbc3e63"
+checksum = "52dbbcc9bd269aa8b62a544bf29e6c63de63f31ccbc0dd31de01d705324dbd8d"
 dependencies = [
  "axum",
  "base64 0.23.1",
@@ -3621,18 +3624,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.13.2"
+version = "1.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cf0ded5c4e56918d8f8a339e1bb67d038d3bc6d144ac407904015ba2e4cde9b"
-dependencies = [
- "tinyvec_macros",
-]
-
-[[package]]
-name = "tinyvec_macros"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tokio"

@@ -256,9 +256,9 @@ fn gateway_matrix() -> String {
     html! {
         <section class="gateway-section" aria-labelledby="gateway-heading">
             <div class="section-heading">
-                <p class="eyebrow">"Rullst Capital 12.0.0"</p>
+                <p class="eyebrow">"Rullst Capital 12.3.0"</p>
                 <h2 id="gateway-heading">"Adapter capability matrix"</h2>
-                <p>"The framework exports 10 incoming billing adapters and 1 outgoing payout adapter. Exported does not mean every adapter has a usable current live checkout."</p>
+                <p>"The framework exports 10 incoming billing adapters and 1 outgoing payout adapter (deprecated in v12.3.0 and removed in v13.0, which retains only Stripe and InfinitePay). Exported does not mean every adapter has a usable current live checkout."</p>
             </div>
             <div class="table-scroll" tabindex="0">
                 <table>

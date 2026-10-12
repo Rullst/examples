@@ -153,9 +153,9 @@ pub fn render_pricing_page(
                     </section>
 
                     <section id="adapter-audit" class="card" style="margin-top: 2rem;">
-                        <h2 class="card-title" style="margin-bottom: .4rem;">"Rullst Capital 12.0.0 capability audit"</h2>
+                        <h2 class="card-title" style="margin-bottom: .4rem;">"Rullst Capital 12.3.0 capability audit"</h2>
                         <p style="color: var(--text-muted); font-size: .9rem;">
-                            "These labels describe the audited v12 code paths, not provider availability for every country or account. Fees, settlement times, tax treatment and regional eligibility are intentionally omitted because providers and merchant contracts change."
+                            "These labels describe the audited v12.3 code paths. Note: in Rullst 12.3.0, 9 out of 11 adapters (Paddle, Lemon Squeezy, Polar, Razorpay, Mercado Pago, Alipay, Coinbase, PicPay, Wise) and NFS-e are marked deprecated and removed in v13.0, which retains only Stripe and InfinitePay."
                         </p>
                         <p class="notice">"Exported by the crate does not mean production-ready. Only Stripe and Razorpay have guarded paths in the separate SaaS blueprint; the published staging target will initially enable Stripe Test Mode only."</p>
                         <div class="gateway-grid">{ rullst::html::RawHtml(gateway_cards) }</div>

@@ -1,6 +1,6 @@
 # Rullst SaaS blueprint: audited test and live checkout
 
-This Rullst 12.0.0 example separates three concerns that the public Showcase
+This Rullst 12.3.0 example separates three concerns that the public Showcase
 must not blur:
 
 - the Showcase is a public, deterministic adapter catalogue;
@@ -50,8 +50,14 @@ is maintained in
 
 ## Adapter inventory
 
-Rullst Capital 12.0.0 exports 10 incoming billing adapters and one outgoing
+Rullst Capital 12.3.0 exports 10 incoming billing adapters and one outgoing
 payout adapter. Exported does not mean production-ready.
+
+> [!WARNING]
+> **V12.3 Deprecations & V13.0 Gateway Removals (`rullst-capital` / `rullst-mail`)**
+> * **Rullst 12.3.0:** Formally marked 9 out of 11 adapters (`Paddle`, `Lemon Squeezy`, `Polar`, `Razorpay`, `Mercado Pago`, `Alipay`, `Coinbase Commerce`, `PicPay`, `Wise`), payout provider contracts, and the Brazilian NFS-e fiscal module with `#[deprecated(since = "12.3.0")]`.
+> * **Rullst 13.0 (alpha 1+):** Permanently **removed** those 9 adapters and NFS-e from `rullst-capital` (`V13-CAPITAL-REMOVED`). Rullst Capital now maintains **only Stripe and InfinitePay**. In parallel, `rullst-mail` removed SendGrid, Postmark, Mailjet, and Mailtrap, maintaining **only Resend, AWS SES, SendPulse, and SMTP** (`V13-MAIL-REMOVED`).
+> * Production SaaS applications planning migration to v13 must consolidate exclusively around **Stripe** (or InfinitePay).
 
 | Adapter | Audited v12 status | Important constraint |
 | --- | --- | --- |
@@ -359,7 +365,7 @@ reconciliation, private paid-artifact delivery and backup automation. The
 operator must still provision production resources, test a backup restore,
 configure monitoring/alerts, review the actual public seller identity and
 document the operator process for correction/closure/deletion requests. The
-authenticated dashboard already provides a private JSON data export. Rullst 12.0.0 still
+authenticated dashboard already provides a private JSON data export. Rullst 12.3.0 still
 lacks a typed one-time Capital contract, so this Stripe integration remains
 application-owned and must not be presented as proof that every exported
 gateway is live-ready.

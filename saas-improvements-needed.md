@@ -1,5 +1,10 @@
 # Rullst SaaS and Capital improvements needed
 
+> [!IMPORTANT]
+> **Lifecycle Update: Rullst 12.3.0 Deprecation & Rullst 13.0 Alpha Removal**
+> In **Rullst 12.3.0**, all adapters in `rullst-capital` except Stripe and InfinitePay (Lemon Squeezy, Polar, Paddle, Alipay, Mercado Pago, Razorpay, Coinbase Commerce, PicPay, Wise) plus the NFS-e fiscal module were formally marked `#[deprecated(since = "12.3.0")]`.
+> In **Rullst 13.0 (alpha 1+)**, those 9 adapters and NFS-e were **permanently removed** (`V13-CAPITAL-REMOVED`), leaving **only Stripe and InfinitePay** supported. Furthermore, `rullst-mail` removed SendGrid, Postmark, Mailjet, and Mailtrap, retaining **only Resend, AWS SES, SendPulse, and SMTP** (`V13-MAIL-REMOVED`).
+
 Investigated on 2026-09-16 against the published `cargo-rullst` and
 `rullst-capital` **12.0.0** crate sources. Provider documentation was checked
 against the public contracts available on the same date.

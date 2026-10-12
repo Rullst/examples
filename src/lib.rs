@@ -437,6 +437,7 @@ const STUDIO_CSS: &str = include_str!("../static/studio.css");
 const TAILWIND_JS: &str = include_str!("../static/tailwind.js");
 const LOGGER_JS: &str = r#"document.addEventListener("DOMContentLoaded",()=>{const target=document.getElementById("studio-request-stream");if(!target||typeof EventSource==="undefined")return;const source=new EventSource("/studio/requests/stream");source.onmessage=(event)=>{const row=document.createElement("div");row.innerHTML=event.data;while(row.lastChild)target.prepend(row.lastChild);};window.addEventListener("beforeunload",()=>source.close(),{once:true});});"#;
 
+#[allow(dead_code)]
 async fn studio_css_handler() -> axum::response::Response {
     use axum::http::header;
     use axum::response::IntoResponse;
@@ -470,6 +471,7 @@ async fn tailwind_handler() -> axum::response::Response {
         .into_response()
 }
 
+#[allow(dead_code)]
 async fn studio_logger_handler() -> axum::response::Response {
     use axum::http::header;
     use axum::response::IntoResponse;
@@ -512,6 +514,7 @@ async fn studio_tailwind_patch(
     }
     axum::response::Response::from_parts(parts, axum::body::Body::from(bytes))
 }
+
 
 async fn nexus_mobile_patch(
     req: axum::extract::Request,
@@ -690,21 +693,6 @@ fn router_with_nexus_auth(
 
     let cache = showcase_cache::ShowcaseCache::default();
     let studio_router = rullst_studio::data_browser::router()
-        .route("/cache", axum::routing::get(showcase_cache::studio_cache_handler))
-        .route("/studio/cache", axum::routing::get(showcase_cache::studio_cache_handler))
-        .route("/assets/studio.css", axum::routing::get(studio_css_handler))
-        .route(
-            "/studio/assets/studio.css",
-            axum::routing::get(studio_css_handler),
-        )
-        .route(
-            "/assets/logger.js",
-            axum::routing::get(studio_logger_handler),
-        )
-        .route(
-            "/studio/assets/logger.js",
-            axum::routing::get(studio_logger_handler),
-        )
         .layer(axum::middleware::from_fn(studio_tailwind_patch));
 
     use blueprint_ai::admin::{Blueprint, Surface, integrate};

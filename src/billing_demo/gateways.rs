@@ -48,7 +48,8 @@ impl GatewayInfo {
     }
 }
 
-/// Returns all adapters exported by Rullst Capital 12.0.0.
+/// Returns all adapters exported by Rullst Capital 12.3.0.
+/// Note: in 12.3.0 all adapters except Stripe and InfinitePay are deprecated ahead of v13.0 removal.
 pub fn all_gateways() -> Vec<GatewayInfo> {
     vec![
         GatewayInfo {
