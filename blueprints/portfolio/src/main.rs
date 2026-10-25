@@ -20,42 +20,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("📊 Rullst Studio running on http://127.0.0.1:5555");
     }
 
-    const STUDIO_CSS: &str = include_str!("../static/studio.css");
-    const LOGGER_JS: &str = r#"document.addEventListener("DOMContentLoaded",()=>{const target=document.getElementById("studio-request-stream");if(!target||typeof EventSource==="undefined")return;const source=new EventSource("/studio/requests/stream");source.onmessage=(event)=>{const row=document.createElement("div");row.innerHTML=event.data;while(row.lastChild)target.prepend(row.lastChild);};window.addEventListener("beforeunload",()=>source.close(),{once:true});});"#;
-
-    async fn studio_css_handler() -> rullst::server::Response {
-        use rullst::server::IntoResponse;
-        use rullst::server::header;
-        (
-            rullst::server::StatusCode::OK,
-            [
-                (header::CONTENT_TYPE, "text/css; charset=utf-8"),
-                (header::CACHE_CONTROL, "public, max-age=86400"),
-                (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
-            ],
-            STUDIO_CSS,
-        )
-            .into_response()
-    }
-
-    async fn studio_logger_handler() -> rullst::server::Response {
-        use rullst::server::IntoResponse;
-        use rullst::server::header;
-        (
-            rullst::server::StatusCode::OK,
-            [
-                (
-                    header::CONTENT_TYPE,
-                    "application/javascript; charset=utf-8",
-                ),
-                (header::CACHE_CONTROL, "public, max-age=86400"),
-                (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
-            ],
-            LOGGER_JS,
-        )
-            .into_response()
-    }
-
     const HTMX_JS: &str = include_str!("../static/htmx-1.9.12.min.js");
 
     async fn htmx_handler() -> rullst::server::Response {
@@ -91,62 +55,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             CRAB_PNG,
         )
             .into_response()
-    }
-
-    async fn studio_cache_handler(headers: rullst::server::HeaderMap) -> rullst::server::Response {
-        use rullst::server::IntoResponse;
-        let content = rullst::html! {
-            <div class="w-full p-4 sm:p-6 lg:p-8 font-mono space-y-6 lg:space-y-8 max-w-7xl mx-auto">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-6">
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl leading-tight font-extrabold text-white tracking-tight flex items-center gap-3">
-                            <span>"🧊"</span> "Studio Cache Inspector"
-                        </h1>
-                        <p class="text-sm text-slate-400 mt-1">
-                            "This blueprint does not currently expose cache counters."
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
-                            "Telemetry unavailable"
-                        </span>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-                    <div class="p-5 bg-slate-900/90 border border-slate-800 rounded-xl shadow-md">
-                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">"Active Cache Entries"</p>
-                        <p class="text-3xl font-extrabold text-sky-400 mt-2">"Not instrumented"</p>
-                        <p class="text-xs text-slate-400 mt-1">"No cache entry counter is exposed"</p>
-                    </div>
-                    <div class="p-5 bg-slate-900/90 border border-slate-800 rounded-xl shadow-md">
-                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">"Hit Rate"</p>
-                        <p class="text-3xl font-extrabold text-emerald-400 mt-2">"Not instrumented"</p>
-                        <p class="text-xs text-slate-400 mt-1">"No hit or miss counter is exposed"</p>
-                    </div>
-                    <div class="p-5 bg-slate-900/90 border border-slate-800 rounded-xl shadow-md">
-                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">"Memory Footprint"</p>
-                        <p class="text-3xl font-extrabold text-indigo-400 mt-2">"Not instrumented"</p>
-                        <p class="text-xs text-slate-400 mt-1">"No memory counter is exposed"</p>
-                    </div>
-                </div>
-
-                <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-6 shadow-md">
-                    <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">"Cached Key Entries"</h3>
-                    <div class="p-8 text-center border border-dashed border-slate-800 rounded-lg">
-                        <p class="text-sm text-slate-400">"Cache statistics are unavailable for this blueprint; these cards do not represent measured values."</p>
-                    </div>
-                </div>
-            </div>
-        };
-
-        if headers.contains_key("hx-request") {
-            return content.into_response();
-        }
-
-        let full_html =
-            rullst::studio::data_browser::studio_layout(content.into_string(), None, &[]);
-        rullst::response::Html(full_html).into_response()
     }
 
     async fn nexus_mobile_patch(
@@ -270,25 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .try_build()?
         .layer(rullst::server::from_fn(nexus_mobile_patch));
 
-    let studio_router = rullst::studio::data_browser::router()
-        .route("/cache", rullst::server::get(studio_cache_handler))
-        .route("/studio/cache", rullst::server::get(studio_cache_handler))
-        .route(
-            "/assets/studio.css",
-            rullst::server::get(studio_css_handler),
-        )
-        .route(
-            "/studio/assets/studio.css",
-            rullst::server::get(studio_css_handler),
-        )
-        .route(
-            "/assets/logger.js",
-            rullst::server::get(studio_logger_handler),
-        )
-        .route(
-            "/studio/assets/logger.js",
-            rullst::server::get(studio_logger_handler),
-        );
+    let studio_router = rullst::studio::data_browser::router();
 
     use blueprint_ai::admin::{Blueprint, Surface, integrate};
     let nexus = integrate(nexus, &nexus_auth, Blueprint::Portfolio, Surface::Nexus)?;

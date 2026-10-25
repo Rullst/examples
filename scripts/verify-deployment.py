@@ -180,13 +180,13 @@ def main():
         print(f"{args.app}: required administrator and provider configuration present.")
         return
     require(args.image, "An immutable expected image is required.")
-    for attempt in range(24):
+    for attempt in range(60):
         properties = azure(args.app, "show")["properties"]
         if (properties.get("latestRevisionName")
                 and properties["latestRevisionName"] == properties.get("latestReadyRevisionName")
                 and properties["template"]["containers"][0]["image"] == args.image):
             break
-        require(attempt < 23, "Azure has not made the expected image ready.")
+        require(attempt < 59, "Azure has not made the expected image ready.")
         print(f"{args.app}: waiting for the expected Azure revision...", flush=True)
         time.sleep(10)
     smoke(args.app, username, password)
