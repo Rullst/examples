@@ -23,6 +23,8 @@ FROM chef AS builder
 COPY --from=planner /app/blueprints/lms/recipe.json recipe.json
 # The standalone shared crate is not part of cargo-chef's blueprint recipe.
 COPY crates/blueprint-ai /app/crates/blueprint-ai
+# LMS still targets Rullst v12: this manifest compiles the shared sources above.
+COPY crates/blueprint-ai-v12 /app/crates/blueprint-ai-v12
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build the application source code

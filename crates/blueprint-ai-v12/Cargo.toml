@@ -1,0 +1,34 @@
+# Rullst v12.3.0 build of the shared `blueprint-ai` crate.
+#
+# The Showcase (root) and LMS examples still target Rullst 12.3.0, while
+# Portfolio and SaaS target 13.0.0-alpha.3. Mixing both major versions in one
+# dependency graph produces two incompatible `rullst-nexus` types, so this
+# manifest compiles the exact same sources from `../blueprint-ai` against v12.
+# Remove this crate once Showcase and LMS are upgraded to Rullst v13.
+[package]
+name = "blueprint-ai"
+version = "0.1.0"
+edition = "2024"
+publish = false
+autotests = false
+
+[lib]
+path = "../blueprint-ai/src/lib.rs"
+
+[dependencies]
+ammonia = "4.1"
+axum = "0.8"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+rullst-ai = "12.3.0"
+rullst-core = "12.3.0"
+rullst-nexus = "12.3.0"
+serde = { version = "1", features = ["derive"] }
+serde_urlencoded = "0.7"
+tokio = { version = "1", features = ["sync", "time"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+base64 = "0.22"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[workspace]

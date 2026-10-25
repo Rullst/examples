@@ -6,6 +6,7 @@ on:
     paths:
       - 'blueprints/lms/**'
       - 'crates/blueprint-ai/**'
+      - 'crates/blueprint-ai-v12/**'
       - '.dockerignore'
       - 'scripts/verify-deployment.py'
       - 'scripts/test_verify_deployment.py'

@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Rullst Framework - Optimized OCI Containerfile
 # Powered by cargo-chef for blazing-fast layer caching (< 30s rebuilds)
 # Compatible with Podman, Buildah, and Docker
@@ -24,6 +24,8 @@ FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 # cargo-chef does not include this standalone path dependency in its recipe.
 COPY crates/blueprint-ai /app/crates/blueprint-ai
+# Showcase still targets Rullst v12: this manifest compiles the shared sources above.
+COPY crates/blueprint-ai-v12 /app/crates/blueprint-ai-v12
 # Changes to the shared crate must also invalidate this cached layer.
 RUN cargo chef cook --release --recipe-path recipe.json
 
