@@ -2,8 +2,8 @@
 
 # 🦀 Rullst Framework — Official Showcase & Blueprints
 
-[![Rullst Version](https://img.shields.io/badge/rullst-v12.3.0-orange.svg?style=flat-square&logo=rust)](https://crates.io/crates/rullst)
-[![cargo-rullst](https://img.shields.io/badge/cargo--rullst-v12.3.0-blue.svg?style=flat-square&logo=rust)](https://crates.io/crates/cargo-rullst)
+[![Rullst Version](https://img.shields.io/badge/rullst-v13.0.0--alpha.3-orange.svg?style=flat-square&logo=rust)](https://crates.io/crates/rullst)
+[![cargo-rullst](https://img.shields.io/badge/cargo--rullst-v13.0.0--alpha.3-blue.svg?style=flat-square&logo=rust)](https://crates.io/crates/cargo-rullst)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![OCI Container Ready](https://img.shields.io/badge/container-cargo--chef-blueviolet.svg?style=flat-square&logo=podman)](Containerfile)
 [![Caddy SSL](https://img.shields.io/badge/proxy-caddy_auto_https-00ADD8.svg?style=flat-square&logo=caddy)](Caddyfile)
@@ -11,7 +11,7 @@
 [![Live LMS Academy](https://img.shields.io/badge/live_lms-azure_container_apps-047857.svg?style=flat-square&logo=microsoftazure)](https://lms.rullst.win/)
 [![Live Portfolio](https://img.shields.io/badge/live_portfolio-azure_container_apps-7C3AED.svg?style=flat-square&logo=microsoftazure)](https://portfolio.rullst.win/)
 
-**Rullst Showcase — Built entirely with Rullst v12.**
+**Rullst Showcase & Blueprints — Portfolio and SaaS running on Rullst v13.0.0-alpha.3.**
 
 [![Join Discord](https://img.shields.io/badge/Join_our_community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/2ntKFtsSjw)
 
@@ -31,14 +31,13 @@ required framework updates are tracked separately in
 example is also governed by the engineering
 [global privacy baseline](docs/GLOBAL_PRIVACY_BASELINE.md).
 
-Welcome to the official showcase and blueprints repository for the **Rullst Framework (`12.3.0`)**. This repository demonstrates how to architect, build, and deploy production-grade, sovereign web applications in pure Rust without JavaScript framework lock-in.
+Welcome to the official showcase and blueprints repository for the **Rullst Framework (`13.0.0-alpha.3`)**. This repository demonstrates how to architect, build, and deploy production-grade, sovereign web applications in pure Rust without JavaScript framework lock-in.
 
-This monorepository contains four live cloud applications, with the SaaS
-blueprint deliberately split into staging and production deployments:
+This monorepository contains four live cloud applications, with the **Portfolio** and **SaaS** blueprints upgraded to **Rullst `13.0.0-alpha.3`** and the SaaS blueprint deliberately split into staging and production deployments:
 1. **🌐 Rullst Showcase App:** Demonstrates the **5 Frontend Paradigms**, Active Record ORM, WAF security layers, Prompt Injection Shield, and Omni cross-platform capabilities.
 2. **🎓 Rullst Academy (LMS Blueprint):** A full-featured, real-world educational platform with 13 SQLite migrations, course catalog, Argon2 authentication, monotonic lesson progress tracking, quizzes, certifications, and integrated **Nexus Admin CMS** + **Studio Dev Cockpit**.
-3. **💼 Rullst Portfolio Blueprint:** An ultra-fast, modern developer portfolio featuring dark glassmorphic UI, HTMX SSR, project showcase, experience timeline, skills matrix, and **Nexus Admin CMS**.
-4. **Rullst SaaS Blueprint:** An audited one-time Stripe checkout with separate
+3. **💼 Rullst Portfolio Blueprint (`v13.0.0-alpha.3`):** An ultra-fast, modern developer portfolio featuring dark glassmorphic UI, HTMX SSR, project showcase, experience timeline, skills matrix, and **Nexus Admin CMS**.
+4. **🚀 Rullst SaaS Blueprint (`v13.0.0-alpha.3`):** An audited one-time Stripe checkout with separate
    sandbox and live databases, provider objects, secrets, entitlements,
    downloadable artifacts, certificates, transactional email, refunds and
    reconciliation.
@@ -110,16 +109,13 @@ The **LMS Blueprint** is a full production-grade application generated via `carg
 
 ## 💳 The SaaS Payment Blueprint (`blueprints/saas`)
 
-The audited SaaS example is published in two deliberately isolated
+The audited SaaS example (`Rullst v13.0.0-alpha.3`) is published in two deliberately isolated
 environments: [permanent Stripe sandbox](https://saas-staging.rullst.win) and
-[customer-facing production](https://saas.rullst.win). Rullst Capital 12.3.0
-exports **10 incoming billing adapters and 1
-outgoing payout adapter**, but adapter presence is not the same as a usable
-live checkout. **Important:** in Rullst 12.3.0, 9 out of 11 adapters (Paddle, Lemon Squeezy, Polar, Razorpay, Mercado Pago, Alipay, Coinbase, PicPay, Wise) and NFS-e are marked `#[deprecated]` and completely removed in Rullst 13.0 (which maintains only Stripe and InfinitePay). This example currently enables only an application-owned Stripe
-one-time path after a server-side Price check; Razorpay and the other providers
-remain report/roadmap entries until each has an audited one-time contract.
-Known Capital defects and v12 capability boundaries are shown directly in its
-UI.
+[customer-facing production](https://saas.rullst.win). **Rullst Capital `13.0.0-alpha.3`**
+permanently removed the 9 deprecated v12 adapters (`Paddle`, `Lemon Squeezy`, `Polar`, `Razorpay`, `Mercado Pago`, `Alipay`, `Coinbase Commerce`, `PicPay`, `Wise`) and the Brazilian NFS-e fiscal module, retaining **only `StripeProvider` and the experimental fail-closed `InfinitePayProvider`**. In parallel, `rullst-mail 13.0.0-alpha.3` retains **only Resend, AWS SES, SendPulse, and SMTP**. This example enables an application-owned Stripe
+one-time path after a server-side Price check; InfinitePay remains an experimental
+report/roadmap entry until a full hosted-link + webhook reconciliation contract is audited.
+Current Capital v13.0.0-alpha.3 capability boundaries are shown directly in its UI.
 
 Payments remain disabled by default in source. Staging uses Stripe test data;
 production uses separate live credentials and can create a real charge. The two
@@ -223,11 +219,11 @@ cargo rullst omni ios       # Opens in iOS Simulator via Xcode
 
 ## 📦 Blueprints Catalog (`cargo-rullst`)
 
-This showcase serves as the companion guide to the official scaffolds generated by the `cargo-rullst` CLI tool (`v12.3.0`):
+This showcase serves as the companion guide to the official scaffolds generated by the `cargo-rullst` CLI tool (`v13.0.0-alpha.3`):
 
 ```bash
 # 1. Install the official CLI
-cargo install cargo-rullst --version 12.3.0
+cargo install cargo-rullst --version =13.0.0-alpha.3 --locked
 
 # 2. Scaffold official blueprints:
 cargo rullst new my-saas      --blueprint saas       # SaaS auth, billing models and Capital adapters; audit live operations before use

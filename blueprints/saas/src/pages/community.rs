@@ -44,7 +44,7 @@ pub fn footer() -> String {
         ),
     ];
     let mut result = String::from(
-        r#"<footer class="showcase-footer"><div class="showcase-footer-brand"><strong>Rullst SaaS Showcase</strong><span>Built entirely with Rullst v12.</span><a class="showcase-discord" href="https://discord.gg/2ntKFtsSjw" rel="noreferrer">Join our Discord ↗</a></div><div class="showcase-footer-grid">"#,
+        r#"<footer class="showcase-footer"><div class="showcase-footer-brand"><strong>Rullst SaaS Showcase</strong><span>Built entirely with Rullst v13.0.0-alpha.3.</span><a class="showcase-discord" href="https://discord.gg/2ntKFtsSjw" rel="noreferrer">Join our Discord ↗</a></div><div class="showcase-footer-grid">"#,
     );
     for (title, links) in groups {
         result.push_str(&format!("<nav aria-label=\"{title}\"><h2>{title}</h2>"));

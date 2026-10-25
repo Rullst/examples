@@ -1,6 +1,6 @@
-# Rullst SaaS blueprint: audited test and live checkout
+# Rullst SaaS blueprint: audited test and live checkout (`v13.0.0-alpha.3`)
 
-This Rullst 12.3.0 example separates three concerns that the public Showcase
+This Rullst `13.0.0-alpha.3` example separates three concerns that the public Showcase
 must not blur:
 
 - the Showcase is a public, deterministic adapter catalogue;
@@ -50,28 +50,18 @@ is maintained in
 
 ## Adapter inventory
 
-Rullst Capital 12.3.0 exports 10 incoming billing adapters and one outgoing
-payout adapter. Exported does not mean production-ready.
+Rullst Capital `13.0.0-alpha.3` exports **2 incoming billing adapters** (`StripeProvider` and `InfinitePayProvider`). The 9 deprecated v12 adapters (`Paddle`, `Lemon Squeezy`, `Polar`, `Razorpay`, `Mercado Pago`, `Alipay`, `Coinbase Commerce`, `PicPay`, `Wise`), payout provider contracts, and the Brazilian NFS-e fiscal module have been permanently removed in v13.0.
 
-> [!WARNING]
-> **V12.3 Deprecations & V13.0 Gateway Removals (`rullst-capital` / `rullst-mail`)**
-> * **Rullst 12.3.0:** Formally marked 9 out of 11 adapters (`Paddle`, `Lemon Squeezy`, `Polar`, `Razorpay`, `Mercado Pago`, `Alipay`, `Coinbase Commerce`, `PicPay`, `Wise`), payout provider contracts, and the Brazilian NFS-e fiscal module with `#[deprecated(since = "12.3.0")]`.
-> * **Rullst 13.0 (alpha 1+):** Permanently **removed** those 9 adapters and NFS-e from `rullst-capital` (`V13-CAPITAL-REMOVED`). Rullst Capital now maintains **only Stripe and InfinitePay**. In parallel, `rullst-mail` removed SendGrid, Postmark, Mailjet, and Mailtrap, maintaining **only Resend, AWS SES, SendPulse, and SMTP** (`V13-MAIL-REMOVED`).
-> * Production SaaS applications planning migration to v13 must consolidate exclusively around **Stripe** (or InfinitePay).
+> [!IMPORTANT]
+> **Rullst 13.0.0-alpha.3 Gateway & Mail Consolidation (`rullst-capital` / `rullst-mail`)**
+> * **Rullst Capital `13.0.0-alpha.3`:** Permanently removed the 9 legacy v12 adapters and NFS-e (`V13-CAPITAL-REMOVED`), retaining **only `StripeProvider` and `InfinitePayProvider`**.
+> * **Rullst Mail `13.0.0-alpha.3`:** Removed SendGrid, Postmark, Mailjet, and Mailtrap, maintaining **only Resend, AWS SES, SendPulse, and SMTP** (`V13-MAIL-REMOVED`).
+> * Production SaaS applications on Rullst v13 consolidate around **Stripe** (with **InfinitePay** available as an experimental fail-closed adapter).
 
-| Adapter | Audited v12 status | Important constraint |
+| Adapter | Audited v13.0.0-alpha.3 status | Important constraint |
 | --- | --- | --- |
 | Stripe | One-time test and application-owned live path implemented | Test and live data, keys, webhooks, databases and Price IDs remain separate. |
-| Razorpay | Report/roadmap only | Its exported v12 path is recurring and needs a separate one-time contract. |
-| Lemon Squeezy | Framework fix required | The v12 adapter hard-codes store ID `1`. |
-| Paddle | Framework fix required | The v12 payload does not match the current transaction contract. |
-| Polar | Framework fix required | The v12 request uses the former price-based checkout shape. |
-| InfinitePay | No plan-only live checkout in v12 | The operation returns `UnsupportedOperation`. |
-| Mercado Pago | No plan-only live checkout in v12 | The operation and body-only live webhook verifier are unavailable. |
-| Coinbase Commerce | No plan-only live checkout in v12 | The operation returns `UnsupportedOperation`. |
-| PicPay | No plan-only live checkout in v12 | The operation returns `UnsupportedOperation`. |
-| Alipay | No live checkout in v12 | RSA2 checkout signing and live webhook verification are disabled. |
-| Wise | Payout only | Wise sends funds; it is not an incoming SaaS checkout gateway. |
+| InfinitePay | Experimental / fail-closed (`UnsupportedOperation` for plan-only checkout) | Plan-only `create_checkout_session` and unverified body-only webhooks fail closed; requires an explicit item/order contract before live activation. |
 
 The full evidence is tracked in
 [`../../saas-improvements-needed.md`](../../saas-improvements-needed.md).
@@ -365,7 +355,7 @@ reconciliation, private paid-artifact delivery and backup automation. The
 operator must still provision production resources, test a backup restore,
 configure monitoring/alerts, review the actual public seller identity and
 document the operator process for correction/closure/deletion requests. The
-authenticated dashboard already provides a private JSON data export. Rullst 12.3.0 still
+authenticated dashboard already provides a private JSON data export. Rullst `13.0.0-alpha.3` still
 lacks a typed one-time Capital contract, so this Stripe integration remains
 application-owned and must not be presented as proof that every exported
 gateway is live-ready.

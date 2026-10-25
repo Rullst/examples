@@ -1,31 +1,23 @@
-//! Audited view of the adapters exported by `rullst-capital` 12.3.0.
+//! Audited view of the adapters exported by `rullst-capital` 13.0.0-alpha.3.
 //!
 //! Note on framework lifecycle:
-//! In Rullst 12.3.0, 9 out of 11 adapters (Paddle, Lemon Squeezy, Polar, Razorpay,
-//! Mercado Pago, Alipay, Coinbase Commerce, PicPay, Wise) and NFS-e are deprecated.
-//! In Rullst 13.0 (alpha 1+), they are completely removed, keeping ONLY Stripe and InfinitePay.
+//! In Rullst 13.0.0-alpha.3, the 9 deprecated v12 adapters (Paddle, Lemon Squeezy,
+//! Polar, Razorpay, Mercado Pago, Alipay, Coinbase Commerce, PicPay, Wise) and NFS-e
+//! were removed, keeping ONLY Stripe and InfinitePay.
 //! "Exported" is deliberately not synonymous with "safe live checkout".
 //! The status text below records the operation boundary used by this example.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GatewayKind {
     Billing,
-    Payout,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LiveCheckoutStatus {
-    /// Enabled in provider sandbox by this example after a server-side check.
+    /// Enabled in provider sandbox and audited live checkout by this example.
     Enabled,
-    /// Exported by v12, but not wired to this one-time product contract.
-    ApplicationContractRequired,
-    /// The v12 adapter issues an outbound checkout request, but its current
-    /// provider contract has a known blocking mismatch.
-    FrameworkFixRequired,
-    /// The v12 adapter intentionally rejects live plan-only checkout.
-    UnsupportedByV12,
-    /// This adapter sends money and is not a customer checkout gateway.
-    PayoutOnly,
+    /// The v13 adapter intentionally rejects live plan-only checkout (experimental fail-closed).
+    ExperimentalFailClosed,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -37,83 +29,20 @@ pub struct GatewayInfo {
     pub test_note: &'static str,
 }
 
-pub const GATEWAYS: [GatewayInfo; 11] = [
+pub const GATEWAYS: [GatewayInfo; 2] = [
     GatewayInfo {
         id: "stripe",
         name: "Stripe",
         kind: GatewayKind::Billing,
         status: LiveCheckoutStatus::Enabled,
-        test_note: "The application-owned sandbox path requires an active one-time BRL 1.00 Price; live money remains blocked.",
-    },
-    GatewayInfo {
-        id: "razorpay",
-        name: "Razorpay",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::ApplicationContractRequired,
-        test_note: "The exported v12 path is subscription-oriented; this one-time report needs a separate provider contract and account review.",
-    },
-    GatewayInfo {
-        id: "lemonsqueezy",
-        name: "Lemon Squeezy",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::FrameworkFixRequired,
-        test_note: "The v12 request hard-codes store ID 1 instead of accepting the merchant's store ID.",
-    },
-    GatewayInfo {
-        id: "paddle",
-        name: "Paddle",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::FrameworkFixRequired,
-        test_note: "The v12 transaction payload does not match the current Paddle transaction contract; Paddle's BRL minimum is R$4.00.",
-    },
-    GatewayInfo {
-        id: "polar",
-        name: "Polar",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::FrameworkFixRequired,
-        test_note: "The v12 adapter sends the former product_price_id checkout shape instead of the current products-based contract.",
+        test_note: "Audited primary gateway in Rullst v13.0.0-alpha.3. The application-owned path verifies an active one-time BRL 1.00 Price and reconciles signed webhooks.",
     },
     GatewayInfo {
         id: "infinitepay",
         name: "InfinitePay",
         kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::UnsupportedByV12,
-        test_note: "Live plan-only checkout returns UnsupportedOperation in rullst-capital 12.0.0.",
-    },
-    GatewayInfo {
-        id: "mercadopago",
-        name: "Mercado Pago",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::UnsupportedByV12,
-        test_note: "Live plan-only checkout and the body-only live webhook verifier are unavailable in v12.",
-    },
-    GatewayInfo {
-        id: "coinbase",
-        name: "Coinbase Commerce",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::UnsupportedByV12,
-        test_note: "Live plan-only checkout returns UnsupportedOperation in rullst-capital 12.0.0.",
-    },
-    GatewayInfo {
-        id: "picpay",
-        name: "PicPay",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::UnsupportedByV12,
-        test_note: "Live plan-only checkout returns UnsupportedOperation in rullst-capital 12.0.0.",
-    },
-    GatewayInfo {
-        id: "alipay",
-        name: "Alipay",
-        kind: GatewayKind::Billing,
-        status: LiveCheckoutStatus::UnsupportedByV12,
-        test_note: "Live RSA2 checkout signing and live webhook verification are explicitly disabled in v12.",
-    },
-    GatewayInfo {
-        id: "wise",
-        name: "Wise",
-        kind: GatewayKind::Payout,
-        status: LiveCheckoutStatus::PayoutOnly,
-        test_note: "Wise is a payout adapter. It sends funds to recipients; it is not used to receive SaaS checkout payments.",
+        status: LiveCheckoutStatus::ExperimentalFailClosed,
+        test_note: "Experimental adapter retained in rullst-capital 13.0.0-alpha.3; live checkout and callbacks remain fail-closed (UnsupportedOperation).",
     },
 ];
 
@@ -127,26 +56,19 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn catalog_has_eleven_unique_adapters() {
+    fn catalog_has_two_v13_unique_adapters() {
         let ids = GATEWAYS
             .iter()
             .map(|gateway| gateway.id)
             .collect::<HashSet<_>>();
-        assert_eq!(GATEWAYS.len(), 11);
-        assert_eq!(ids.len(), 11);
+        assert_eq!(GATEWAYS.len(), 2);
+        assert_eq!(ids.len(), 2);
         assert_eq!(
             GATEWAYS
                 .iter()
                 .filter(|gateway| gateway.kind == GatewayKind::Billing)
                 .count(),
-            10
-        );
-        assert_eq!(
-            GATEWAYS
-                .iter()
-                .filter(|gateway| gateway.kind == GatewayKind::Payout)
-                .count(),
-            1
+            2
         );
     }
 

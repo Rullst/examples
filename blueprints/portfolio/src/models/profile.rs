@@ -1,4 +1,4 @@
-use rullst::db::{Orm, FromRow, Nexus};
+use rullst::db::{FromRow, Nexus, Orm, RowSnapshot};
 
 #[derive(Debug, Clone, FromRow, Orm, Nexus)]
 #[orm(table = "profiles")]
@@ -12,4 +12,6 @@ pub struct Profile {
     pub avatar_url: String,
     pub github_url: String,
     pub linkedin_url: String,
+    #[sqlx(skip)]
+    pub snapshot: RowSnapshot,
 }

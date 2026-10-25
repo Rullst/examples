@@ -141,10 +141,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         if headers.contains_key("hx-request") {
-            return rullst::response::Html(content).into_response();
+            return content.into_response();
         }
 
-        let full_html = rullst::studio::data_browser::studio_layout(content, None, &[]);
+        let full_html =
+            rullst::studio::data_browser::studio_layout(content.into_string(), None, &[]);
         rullst::response::Html(full_html).into_response()
     }
 
@@ -333,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ]
     .nest_axum("/nexus", nexus)
     .nest_axum("/studio", studio_router)
+    .merge_axum(rullst::health::health_router())
     .layer(rullst::server::from_fn(showcase::shell))
     // Forms need a token in development too; the framework deduplicates this
     // middleware when its production security baseline is also installed.

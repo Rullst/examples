@@ -2,6 +2,7 @@ use crate::controllers::billing_controller::PaymentMode;
 use crate::controllers::gateway_catalog::{GATEWAYS, GatewayKind, LiveCheckoutStatus};
 use crate::controllers::legal_controller::MerchantNotice;
 use rullst::html;
+use rullst::html::Markup;
 use rullst::response::Html;
 
 pub struct PaymentPageState {
@@ -15,32 +16,29 @@ pub struct PaymentPageState {
     pub merchant_notice: Option<MerchantNotice>,
 }
 
-fn founding_customer_meter(state: &PaymentPageState) -> String {
+fn founding_customer_meter(state: &PaymentPageState) -> Option<Markup> {
     if state.production_deployment {
-        return state
-            .founding_customer_count
-            .map(|count| {
-                let buyer_label = if count == 1 {
-                    "verified active buyer"
-                } else {
-                    "verified active buyers"
-                };
-                html! {
-                    <section class="founding-meter" aria-label="Founding Customer count">
-                        <div class="founding-meter__seal" aria-hidden="true">"FC"</div>
-                        <div class="founding-meter__copy">
-                            <p class="founding-meter__eyebrow">"Rullst Founding Customers"</p>
-                            <p class="founding-meter__value"><strong>{count}</strong><span>{buyer_label}</span></p>
-                            <p>"Counted only after live payment reconciliation. Refunded or disputed purchases are excluded."</p>
-                        </div>
-                    </section>
-                }
-            })
-            .unwrap_or_default();
+        return state.founding_customer_count.map(|count| {
+            let buyer_label = if count == 1 {
+                "verified active buyer"
+            } else {
+                "verified active buyers"
+            };
+            html! {
+                <section class="founding-meter" aria-label="Founding Customer count">
+                    <div class="founding-meter__seal" aria-hidden="true">"FC"</div>
+                    <div class="founding-meter__copy">
+                        <p class="founding-meter__eyebrow">"Rullst Founding Customers"</p>
+                        <p class="founding-meter__value"><strong>{count}</strong><span>{buyer_label}</span></p>
+                        <p>"Counted only after live payment reconciliation. Refunded or disputed purchases are excluded."</p>
+                    </div>
+                </section>
+            }
+        });
     }
 
     if state.payment_mode == PaymentMode::Test {
-        html! {
+        Some(html! {
             <aside class="founding-meter founding-meter--sandbox" aria-label="Sandbox count policy">
                 <div class="founding-meter__seal" aria-hidden="true">"TEST"</div>
                 <div class="founding-meter__copy">
@@ -48,9 +46,9 @@ fn founding_customer_meter(state: &PaymentPageState) -> String {
                     <p>"Test checkouts and Sandbox Pioneer certificates never increase the live Founding Customer count."</p>
                 </div>
             </aside>
-        }
+        })
     } else {
-        String::new()
+        None
     }
 }
 
@@ -59,7 +57,7 @@ fn pricing_navbar(
     signed_in: bool,
     live: bool,
     production_deployment: bool,
-) -> String {
+) -> Markup {
     let account_actions = if signed_in {
         format!(
             "<span class=\"pricing-nav__status\">Signed in</span><a href=\"/dashboard\" class=\"pricing-nav__link\">Dashboard</a><form method=\"post\" action=\"/logout\" class=\"pricing-nav__form\"><input type=\"hidden\" name=\"_token\" value=\"{}\"><button type=\"submit\" class=\"pricing-nav__link pricing-nav__button\">Sign out</button></form>",
@@ -85,7 +83,7 @@ fn pricing_navbar(
     }
 }
 
-fn setup_banner(state: &PaymentPageState) -> String {
+fn setup_banner(state: &PaymentPageState) -> Markup {
     let (title, message, class_name) = if let Some(error) = state.setup_error.as_deref() {
         (
             "Configuration rejected",
@@ -135,7 +133,7 @@ fn setup_banner(state: &PaymentPageState) -> String {
     }
 }
 
-fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
+fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> Markup {
     let checkout_available =
         state.payment_mode != PaymentMode::Disabled && state.setup_error.is_none();
     let action = if checkout_available && state.signed_in {
@@ -168,23 +166,19 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
         "<button type=\"button\" class=\"btn-checkout\" disabled>Payment checkout is disabled</button>"
             .to_owned()
     };
-    let seller_disclosure = state
-        .merchant_notice
-        .as_ref()
-        .map(|merchant| {
-            let mailto = format!("mailto:{}", merchant.support_email);
-            html! {
-                <aside class="seller-disclosure" aria-label="Seller identification">
-                    <h3>"Seller identification"</h3>
-                    <p><strong>{merchant.legal_name.as_str()}</strong>" (Rullst)"</p>
-                    <p>"Brazilian tax registration: "<strong>{merchant.tax_id.as_str()}</strong></p>
-                    <address>{merchant.physical_address.as_str()}</address>
-                    <p><a href={mailto.as_str()}>{merchant.support_email.as_str()}</a></p>
-                    <p><a href="/terms">"Read the purchase and refund terms before paying."</a></p>
-                </aside>
-            }
-        })
-        .unwrap_or_default();
+    let seller_disclosure = state.merchant_notice.as_ref().map(|merchant| {
+        let mailto = format!("mailto:{}", merchant.support_email);
+        html! {
+            <aside class="seller-disclosure" aria-label="Seller identification">
+                <h3>"Seller identification"</h3>
+                <p><strong>{merchant.legal_name.as_str()}</strong>" (Rullst)"</p>
+                <p>"Brazilian tax registration: "<strong>{merchant.tax_id.as_str()}</strong></p>
+                <address>{merchant.physical_address.as_str()}</address>
+                <p><a href={mailto.as_str()}>{merchant.support_email.as_str()}</a></p>
+                <p><a href="/terms">"Read the purchase and refund terms before paying."</a></p>
+            </aside>
+        }
+    });
     let deliverables = if state.payment_mode == PaymentMode::Live {
         "<div class=\"deliverables\"><h3>What this purchase includes</h3><ul><li>A private, versioned Markdown guide containing the Stripe gateway field report and a sanitized implementation tutorial for Stripe, PostgreSQL, GitHub OIDC, Azure Container Apps, DNS/TLS, webhooks and production promotion.</li><li>A Rullst Founding Customer certificate for every reconciled live purchase. There is no certificate quota or expiration based on purchase order.</li></ul></div>".to_owned()
     } else {
@@ -208,7 +202,7 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
                 <li>"Paid session reconciled with Stripe before access"</li>
                 <li>"HTTP 303 checkout handoff"</li>
             </ul>
-            { rullst::html::RawHtml(seller_disclosure) }
+            { seller_disclosure }
             { rullst::html::RawHtml(action) }
             <p class="fine-print">"A successful redirect never grants access. Application state changes only after verified provider evidence. The provider dashboard remains authoritative for charges, cancellations and refunds."</p>
         </section>
@@ -217,17 +211,11 @@ fn checkout_card(csrf_token: &str, state: &PaymentPageState) -> String {
 
 fn status_text(status: LiveCheckoutStatus) -> (&'static str, &'static str) {
     match status {
-        LiveCheckoutStatus::Enabled => ("Sandbox path ready", "status status--enabled"),
-        LiveCheckoutStatus::ApplicationContractRequired => {
-            ("Application contract required", "status status--blocked")
-        }
-        LiveCheckoutStatus::FrameworkFixRequired => {
-            ("Framework fix required", "status status--blocked")
-        }
-        LiveCheckoutStatus::UnsupportedByV12 => {
-            ("No live checkout in v12", "status status--unavailable")
-        }
-        LiveCheckoutStatus::PayoutOnly => ("Payout only", "status status--payout"),
+        LiveCheckoutStatus::Enabled => ("Sandbox & live path ready", "status status--enabled"),
+        LiveCheckoutStatus::ExperimentalFailClosed => (
+            "Experimental fail-closed in v13",
+            "status status--unavailable",
+        ),
     }
 }
 
@@ -238,7 +226,6 @@ fn gateway_rows() -> String {
             let (status, class_name) = status_text(gateway.status);
             let kind = match gateway.kind {
                 GatewayKind::Billing => "Billing",
-                GatewayKind::Payout => "Outgoing payout",
             };
             format!(
                 "<tr><th scope=\"row\">{}</th><td>{}</td><td><span class=\"{}\">{}</span></td><td>{}</td></tr>",
@@ -252,13 +239,13 @@ fn gateway_rows() -> String {
         .collect()
 }
 
-fn gateway_matrix() -> String {
+fn gateway_matrix() -> Markup {
     html! {
         <section class="gateway-section" aria-labelledby="gateway-heading">
             <div class="section-heading">
-                <p class="eyebrow">"Rullst Capital 12.3.0"</p>
+                <p class="eyebrow">"Rullst Capital 13.0.0-alpha.3"</p>
                 <h2 id="gateway-heading">"Adapter capability matrix"</h2>
-                <p>"The framework exports 10 incoming billing adapters and 1 outgoing payout adapter (deprecated in v12.3.0 and removed in v13.0, which retains only Stripe and InfinitePay). Exported does not mean every adapter has a usable current live checkout."</p>
+                <p>"Rullst v13.0.0-alpha.3 removed the 9 deprecated v12 billing and payout adapters (Paddle, Lemon Squeezy, Polar, Razorpay, Mercado Pago, Alipay, Coinbase Commerce, PicPay, Wise) and NFS-e, retaining only Stripe and the experimental fail-closed InfinitePay adapter."</p>
             </div>
             <div class="table-scroll" tabindex="0">
                 <table>
@@ -347,14 +334,14 @@ window.addEventListener('pageshow', reset);
                 <div class="glow-bg"></div>
                 <div class="glow-bg-right"></div>
                 <main class="container">
-                    { rullst::html::RawHtml(pricing_navbar(csrf_token, state.signed_in, live, state.production_deployment)) }
+                    { pricing_navbar(csrf_token, state.signed_in, live, state.production_deployment) }
                     <header class="header">
                         <span class="badge">"Rullst SaaS Showcase"</span>
-                        <p class="framework-credit">"Built entirely with Rullst v12"</p>
+                        <p class="framework-credit">"Built entirely with Rullst v13.0.0-alpha.3"</p>
                         <h1>{heading}</h1>
                         <p class="subtitle">{subtitle}</p>
                     </header>
-                    { rullst::html::RawHtml(founding_customer_meter(state)) }
+                    { founding_customer_meter(state) }
                     <section class="community-callout" aria-labelledby="community-heading">
                         <div class="community-callout__mark" aria-hidden="true">"R"</div>
                         <div>
@@ -364,9 +351,9 @@ window.addEventListener('pageshow', reset);
                         </div>
                         <a href="https://discord.gg/2ntKFtsSjw" target="_blank" rel="noopener noreferrer">"Join us on Discord"</a>
                     </section>
-                    { rullst::html::RawHtml(setup_banner(state)) }
+                    { setup_banner(state) }
                     <div class="pricing-grid">
-                        { rullst::html::RawHtml(checkout_card(csrf_token, state)) }
+                        { checkout_card(csrf_token, state) }
                         <aside class="safety-card">
                             <p class="eyebrow">"Safe rollout order"</p>
                             <h2>{checklist_title}</h2>
@@ -374,7 +361,7 @@ window.addEventListener('pageshow', reset);
                             <p class="fine-print">{final_note}</p>
                         </aside>
                     </div>
-                    { rullst::html::RawHtml(gateway_matrix()) }
+                    { gateway_matrix() }
                     { rullst::html::RawHtml(super::community::footer()) }
                 </main>
                 { rullst::html::RawHtml(checkout_script) }

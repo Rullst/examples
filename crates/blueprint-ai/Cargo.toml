@@ -5,12 +5,12 @@ edition = "2024"
 publish = false
 
 [dependencies]
-ammonia = "4.1"
+ammonia = "4.2.4"
 axum = "0.8"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
-rullst-ai = "12.3.0"
-rullst-core = "12.3.0"
-rullst-nexus = "12.3.0"
+rullst-ai = "=13.0.0-alpha.3"
+rullst-core = { version = "=13.0.0-alpha.3", default-features = false }
+rullst-nexus = { version = "=13.0.0-alpha.3", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_urlencoded = "0.7"
 tokio = { version = "1", features = ["sync", "time"] }

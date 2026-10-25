@@ -7,6 +7,7 @@ pub struct User {
     pub id: i32,
     pub name: String,
     pub email: String,
+    #[orm(hidden)]
     pub password_hash: Option<String>,
     pub oauth_provider: Option<String>,
     pub oauth_id: Option<String>,

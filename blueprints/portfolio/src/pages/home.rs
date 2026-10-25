@@ -4,7 +4,7 @@ use crate::models::profile::Profile;
 use crate::models::project::Project;
 use crate::models::skill::Skill;
 use rullst::html;
-use rullst::html::escape_str;
+use rullst::html::{Markup, escape_str};
 
 const PUBLIC_DEMO_USERNAME: &str = "rullst_demo";
 const PUBLIC_DEMO_PASSWORD: &str = "RullstDemoAccess2026!";
@@ -634,7 +634,7 @@ fn cv_styles() -> String {
     "#.to_string()
 }
 
-fn render_sidebar(profile: &Profile, skills: &[Skill]) -> String {
+fn render_sidebar(profile: &Profile, skills: &[Skill]) -> Markup {
     html! {
         <aside class="sidebar">
             <div style="text-align: center;">
@@ -693,16 +693,16 @@ fn safe_project_url(url: &str) -> &str {
     }
 }
 
-fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
+fn render_content(projects: &[Project], experiences: &[Experience]) -> Markup {
     html! {
         <main class="content">
             <section class="framework-callout" aria-label="Built with Rullst">
                 <span class="showcase-badge">"Rullst Portfolio Showcase"</span>
-                <h2>"Built entirely with Rullst v12"</h2>
+                <h2>"Built entirely with Rullst v13.0.0-alpha.3"</h2>
                 <p>"From the public portfolio to Nexus, Studio, and Generative AI integration: explore what you can build with the Rullst framework."</p>
                 <a href="https://rullst.win" rel="noreferrer">"Explore Rullst →"</a>
             </section>
-            { rullst::html::RawHtml(render_community_callout()) }
+            { render_community_callout() }
             <section>
                 <h2 class="section-title">"Experience"</h2>
                 <div class="timeline">
@@ -735,7 +735,7 @@ fn render_content(projects: &[Project], experiences: &[Experience]) -> String {
     }
 }
 
-fn render_community_callout() -> String {
+fn render_community_callout() -> Markup {
     html! {
         <section class="community-callout" aria-labelledby="community-heading">
             <div class="community-callout-mark" aria-hidden="true">"R"</div>
@@ -919,7 +919,7 @@ pub fn render(
     experiences: &[Experience],
     skills: &[Skill],
     csrf_token: &str,
-) -> String {
+) -> Markup {
     html! {
         <html lang="en">
             <head>
@@ -938,8 +938,8 @@ pub fn render(
                 <div class="glow-blob glow-2"></div>
 
                 <div class="layout">
-                    { rullst::html::RawHtml(render_sidebar(profile, skills)) }
-                    { rullst::html::RawHtml(render_content(projects, experiences)) }
+                    { render_sidebar(profile, skills) }
+                    { render_content(projects, experiences) }
                 </div>
 
                 { rullst::html::RawHtml(render_ai_widget(csrf_token)) }

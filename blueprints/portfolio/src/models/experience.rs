@@ -1,4 +1,4 @@
-use rullst::db::{Orm, FromRow, Nexus};
+use rullst::db::{FromRow, Nexus, Orm, RowSnapshot};
 
 #[derive(Debug, Clone, FromRow, Orm, Nexus)]
 #[orm(table = "experiences")]
@@ -8,4 +8,6 @@ pub struct Experience {
     pub company: String,
     pub period: String,
     pub description: String,
+    #[sqlx(skip)]
+    pub snapshot: RowSnapshot,
 }

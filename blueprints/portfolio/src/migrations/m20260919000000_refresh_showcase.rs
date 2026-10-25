@@ -39,31 +39,31 @@ impl Migration for RefreshShowcase {
                 "Rullst",
                 "Explore the Rullst framework and its ecosystem for building Rust web applications.",
                 "https://rullst.win/",
-                "Rust, Rullst v12, Web framework",
+                "Rust, Rullst v13.0.0-alpha.3, Web framework",
             ),
             (
                 "Rullst LMS Showcase",
                 "A learning platform demo with a course catalog, lessons, and shared access to Nexus and Studio. Visit Rullst Academy for the full learning experience.",
                 "https://lms.rullst.win",
-                "Rust, LMS, Rullst v12",
+                "Rust, LMS, Rullst v13.0.0-alpha.3",
             ),
             (
                 "Rullst Portfolio Showcase",
                 "This portfolio: a server-rendered Rust application with a database-backed profile, project catalog, Nexus CMS, and optional Career Copilot.",
                 "https://portfolio.rullst.win",
-                "Rust, HTMX, Portfolio",
+                "Rust, HTMX, Portfolio, Rullst v13.0.0-alpha.3",
             ),
             (
                 "Rullst Framework Showcase",
-                "Explore interactive framework demos, developer tools, and integrations built with Rullst v12.",
+                "Explore interactive framework demos, developer tools, and integrations built with Rullst v13.0.0-alpha.3.",
                 "https://showcase.rullst.win",
-                "Rust, HTMX, Developer tools",
+                "Rust, HTMX, Developer tools, Rullst v13.0.0-alpha.3",
             ),
             (
                 "Rullst SaaS Showcase",
                 "Explore a SaaS blueprint and its application flows, built with the Rullst framework.",
                 "https://saas.rullst.win",
-                "Rust, SaaS, Rullst v12",
+                "Rust, SaaS, Rullst v13.0.0-alpha.3",
             ),
         ];
         for (index, (title, description, url, tags)) in projects.iter().enumerate() {
@@ -135,9 +135,14 @@ mod tests {
             .unwrap();
         assert_eq!(name, "CMS edit");
         super::super::m20260701000000_create_portfolio_tables::CreatePortfolioTables
-            .up().await.unwrap();
-        let experience_count: i64 = rullst::db::sqlx::query_scalar("SELECT COUNT(*) FROM experiences")
-            .fetch_one(pool).await.unwrap();
+            .up()
+            .await
+            .unwrap();
+        let experience_count: i64 =
+            rullst::db::sqlx::query_scalar("SELECT COUNT(*) FROM experiences")
+                .fetch_one(pool)
+                .await
+                .unwrap();
         assert_eq!(experience_count, 1);
         let count: i64 = rullst::db::sqlx::query_scalar("SELECT COUNT(*) FROM projects")
             .fetch_one(pool)

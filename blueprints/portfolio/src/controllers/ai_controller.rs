@@ -259,17 +259,23 @@ pub async fn chat(
     }
 
     // 1. Fetch live database context (RAG)
-    let profile = Profile::find(1).await.unwrap_or(None).unwrap_or(Profile {
-        id: 1,
-        name: "Venelouis".to_string(),
-        title: "Senior Rust & AI Engineer".to_string(),
-        subtitle: "Specializing in hyper-concurrent web backends, Generative AI integration, and high-throughput Rust architectures.".to_string(),
-        email: "officialrullst@gmail.com".to_string(),
-        website: "https://rullst.win".to_string(),
-        avatar_url: "/static/rullst.png".to_string(),
-        github_url: "https://github.com/Rullst".to_string(),
-        linkedin_url: "https://linkedin.com/company/rullst".to_string(),
-    });
+    let profile = Profile::query()
+        .order_by("id")
+        .first()
+        .await
+        .unwrap_or(None)
+        .unwrap_or(Profile {
+            id: 1,
+            name: "Venelouis".to_string(),
+            title: "Senior Rust & AI Engineer".to_string(),
+            subtitle: "Specializing in hyper-concurrent web backends, Generative AI integration, and high-throughput Rust architectures.".to_string(),
+            email: "officialrullst@gmail.com".to_string(),
+            website: "https://rullst.win".to_string(),
+            avatar_url: "/static/rullst.png".to_string(),
+            github_url: "https://github.com/Rullst".to_string(),
+            linkedin_url: "https://linkedin.com/company/rullst".to_string(),
+            snapshot: rullst::db::RowSnapshot::default(),
+        });
     let skills = Skill::query().limit(30).get().await.unwrap_or_default();
     let projects = Project::query().limit(10).get().await.unwrap_or_default();
     let experiences = Experience::query()

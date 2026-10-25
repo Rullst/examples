@@ -8,6 +8,10 @@
 *.db-wal
 *.sqlite
 *.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+*.duckdb
+*.duckdb.wal
 
 # Rullst: Environment & Secrets
 .env

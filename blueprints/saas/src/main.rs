@@ -142,6 +142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             rullst::security::headers_middleware,
         ))
         .layer(rullst::server::from_fn(staging_headers))
+        .merge_axum(rullst::health::health_router())
         .nest_axum("/nexus", nexus);
 
     let nexus_tls_termination = std::env::var("NEXUS_TRUSTED_TLS_TERMINATION").ok();
